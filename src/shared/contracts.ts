@@ -1,0 +1,168 @@
+import { z } from "zod";
+
+export const runtimeMessageSchema = z.discriminatedUnion("action", [
+	z.object({
+		action: z.literal("captureElement"),
+		selector: z.string().min(1),
+	}),
+	z.object({
+		action: z.literal("getElementPositionAndDimensions"),
+		selector: z.string().min(1),
+	}),
+	z.object({
+		action: z.literal("cropImage"),
+		dataUrl: z.string().startsWith("data:image/"),
+		x: z.number(),
+		y: z.number(),
+		width: z.number().positive(),
+		height: z.number().positive(),
+	}),
+]);
+
+export type RuntimeMessage = z.infer<typeof runtimeMessageSchema>;
+
+export const elementDimensionsSchema = z.object({
+	x: z.number(),
+	y: z.number(),
+	width: z.number().positive(),
+	height: z.number().positive(),
+});
+
+export type ElementDimensions = z.infer<typeof elementDimensionsSchema>;
+
+export const repoSchema = z.object({
+	id: z.number(),
+	name: z.string(),
+	fullName: z.string(),
+	owner: z.string(),
+	private: z.boolean(),
+	defaultBranch: z.string(),
+});
+
+export type Repo = z.infer<typeof repoSchema>;
+
+export const extensionSettingsSchema = z.object({
+	threshold: z.number().min(0).max(100),
+	selectedRepoFullName: z.string().nullable(),
+	selectedBranch: z.string().nullable(),
+});
+
+export type ExtensionSettings = z.infer<typeof extensionSettingsSchema>;
+
+export const authStatusSchema = z.object({
+	isAuthenticated: z.boolean(),
+	username: z.string().nullable(),
+	method: z.enum(["device", "web", "pat"]).nullable(),
+});
+
+export type AuthStatus = z.infer<typeof authStatusSchema>;
+
+export const submissionPayloadSchema = z.object({
+	challengeId: z.string().min(1),
+	challengeName: z.string().min(1),
+	challengeUrl: z.string().url().optional(),
+	submittedAt: z.string(),
+	score: z.number().nullable(),
+	matchPct: z.number().min(0).max(100).nullable(),
+	code: z.string(),
+	targetImage: z
+		.object({
+			type: z.enum(["dataUrl", "url"]),
+			value: z.string().min(1),
+		})
+		.nullable(),
+	resultImageDataUrl: z.string().startsWith("data:image/").nullable(),
+});
+
+export type SubmissionPayload = z.infer<typeof submissionPayloadSchema>;
+
+export const syncEventSchema = z.object({
+	id: z.string(),
+	timestamp: z.string(),
+	level: z.enum(["info", "warn", "error"]),
+	message: z.string(),
+	commitUrl: z.string().url().nullable(),
+});
+
+export type SyncEvent = z.infer<typeof syncEventSchema>;
+
+export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
+	runtimeMessageSchema.options[0],
+	z.object({
+		action: z.literal("getExtensionState"),
+	}),
+	z.object({
+		action: z.literal("saveSettings"),
+		settings: extensionSettingsSchema,
+	}),
+	z.object({
+		action: z.literal("startGithubDeviceFlow"),
+	}),
+	z.object({
+		action: z.literal("pollGithubDeviceFlow"),
+		deviceCode: z.string().min(1),
+	}),
+	z.object({
+		action: z.literal("startGithubWebFlow"),
+	}),
+	z.object({
+		action: z.literal("loginWithPat"),
+		token: z.string().min(1),
+	}),
+	z.object({
+		action: z.literal("logoutGithub"),
+	}),
+	z.object({
+		action: z.literal("listRepos"),
+	}),
+	z.object({
+		action: z.literal("createRepo"),
+		name: z.string().min(1),
+		private: z.boolean(),
+	}),
+	z.object({
+		action: z.literal("cssbattleSubmission"),
+		payload: submissionPayloadSchema,
+	}),
+]);
+
+export type PopupToBackgroundMessage = z.infer<
+	typeof popupToBackgroundMessageSchema
+>;
+
+export const deviceFlowStartResponseSchema = z.object({
+	deviceCode: z.string(),
+	userCode: z.string(),
+	verificationUri: z.string().url(),
+	verificationUriComplete: z.string().url().nullable(),
+	expiresIn: z.number().positive(),
+	interval: z.number().positive(),
+});
+
+export type DeviceFlowStartResponse = z.infer<
+	typeof deviceFlowStartResponseSchema
+>;
+
+export const submissionIngestionResponseSchema = z.object({
+	accepted: z.boolean(),
+	threshold: z.number().min(0).max(100),
+	reason: z.string(),
+	committed: z.boolean(),
+	commitUrl: z.string().url().nullable(),
+});
+
+export type SubmissionIngestionResponse = z.infer<
+	typeof submissionIngestionResponseSchema
+>;
+
+export const extensionStateResponseSchema = z.object({
+	auth: authStatusSchema,
+	settings: extensionSettingsSchema,
+	repos: z.array(repoSchema),
+	lastSubmission: submissionPayloadSchema.nullable(),
+	lastSubmissionAccepted: z.boolean().nullable(),
+	lastIngestion: submissionIngestionResponseSchema.nullable(),
+	recentEvents: z.array(syncEventSchema),
+});
+
+export type ExtensionStateResponse = z.infer<typeof extensionStateResponseSchema>;
