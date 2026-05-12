@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import type { ReactElement } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	extensionStateResponseSchema,
 	popupToBackgroundMessageSchema,
@@ -12,6 +12,22 @@ import {
 import "../public/popup.css";
 
 const previewSelector = "iframe[title*='Preview' i]";
+const THRESHOLD_MIN = 0;
+const THRESHOLD_MAX = 100;
+const THRESHOLD_SAVE_DEBOUNCE_MS = 400;
+const POPUP_ERRORS = {
+	loadState: "Could not load popup state",
+	saveThreshold: "Could not update threshold",
+	manualCapture: "Manual preview capture failed",
+} as const;
+
+type PopupNotice = {
+	level: "success" | "warn" | "error";
+	message: string;
+};
+
+const clampThreshold = (value: number): number =>
+	Math.min(THRESHOLD_MAX, Math.max(THRESHOLD_MIN, Math.round(value)));
 
 const openSettingsPage = (): void => {
 	// openOptionsPage() from the toolbar popup is flaky (popup closes and navigation may never run).
@@ -34,24 +50,34 @@ const App = (): ReactElement => {
 	const [status, setStatus] = useState<"idle" | "capturing" | "saving" | "error">("idle");
 	const [error, setError] = useState<string | null>(null);
 	const [capturePreview, setCapturePreview] = useState<string | null>(null);
+	const [thresholdDraft, setThresholdDraft] = useState(95);
+	const [notice, setNotice] = useState<PopupNotice | null>(null);
+	const hasLoadedOnceRef = useRef(false);
 
 	const load = useCallback(async (): Promise<void> => {
-		setLoading(true);
+		const shouldShowLoading = !hasLoadedOnceRef.current;
+		if (shouldShowLoading) {
+			setLoading(true);
+		}
 		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "getExtensionState",
 		});
 		const response = await chrome.runtime.sendMessage(message);
 		if (!response?.ok) {
-			setError(response?.error ?? "Could not load");
-			setLoading(false);
+			setError(POPUP_ERRORS.loadState);
+			if (shouldShowLoading) {
+				setLoading(false);
+			}
 			setStatus("error");
 			return;
 		}
 		const parsed = extensionStateResponseSchema.safeParse(response.data);
 		if (!parsed.success) {
-			setError("Invalid response");
-			setLoading(false);
+			setError(POPUP_ERRORS.loadState);
+			if (shouldShowLoading) {
+				setLoading(false);
+			}
 			setStatus("error");
 			return;
 		}
@@ -62,9 +88,31 @@ const App = (): ReactElement => {
 			lastSubmissionAccepted: parsed.data.lastSubmissionAccepted,
 			lastIngestion: parsed.data.lastIngestion,
 		});
-		setLoading(false);
+		setThresholdDraft(parsed.data.settings.threshold);
+		hasLoadedOnceRef.current = true;
+		if (shouldShowLoading) {
+			setLoading(false);
+		}
 		setStatus("idle");
 	}, []);
+
+	useEffect(() => {
+		if (!data) {
+			return;
+		}
+		const current = data.settings.threshold;
+		const next = clampThreshold(thresholdDraft);
+		if (current === next) {
+			return;
+		}
+
+		const timeoutId = window.setTimeout(() => {
+			void saveThreshold(next);
+		}, THRESHOLD_SAVE_DEBOUNCE_MS);
+		return () => {
+			window.clearTimeout(timeoutId);
+		};
+	}, [thresholdDraft, data]);
 
 	useEffect(() => {
 		void load();
@@ -89,11 +137,18 @@ const App = (): ReactElement => {
 		});
 		const response = await chrome.runtime.sendMessage(message);
 		if (!response?.ok) {
-			setError(response?.error ?? "Save failed");
 			setStatus("error");
+			setNotice({
+				level: "error",
+				message: POPUP_ERRORS.saveThreshold,
+			});
 			return;
 		}
-		setData({ ...data, settings: { ...data.settings, threshold } });
+		setData({ ...data, settings: { ...data.settings, threshold: clampThreshold(threshold) } });
+		setNotice({
+			level: "success",
+			message: `Threshold saved at ${clampThreshold(threshold)}%`,
+		});
 		setStatus("idle");
 	};
 
@@ -109,16 +164,25 @@ const App = (): ReactElement => {
 		try {
 			const response = await chrome.runtime.sendMessage(message);
 			if (!response?.ok || typeof response.data?.croppedDataUrl !== "string") {
-				setError(response?.error ?? "Could not capture preview");
 				setStatus("error");
+				setNotice({
+					level: "error",
+					message: POPUP_ERRORS.manualCapture,
+				});
 				return;
 			}
 			setCapturePreview(response.data.croppedDataUrl);
+			setNotice({
+				level: "success",
+				message: "Manual preview capture completed",
+			});
 			setStatus("idle");
-		} catch (err) {
-			const message = err instanceof Error ? err.message : "Could not capture preview";
-			setError(message);
+		} catch (_err) {
 			setStatus("error");
+			setNotice({
+				level: "error",
+				message: POPUP_ERRORS.manualCapture,
+			});
 		}
 	};
 
@@ -142,13 +206,12 @@ const App = (): ReactElement => {
 				</button>
 			</header>
 
-			<p className="subtitle">
-				{auth.isAuthenticated
-					? `${auth.username ?? "GitHub"} · ${auth.method ?? "?"}`
-					: "Not signed in"}
-			</p>
+			{!auth.isAuthenticated ? <p className="subtitle">Not signed in</p> : null}
 
 			{error ? <p className="error">{error}</p> : null}
+			{notice ? (
+				<p className={`notice notice-${notice.level}`}>{notice.message}</p>
+			) : null}
 
 			{!auth.isAuthenticated ? (
 				<section className="card">
@@ -160,32 +223,54 @@ const App = (): ReactElement => {
 			) : (
 				<>
 					<section className="card card-sync">
-						<h2 className="card-heading">Capture</h2>
+						<h2 className="card-heading">Submission flow</h2>
+						<p className="card-help">
+							On CSSBattle submit, CssHub automatically captures preview and sends data.
+						</p>
 						<label className="field-label" htmlFor="thr">
 							Match threshold (%)
 						</label>
-						<input
-							id="thr"
-							className="field-input"
-							type="number"
-							min={0}
-							max={100}
-							value={settings.threshold}
-							disabled={status === "saving"}
-							onChange={(e) => {
-								const t = Number(e.target.value);
-								if (Number.isFinite(t)) {
-									void saveThreshold(t);
-								}
-							}}
-						/>
+						<div className="threshold-row">
+							<input
+								id="thr"
+								className="field-slider"
+								type="range"
+								min={THRESHOLD_MIN}
+								max={THRESHOLD_MAX}
+								value={thresholdDraft}
+								disabled={status === "saving"}
+								onChange={(e) => {
+									const t = Number(e.target.value);
+									if (Number.isFinite(t)) {
+										setThresholdDraft(clampThreshold(t));
+									}
+								}}
+							/>
+							<input
+								className="field-input field-threshold-number"
+								type="number"
+								min={THRESHOLD_MIN}
+								max={THRESHOLD_MAX}
+								value={thresholdDraft}
+								disabled={status === "saving"}
+								onChange={(e) => {
+									const t = Number(e.target.value);
+									if (Number.isFinite(t)) {
+										setThresholdDraft(clampThreshold(t));
+									}
+								}}
+							/>
+						</div>
+						<p className="muted">Saved value: {settings.threshold}%</p>
 						<button
 							type="button"
 							className="btn-full"
 							onClick={() => void handleCapture()}
 							disabled={status === "capturing"}
 						>
-							{status === "capturing" ? "Capturing…" : "Capture preview"}
+							{status === "capturing"
+								? "Running manual test…"
+								: "Run manual preview capture test"}
 						</button>
 						{capturePreview ? (
 							<img

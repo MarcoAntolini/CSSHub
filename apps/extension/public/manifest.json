@@ -18,7 +18,7 @@
 		"page": "settings.html",
 		"open_in_tab": true
 	},
-	"permissions": ["storage", "activeTab", "tabs", "identity", "scripting"],
+	"permissions": ["storage", "activeTab", "tabs", "identity", "scripting", "notifications"],
 	"host_permissions": [
 		"https://api.github.com/*",
 		"https://github.com/*",

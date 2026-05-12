@@ -172,6 +172,33 @@ body {
 	margin-top: 0.5rem;
 }
 
+.notice {
+	border: 1px solid;
+	border-radius: 8px;
+	padding: 0.5rem 0.65rem;
+	font-size: 0.8rem;
+	line-height: 1.35;
+	margin-top: 0.5rem;
+}
+
+.notice-success {
+	color: #86efac;
+	background: rgba(22, 101, 52, 0.28);
+	border-color: rgba(134, 239, 172, 0.45);
+}
+
+.notice-warn {
+	color: #fcd34d;
+	background: rgba(120, 53, 15, 0.28);
+	border-color: rgba(251, 191, 36, 0.45);
+}
+
+.notice-error {
+	color: #fca5a5;
+	background: rgba(127, 29, 29, 0.3);
+	border-color: rgba(248, 113, 113, 0.45);
+}
+
 .hint {
 	font-size: 0.72rem;
 	color: #64748b;

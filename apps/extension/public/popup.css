@@ -68,6 +68,32 @@ body {
 	line-height: 1.3;
 }
 
+.notice {
+	font-size: 0.75rem;
+	line-height: 1.3;
+	border: 1px solid;
+	border-radius: 8px;
+	padding: 7px 9px;
+}
+
+.notice-success {
+	color: #166534;
+	background: #dcfce7;
+	border-color: #86efac;
+}
+
+.notice-warn {
+	color: #92400e;
+	background: #ffedd5;
+	border-color: #fdba74;
+}
+
+.notice-error {
+	color: #991b1b;
+	background: #fee2e2;
+	border-color: #fca5a5;
+}
+
 .card {
 	background: #ffffff;
 	border: 1px solid #e2e8f0;
@@ -116,6 +142,24 @@ body {
 	outline: none;
 	border-color: #0284c7;
 	box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.threshold-row {
+	display: grid;
+	grid-template-columns: 1fr 72px;
+	gap: 8px;
+	align-items: center;
+}
+
+.field-slider {
+	width: 100%;
+	accent-color: #0f172a;
+}
+
+.field-threshold-number {
+	padding-right: 6px;
+	padding-left: 6px;
+	text-align: right;
 }
 
 .btn-full,

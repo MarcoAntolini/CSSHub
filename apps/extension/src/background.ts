@@ -359,6 +359,7 @@ const formatCommitMessage = (
 const DUPLICATE_WINDOW_MS = 45 * 1000;
 const MAX_EVENTS = 15;
 const MAX_REASONABLE_SCORE = 100_000;
+const BADGE_CLEAR_TIMEOUT_MS = 10_000;
 type SyncEventCode =
 	| "SYNC_COMMITTED"
 	| "SYNC_SKIPPED_DUPLICATE"
@@ -375,6 +376,45 @@ type SyncEventCode =
 	| "GITHUB_UNAVAILABLE"
 	| "NETWORK_ERROR"
 	| "UNEXPECTED_ERROR";
+
+type FeedbackLevel = "success" | "warn" | "error";
+
+const setActionBadge = (level: FeedbackLevel, text: string): void => {
+	const bg =
+		level === "success"
+			? "#15803d"
+			: level === "warn"
+			? "#b45309"
+			: "#b91c1c";
+	chrome.action.setBadgeBackgroundColor({ color: bg });
+	chrome.action.setBadgeText({ text });
+	setTimeout(() => {
+		chrome.action.setBadgeText({ text: "" });
+	}, BADGE_CLEAR_TIMEOUT_MS);
+};
+
+const showBrowserNotification = (
+	level: FeedbackLevel,
+	title: string,
+	message: string
+): void => {
+	if (!chrome.notifications) {
+		return;
+	}
+	const iconUrl =
+		level === "success"
+			? "icons/icon_48.png"
+			: level === "warn"
+			? "icons/icon_48.png"
+			: "icons/icon_48.png";
+	void chrome.notifications.create({
+		type: "basic",
+		title,
+		message,
+		iconUrl,
+		priority: level === "error" ? 2 : 1,
+	});
+};
 
 const parseGithubStatus = (message: string): number | null => {
 	const matched = message.match(/GitHub request failed \((\d{3})\)/);
@@ -878,6 +918,20 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 		recentEvents,
 	});
 
+	if (committed) {
+		setActionBadge("success", "OK");
+		showBrowserNotification("success", "CssHub synced", reason);
+	} else if (accepted) {
+		setActionBadge("warn", "WAIT");
+		showBrowserNotification("warn", "CssHub action needed", reason);
+	} else if (duplicate) {
+		setActionBadge("warn", "DUP");
+		showBrowserNotification("warn", "CssHub skipped duplicate", reason);
+	} else {
+		setActionBadge("warn", "SKIP");
+		showBrowserNotification("warn", "CssHub skipped submission", reason);
+	}
+
 	sendResponse({
 		ok: true,
 		data: responsePayload,
@@ -922,6 +976,8 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
 	void handler(data, sendResponse, _sender).catch((error: unknown) => {
 		const safeError = toUserSafeError(error);
+		setActionBadge("error", "ERR");
+		showBrowserNotification("error", "CssHub error", safeError.message);
 		void getStoredState()
 			.then((state) =>
 				saveStoredState({

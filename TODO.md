@@ -12,5 +12,8 @@
 
 ## TODO NEXT
 
+- fare il commit solo se lo score è maggiore del precedente?
+- clear activity log il pulsante va spostato
+- nella pagina dei log sarebbe meglio avere degli alert/sonner invece che i "badge"
 - rimuovere contorno dai loghi (photopea?)
 - fare controllo codice superfluo

@@ -28,6 +28,10 @@ type LoadedState = {
 };
 
 const oauthRedirectHint = (): string => chrome.identity.getRedirectURL("github");
+type UiNotice = {
+	level: "success" | "warn" | "error";
+	message: string;
+};
 const BRANCH_NAME_PATTERN = /^[A-Za-z0-9._/-]+$/;
 
 const validateBranchName = (
@@ -62,6 +66,7 @@ const App = (): ReactElement => {
 	const [loading, setLoading] = useState(true);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [notice, setNotice] = useState<UiNotice | null>(null);
 
 	const [patToken, setPatToken] = useState("");
 	const [deviceFlow, setDeviceFlow] = useState<{
@@ -186,9 +191,17 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Could not save settings");
+			setNotice({
+				level: "error",
+				message: "Could not save settings",
+			});
 			return false;
 		}
 		setData((prev) => (prev ? { ...prev, settings: next } : prev));
+		setNotice({
+			level: "success",
+			message: "Settings updated",
+		});
 		return true;
 	};
 
@@ -229,8 +242,16 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Web OAuth failed");
+			setNotice({
+				level: "error",
+				message: "Web OAuth failed",
+			});
 			return;
 		}
+		setNotice({
+			level: "success",
+			message: "GitHub account connected",
+		});
 		await loadState();
 	};
 
@@ -244,6 +265,10 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Device flow failed");
+			setNotice({
+				level: "error",
+				message: "Device flow failed",
+			});
 			return;
 		}
 		const payload = deviceFlowStartResponseSchema.safeParse(response.data);
@@ -277,14 +302,26 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Polling failed");
+			setNotice({
+				level: "error",
+				message: "Polling failed",
+			});
 			return;
 		}
 		if (response.data?.status === "pending") {
 			setError("Still waiting — approve on GitHub first.");
+			setNotice({
+				level: "warn",
+				message: "Waiting for GitHub approval",
+			});
 			return;
 		}
 		if (response.data?.status === "authenticated") {
 			setDeviceFlow(null);
+			setNotice({
+				level: "success",
+				message: "GitHub account connected",
+			});
 			await loadState();
 		}
 	};
@@ -304,9 +341,17 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "PAT login failed");
+			setNotice({
+				level: "error",
+				message: "PAT login failed",
+			});
 			return;
 		}
 		setPatToken("");
+		setNotice({
+			level: "success",
+			message: "GitHub account connected",
+		});
 		await loadState();
 	};
 
@@ -320,9 +365,17 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Logout failed");
+			setNotice({
+				level: "error",
+				message: "Logout failed",
+			});
 			return;
 		}
 		setDeviceFlow(null);
+		setNotice({
+			level: "warn",
+			message: "GitHub account disconnected",
+		});
 		await loadState();
 	};
 
@@ -336,9 +389,17 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Could not clear activity log");
+			setNotice({
+				level: "error",
+				message: "Could not clear activity log",
+			});
 			return;
 		}
 		setData((prev) => (prev ? { ...prev, recentEvents: [] } : prev));
+		setNotice({
+			level: "success",
+			message: "Activity log cleared",
+		});
 	};
 
 	const clearRepoSelection = async (): Promise<void> => {
@@ -399,10 +460,18 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Create failed");
+			setNotice({
+				level: "error",
+				message: "Repository creation failed",
+			});
 			return;
 		}
 		setCreateOpen(false);
 		setCreateName("");
+		setNotice({
+			level: "success",
+			message: "Repository created and selected",
+		});
 		await loadState();
 	};
 
@@ -417,6 +486,10 @@ const App = (): ReactElement => {
 		const validationError = validateBranchName(newBranchName, existing);
 		if (validationError) {
 			setError(validationError);
+			setNotice({
+				level: "warn",
+				message: validationError,
+			});
 			return;
 		}
 
@@ -428,6 +501,10 @@ const App = (): ReactElement => {
 			"";
 		if (!fromBranch) {
 			setError("No source branch available");
+			setNotice({
+				level: "warn",
+				message: "No source branch available",
+			});
 			return;
 		}
 
@@ -443,6 +520,10 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Could not create branch");
+			setNotice({
+				level: "error",
+				message: "Branch creation failed",
+			});
 			return;
 		}
 
@@ -453,6 +534,10 @@ const App = (): ReactElement => {
 		setCreateBranchName("");
 		setCreateBranchFrom(newBranchName);
 		setData((prev) => (prev ? { ...prev, settings: nextSelection } : prev));
+		setNotice({
+			level: "success",
+			message: `Branch ${newBranchName} created`,
+		});
 		const fetched = await refreshBranchesOnly(data.settings.selectedRepoFullName);
 		setBranches(fetched);
 	};
@@ -486,6 +571,9 @@ const App = (): ReactElement => {
 			</p>
 
 			{error ? <p className="error-text">{error}</p> : null}
+			{notice ? (
+				<p className={`notice notice-${notice.level}`}>{notice.message}</p>
+			) : null}
 
 			<section className="settings-section">
 				<h2>GitHub account</h2>

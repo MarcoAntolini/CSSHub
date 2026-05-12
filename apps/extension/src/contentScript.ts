@@ -335,6 +335,7 @@ const processSubmission = async (): Promise<void> => {
 };
 
 const installSubmitListeners = (): void => {
+	// Main ingestion path: capture and submit are automatic on CSSBattle submit clicks.
 	document.addEventListener(
 		"click",
 		(event) => {
@@ -404,4 +405,5 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
 if (window.location.pathname.startsWith("/play/")) {
 	installSubmitListeners();
+	console.info("[CssHub] Auto-capture enabled: submissions are synced on submit.");
 }
