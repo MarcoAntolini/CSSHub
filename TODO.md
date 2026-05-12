@@ -13,3 +13,4 @@
 ## TODO NEXT
 
 - rimuovere contorno dai loghi (photopea?)
+- fare controllo codice superfluo
