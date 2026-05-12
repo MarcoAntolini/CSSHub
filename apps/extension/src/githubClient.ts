@@ -184,6 +184,84 @@ export type CommitResult = {
 	commitUrl: string;
 };
 
+export type SavedSubmissionMetrics = {
+	score: number;
+	matchPct: number;
+};
+
+const encodeRepoPath = (path: string): string =>
+	path
+		.split("/")
+		.map((segment) => encodeURIComponent(segment))
+		.join("/");
+
+const parseSavedSubmissionMetrics = (
+	raw: unknown
+): SavedSubmissionMetrics | null => {
+	if (!raw || typeof raw !== "object") {
+		return null;
+	}
+	const data = raw as Record<string, unknown>;
+	if (
+		typeof data.score !== "number" ||
+		!Number.isFinite(data.score) ||
+		typeof data.matchPct !== "number" ||
+		!Number.isFinite(data.matchPct)
+	) {
+		return null;
+	}
+	return {
+		score: data.score,
+		matchPct: data.matchPct,
+	};
+};
+
+export const getSavedSubmissionMetrics = async (
+	token: string,
+	repoFullName: string,
+	branch: string,
+	metadataPath: string
+): Promise<SavedSubmissionMetrics | null> => {
+	const { owner, repo } = parseRepoFullName(repoFullName);
+	const response = await fetch(
+		`https://api.github.com/repos/${owner}/${repo}/contents/${encodeRepoPath(metadataPath)}?ref=${encodeURIComponent(branch)}`,
+		{
+			headers: {
+				Accept: "application/vnd.github+json",
+				Authorization: `Bearer ${token}`,
+				"X-GitHub-Api-Version": "2022-11-28",
+			},
+		}
+	);
+
+	if (response.status === 404) {
+		return null;
+	}
+	if (response.status === 409 || response.status === 422) {
+		return null;
+	}
+	if (!response.ok) {
+		const payload = await response.text();
+		throw new Error(`GitHub request failed (${response.status}): ${payload}`);
+	}
+
+	const data = (await response.json()) as {
+		content?: unknown;
+		encoding?: unknown;
+	};
+	if (data.encoding !== "base64" || typeof data.content !== "string") {
+		return null;
+	}
+
+	try {
+		const decoded = atob(data.content.replace(/\n/g, ""));
+		const parsed = JSON.parse(decoded) as unknown;
+		return parseSavedSubmissionMetrics(parsed);
+	} catch (_error) {
+		return null;
+	}
+};
+
 const getBranchHeadSha = async (
 	token: string,
 	owner: string,

@@ -236,6 +236,23 @@ body {
 	border-color: rgba(248, 113, 113, 0.45);
 }
 
+.event-best-kept {
+	background: rgba(120, 53, 15, 0.22);
+}
+
+.event-pill {
+	display: inline-flex;
+	width: fit-content;
+	padding: 0.12rem 0.45rem;
+	border-radius: 999px;
+	font-size: 0.64rem;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: #fcd34d;
+	background: rgba(120, 53, 15, 0.45);
+	border: 1px solid rgba(251, 191, 36, 0.45);
+}
+
 .device-flow {
 	background: rgba(2, 6, 23, 0.6);
 	border-radius: 8px;

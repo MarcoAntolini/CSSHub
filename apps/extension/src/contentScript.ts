@@ -290,6 +290,9 @@ let isProcessingSubmission = false;
 
 const processSubmission = async (): Promise<void> => {
 	if (isProcessingSubmission) {
+		console.info(
+			"[CssHub] Submit ignored because a previous submission is still processing."
+		);
 		return;
 	}
 	isProcessingSubmission = true;
@@ -316,10 +319,23 @@ const processSubmission = async (): Promise<void> => {
 		};
 		const response = await chrome.runtime.sendMessage(message);
 		if (!response?.ok) {
-			console.warn("[CssHub] Submission payload rejected", response?.error);
+			console.warn(
+				"[CssHub] Submission rejected by extension background logic."
+			);
 			return;
 		}
-		console.info("[CssHub] Submission captured", response.data);
+		const ingestion = response.data as
+			| { committed?: unknown; reason?: unknown }
+			| undefined;
+		const reason =
+			typeof ingestion?.reason === "string"
+				? ingestion.reason
+				: "Submission processed";
+		if (ingestion?.committed === true) {
+			console.info("[CssHub] Submission committed", { reason });
+			return;
+		}
+		console.info("[CssHub] Submission skipped", { reason });
 	} catch (error) {
 		if (isExtensionContextInvalidated(error)) {
 			console.warn(
@@ -328,7 +344,7 @@ const processSubmission = async (): Promise<void> => {
 			return;
 		}
 
-		console.error("[CssHub] Submission processing failed", error);
+		console.error("[CssHub] Submission processing failed unexpectedly", error);
 	} finally {
 		isProcessingSubmission = false;
 	}

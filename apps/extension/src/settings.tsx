@@ -753,8 +753,11 @@ const App = (): ReactElement => {
 				) : (
 					<ul className="event-list">
 						{recentEvents.map((ev) => (
-							<li key={ev.id} className={`event event-${ev.level}`}>
+							<li key={ev.id} className={`event event-${ev.level} ${ev.code === "SYNC_SKIPPED_NOT_IMPROVED" ? "event-best-kept" : ""}`}>
 								<span>{new Date(ev.timestamp).toLocaleString()}</span>
+								{ev.code === "SYNC_SKIPPED_NOT_IMPROVED" ? (
+									<span className="event-pill">best result kept</span>
+								) : null}
 								<span>{ev.message}</span>
 								{ev.commitUrl ? (
 									<a href={ev.commitUrl} target="_blank" rel="noreferrer" style={{ color: "#38bdf8" }}>

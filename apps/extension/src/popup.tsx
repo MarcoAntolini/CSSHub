@@ -15,6 +15,17 @@ const previewSelector = "iframe[title*='Preview' i]";
 const THRESHOLD_MIN = 0;
 const THRESHOLD_MAX = 100;
 const THRESHOLD_SAVE_DEBOUNCE_MS = 400;
+const NOT_IMPROVED_CODE = "SYNC_SKIPPED_NOT_IMPROVED";
+const ERROR_LIKE_CODES = new Set([
+	"SYNC_AUTH_REQUIRED",
+	"SYNC_REPO_REQUIRED",
+	"GITHUB_NOT_FOUND",
+	"GITHUB_CONFLICT",
+	"GITHUB_RATE_LIMIT",
+	"GITHUB_UNAVAILABLE",
+	"NETWORK_ERROR",
+	"UNEXPECTED_ERROR",
+]);
 const POPUP_ERRORS = {
 	loadState: "Could not load popup state",
 	saveThreshold: "Could not update threshold",
@@ -196,6 +207,20 @@ const App = (): ReactElement => {
 	}
 
 	const { auth, settings, lastSubmission, lastSubmissionAccepted, lastIngestion } = data;
+	const statusTone = lastIngestion?.committed
+		? "success"
+		: lastIngestion?.code === NOT_IMPROVED_CODE
+		? "warn"
+		: lastIngestion?.code && ERROR_LIKE_CODES.has(lastIngestion.code)
+		? "error"
+		: "neutral";
+	const statusText = lastIngestion?.committed
+		? "committed"
+		: lastIngestion?.code === NOT_IMPROVED_CODE
+		? "skipped · best kept"
+		: lastSubmissionAccepted
+		? "accepted"
+		: "skipped";
 
 	return (
 		<main className="popup popup-shell">
@@ -289,10 +314,12 @@ const App = (): ReactElement => {
 								<span className="muted">
 									{lastSubmission.matchPct != null ? `${lastSubmission.matchPct}%` : "—"}
 								</span>
-								<span className="muted">
-									{lastSubmissionAccepted ? "accepted" : "skipped"}
+								<span className={`last-status last-status-${statusTone}`}>
+									{statusText}
 								</span>
-								<span className="last-result muted">{lastIngestion?.reason ?? ""}</span>
+								<span className={`last-result ${statusTone === "error" ? "last-result-error" : statusTone === "warn" ? "last-result-warn" : statusTone === "success" ? "last-result-success" : "muted"}`}>
+									{lastIngestion?.reason ?? ""}
+								</span>
 								{lastIngestion?.commitUrl ? (
 									<a href={lastIngestion.commitUrl} target="_blank" rel="noreferrer" className="commit-link">
 										Commit

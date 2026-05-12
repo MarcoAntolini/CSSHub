@@ -167,6 +167,7 @@ export const submissionIngestionResponseSchema = z.object({
 	accepted: z.boolean(),
 	threshold: z.number().min(0).max(100),
 	reason: z.string(),
+	code: z.string().min(1).optional(),
 	committed: z.boolean(),
 	commitUrl: z.string().url().nullable(),
 });
