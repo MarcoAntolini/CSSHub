@@ -1,21 +1,11 @@
-# <img src="public/icons/icon_48.png" width="45" align="left"> App
+# <img src="apps/extension/public/icons/icon_48.png" width="45" align="left"> CssHub
 
-My Chrome Extension
-
-## Features
-
-- Feature 1
-- Feature 2
+CssHub is a Chrome extension that allows you to sync your CSSBattle submissions to GitHub.
 
 ## Install
 
-[**Chrome** extension]() <!-- TODO: Add chrome extension link inside parenthesis -->
+[**Chrome** extension](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)
 
 ## Contribution
 
 Suggestions and pull requests are welcomed!.
-
----
-
-This project was bootstrapped with [Chrome Extension CLI](https://github.com/dutiyesh/chrome-extension-cli)
-
