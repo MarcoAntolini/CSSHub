@@ -8,6 +8,7 @@ import {
 	type SyncEvent,
 	type SubmissionPayload,
 	type Repo,
+	type Branch,
 	type ElementDimensions,
 } from "./shared/contracts";
 import {
@@ -19,8 +20,10 @@ import {
 } from "./githubAuth";
 import {
 	createUserRepo,
+	createBranch,
 	commitFilesToRepo,
 	fetchAuthenticatedUser,
+	listBranches,
 	listUserRepos,
 	type CommitFile,
 } from "./githubClient";
@@ -733,6 +736,16 @@ const handleListRepos: Handler<"listRepos"> = async (_data, sendResponse) => {
 	sendResponse({ ok: true, data: repos });
 };
 
+const handleListBranches: Handler<"listBranches"> = async (data, sendResponse) => {
+	const state = await getStoredState();
+	if (!state.githubToken) {
+		sendResponse({ ok: false, error: "Not authenticated with GitHub" });
+		return;
+	}
+	const branches = await listBranches(state.githubToken, data.repoFullName);
+	sendResponse({ ok: true, data: branches });
+};
+
 const handleCreateRepo: Handler<"createRepo"> = async (data, sendResponse) => {
 	const state = await getStoredState();
 	if (!state.githubToken) {
@@ -750,6 +763,30 @@ const handleCreateRepo: Handler<"createRepo"> = async (data, sendResponse) => {
 		},
 	});
 	sendResponse({ ok: true, data: repo });
+};
+
+const handleCreateBranch: Handler<"createBranch"> = async (data, sendResponse) => {
+	const state = await getStoredState();
+	if (!state.githubToken) {
+		sendResponse({ ok: false, error: "Not authenticated with GitHub" });
+		return;
+	}
+
+	const branch: Branch = await createBranch(
+		state.githubToken,
+		data.repoFullName,
+		data.newBranch,
+		data.fromBranch
+	);
+	await saveStoredState({
+		...state,
+		settings: {
+			...state.settings,
+			selectedRepoFullName: data.repoFullName,
+			selectedBranch: branch.name,
+		},
+	});
+	sendResponse({ ok: true, data: branch });
 };
 
 const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
@@ -860,7 +897,9 @@ const actionHandlers: {
 	logoutGithub: handleLogoutGithub,
 	clearRecentEvents: handleClearRecentEvents,
 	listRepos: handleListRepos,
+	listBranches: handleListBranches,
 	createRepo: handleCreateRepo,
+	createBranch: handleCreateBranch,
 	cssbattleSubmission: handleCssbattleSubmission,
 };
 

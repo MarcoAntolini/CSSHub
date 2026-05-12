@@ -41,6 +41,12 @@ export const repoSchema = z.object({
 
 export type Repo = z.infer<typeof repoSchema>;
 
+export const branchSchema = z.object({
+	name: z.string().min(1),
+});
+
+export type Branch = z.infer<typeof branchSchema>;
+
 export const extensionSettingsSchema = z.object({
 	threshold: z.number().min(0).max(100),
 	selectedRepoFullName: z.string().nullable(),
@@ -115,6 +121,16 @@ export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
 	}),
 	z.object({
 		action: z.literal("listRepos"),
+	}),
+	z.object({
+		action: z.literal("listBranches"),
+		repoFullName: z.string().min(1),
+	}),
+	z.object({
+		action: z.literal("createBranch"),
+		repoFullName: z.string().min(1),
+		newBranch: z.string().min(1),
+		fromBranch: z.string().min(1),
 	}),
 	z.object({
 		action: z.literal("createRepo"),

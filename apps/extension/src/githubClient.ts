@@ -1,4 +1,4 @@
-import { repoSchema, type Repo } from "./shared/contracts";
+import { branchSchema, repoSchema, type Branch, type Repo } from "./shared/contracts";
 
 const githubRequest = async <T>(
 	token: string,
@@ -85,6 +85,59 @@ export const createUserRepo = async (
 		owner: data.owner.login,
 		private: data.private,
 		defaultBranch: data.default_branch,
+	});
+};
+
+const parseRepoFullName = (repoFullName: string): { owner: string; repo: string } => {
+	const [owner, repo] = repoFullName.split("/");
+	if (!owner || !repo) {
+		throw new Error("Invalid repository full name");
+	}
+	return { owner, repo };
+};
+
+export const listBranches = async (
+	token: string,
+	repoFullName: string
+): Promise<Branch[]> => {
+	const { owner, repo } = parseRepoFullName(repoFullName);
+	const data = await githubRequest<Array<{ name: string }>>(
+		token,
+		`/repos/${owner}/${repo}/branches?per_page=100`
+	);
+	return data
+		.map((branch) =>
+			branchSchema.parse({
+				name: branch.name,
+			})
+		)
+		.sort((a, b) => a.name.localeCompare(b.name));
+};
+
+export const createBranch = async (
+	token: string,
+	repoFullName: string,
+	newBranch: string,
+	fromBranch: string
+): Promise<Branch> => {
+	const { owner, repo } = parseRepoFullName(repoFullName);
+	const fromSha = await getBranchHeadSha(token, owner, repo, fromBranch);
+	await githubRequest(
+		token,
+		`/repos/${owner}/${repo}/git/refs`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				ref: `refs/heads/${newBranch}`,
+				sha: fromSha,
+			}),
+		}
+	);
+	return branchSchema.parse({
+		name: newBranch,
 	});
 };
 
@@ -282,10 +335,7 @@ export const commitFilesToRepo = async (
 	message: string,
 	files: CommitFile[]
 ): Promise<CommitResult> => {
-	const [owner, repo] = repoFullName.split("/");
-	if (!owner || !repo) {
-		throw new Error("Invalid repository full name");
-	}
+	const { owner, repo } = parseRepoFullName(repoFullName);
 
 	const headSha = await getBranchHeadSha(token, owner, repo, branch);
 	const headCommit = await getCommit(token, owner, repo, headSha);

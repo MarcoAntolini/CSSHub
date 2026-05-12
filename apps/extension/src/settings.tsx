@@ -5,7 +5,9 @@ import {
 	deviceFlowStartResponseSchema,
 	extensionStateResponseSchema,
 	popupToBackgroundMessageSchema,
+	branchSchema,
 	repoSchema,
+	type Branch,
 	type ExtensionSettings,
 	type Repo,
 	type AuthStatus,
@@ -26,6 +28,34 @@ type LoadedState = {
 };
 
 const oauthRedirectHint = (): string => chrome.identity.getRedirectURL("github");
+const BRANCH_NAME_PATTERN = /^[A-Za-z0-9._/-]+$/;
+
+const validateBranchName = (
+	value: string,
+	existingBranchNames: Set<string>
+): string | null => {
+	if (!value) {
+		return "Branch name required";
+	}
+	if (!BRANCH_NAME_PATTERN.test(value)) {
+		return "Use only letters, numbers, dot, underscore, slash, and dash";
+	}
+	if (
+		value.includes("..") ||
+		value.includes("//") ||
+		value.startsWith("/") ||
+		value.endsWith("/") ||
+		value.startsWith(".") ||
+		value.endsWith(".") ||
+		value.endsWith(".lock")
+	) {
+		return "Invalid branch format";
+	}
+	if (existingBranchNames.has(value)) {
+		return "Branch already exists";
+	}
+	return null;
+};
 
 const App = (): ReactElement => {
 	const [data, setData] = useState<LoadedState | null>(null);
@@ -50,6 +80,10 @@ const App = (): ReactElement => {
 	const [pickSearch, setPickSearch] = useState("");
 	const [pickList, setPickList] = useState<Repo[]>([]);
 	const [pickSelected, setPickSelected] = useState<Repo | null>(null);
+	const [branches, setBranches] = useState<Branch[]>([]);
+	const [branchesLoading, setBranchesLoading] = useState(false);
+	const [createBranchName, setCreateBranchName] = useState("");
+	const [createBranchFrom, setCreateBranchFrom] = useState("");
 
 	const loadState = useCallback(async (): Promise<void> => {
 		setLoading(true);
@@ -85,6 +119,60 @@ const App = (): ReactElement => {
 		void loadState();
 	}, [loadState]);
 
+	useEffect(() => {
+		if (!data?.auth.isAuthenticated || !data.settings.selectedRepoFullName) {
+			setBranches([]);
+			setCreateBranchFrom("");
+			return;
+		}
+
+		let cancelled = false;
+		const repoFullName = data.settings.selectedRepoFullName;
+		const selectedBranch = data.settings.selectedBranch;
+		const defaultBranch =
+			data.repos.find((repo) => repo.fullName === repoFullName)?.defaultBranch ??
+			null;
+
+		setBranchesLoading(true);
+		void refreshBranchesOnly(repoFullName)
+			.then((fetched) => {
+				if (cancelled) {
+					return;
+				}
+				setBranches(fetched);
+				const fallbackBranch = defaultBranch ?? fetched[0]?.name ?? null;
+				const validSelection =
+					selectedBranch && fetched.some((branch) => branch.name === selectedBranch)
+						? selectedBranch
+						: fallbackBranch;
+				if (validSelection) {
+					setCreateBranchFrom((prev) =>
+						prev && fetched.some((branch) => branch.name === prev)
+							? prev
+							: validSelection
+					);
+				} else {
+					setCreateBranchFrom("");
+				}
+
+				if (selectedBranch && validSelection && selectedBranch !== validSelection) {
+					void saveSettingsRemote({
+						...data.settings,
+						selectedBranch: validSelection,
+					});
+				}
+			})
+			.finally(() => {
+				if (!cancelled) {
+					setBranchesLoading(false);
+				}
+			});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [data]);
+
 	const saveSettingsRemote = async (
 		next: ExtensionSettings
 	): Promise<boolean> => {
@@ -114,6 +202,20 @@ const App = (): ReactElement => {
 			return [];
 		}
 		const parsed = repoSchema.array().safeParse(response.data);
+		return parsed.success ? parsed.data : [];
+	};
+
+	const refreshBranchesOnly = async (repoFullName: string): Promise<Branch[]> => {
+		const message = popupToBackgroundMessageSchema.parse({
+			action: "listBranches",
+			repoFullName,
+		});
+		const response = await chrome.runtime.sendMessage(message);
+		if (!response?.ok) {
+			setError(response?.error ?? "Could not list branches");
+			return [];
+		}
+		const parsed = branchSchema.array().safeParse(response.data);
 		return parsed.success ? parsed.data : [];
 	};
 
@@ -249,6 +351,9 @@ const App = (): ReactElement => {
 			selectedBranch: null,
 		});
 		if (ok) {
+			setBranches([]);
+			setCreateBranchFrom("");
+			setCreateBranchName("");
 			await loadState();
 		}
 	};
@@ -299,6 +404,57 @@ const App = (): ReactElement => {
 		setCreateOpen(false);
 		setCreateName("");
 		await loadState();
+	};
+
+	const confirmCreateBranch = async (): Promise<void> => {
+		if (!data?.settings.selectedRepoFullName) {
+			setError("Select a repository first");
+			return;
+		}
+
+		const newBranchName = createBranchName.trim();
+		const existing = new Set(branches.map((branch) => branch.name));
+		const validationError = validateBranchName(newBranchName, existing);
+		if (validationError) {
+			setError(validationError);
+			return;
+		}
+
+		const fromBranch =
+			createBranchFrom ||
+			data.settings.selectedBranch ||
+			selectedRepoMeta?.defaultBranch ||
+			branches[0]?.name ||
+			"";
+		if (!fromBranch) {
+			setError("No source branch available");
+			return;
+		}
+
+		setBusy(true);
+		setError(null);
+		const message = popupToBackgroundMessageSchema.parse({
+			action: "createBranch",
+			repoFullName: data.settings.selectedRepoFullName,
+			newBranch: newBranchName,
+			fromBranch,
+		});
+		const response = await chrome.runtime.sendMessage(message);
+		setBusy(false);
+		if (!response?.ok) {
+			setError(response?.error ?? "Could not create branch");
+			return;
+		}
+
+		const nextSelection = {
+			...data.settings,
+			selectedBranch: newBranchName,
+		};
+		setCreateBranchName("");
+		setCreateBranchFrom(newBranchName);
+		setData((prev) => (prev ? { ...prev, settings: nextSelection } : prev));
+		const fetched = await refreshBranchesOnly(data.settings.selectedRepoFullName);
+		setBranches(fetched);
 	};
 
 	const filteredPickList = useMemo(() => {
@@ -418,18 +574,66 @@ const App = (): ReactElement => {
 								Create new…
 							</button>
 						</div>
+						{branchesLoading ? (
+							<p className="muted" style={{ marginTop: "0.75rem" }}>
+								Loading branches…
+							</p>
+						) : null}
 						<div className="row" style={{ marginTop: "1rem" }}>
-							<label htmlFor="branch-settings">Default branch override</label>
-							<input
+							<label htmlFor="branch-settings">Sync branch</label>
+							<select
 								id="branch-settings"
-								type="text"
-								value={settings.selectedBranch ?? selectedRepoMeta?.defaultBranch ?? ""}
+								value={settings.selectedBranch ?? ""}
+								disabled={busy || branchesLoading || branches.length === 0}
 								onChange={(e) => {
-									const v = e.target.value || null;
-									void saveSettingsRemote({ ...settings, selectedBranch: v });
+									const nextBranch = e.target.value || null;
+									void saveSettingsRemote({ ...settings, selectedBranch: nextBranch });
 								}}
+							>
+								{branches.length === 0 ? (
+									<option value="">No branches found</option>
+								) : (
+									branches.map((branch) => (
+										<option key={branch.name} value={branch.name}>
+											{branch.name}
+										</option>
+									))
+								)}
+							</select>
+						</div>
+						<div className="row">
+							<label htmlFor="branch-create-name">Create new branch</label>
+							<input
+								id="branch-create-name"
+								type="text"
+								placeholder="feature/my-branch"
+								value={createBranchName}
+								onChange={(e) => setCreateBranchName(e.target.value)}
+								disabled={busy || branchesLoading}
 							/>
 						</div>
+						<div className="row">
+							<label htmlFor="branch-create-from">From branch</label>
+							<select
+								id="branch-create-from"
+								value={createBranchFrom}
+								onChange={(e) => setCreateBranchFrom(e.target.value)}
+								disabled={busy || branchesLoading || branches.length === 0}
+							>
+								{branches.length === 0 ? (
+									<option value="">No source branch</option>
+								) : (
+									branches.map((branch) => (
+										<option key={`from-${branch.name}`} value={branch.name}>
+											{branch.name}
+										</option>
+									))
+								)}
+							</select>
+						</div>
+						<button type="button" className="btn" onClick={() => void confirmCreateBranch()} disabled={busy || branchesLoading || branches.length === 0}>
+							Create branch
+						</button>
 					</>
 				) : (
 					<>
