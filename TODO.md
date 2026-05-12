@@ -9,3 +9,7 @@
 - l'input del threshold deve essere un numero tra 0 e 100, non deve essere possibile inserire un valore fuori da questo range. può essere reso uno slider per rendere più facile l'interazione dell'utente
 - al momento non c'è nessun tipo di feedback visivo per l'utente a parte nel popup e nei settings. dovremmo aggiungere qualche tipo di alert o notifica per indicare all'utente che sta succedendo qualcosa?  oppure è sufficiente quello che c'è? ragioniamo sulla migliore UX per l'utente
 - l'activity log nei settings si resetta? se non lo fa già automaticamente è necessario forse aggiungere un pulsante clear per l'utente?
+
+## TODO NEXT
+
+- rimuovere contorno dai loghi (photopea?)
