@@ -1,32 +1,20 @@
 {
-	"name": "app",
+	"name": "csshub",
 	"version": "0.1.0",
-	"description": "CssHub Chrome Extension",
+	"description": "CssHub monorepo",
 	"author": "CssHub",
 	"license": "MIT",
 	"private": true,
-	"keywords": [],
 	"type": "module",
-	"workspaces": ["apps/backend"],
+	"workspaces": [
+		"apps/*"
+	],
 	"scripts": {
-		"dev": "vite build --watch --mode development",
-		"build": "vite build",
-		"typecheck": "tsc --noEmit",
+		"dev": "npm --workspace @csshub/extension run dev",
+		"build": "npm --workspace @csshub/extension run build",
+		"typecheck": "npm run typecheck --workspaces --if-present",
 		"dev:backend": "npm --workspace @csshub/backend run dev",
+		"typecheck:extension": "npm --workspace @csshub/extension run typecheck",
 		"typecheck:backend": "npm --workspace @csshub/backend run typecheck"
-	},
-	"devDependencies": {
-		"@types/chrome": "^0.1.24",
-		"@types/react": "^19.1.5",
-		"@types/react-dom": "^19.1.5",
-		"@vitejs/plugin-react": "^4.5.2",
-		"typescript": "^5.8.3",
-		"vite": "^6.3.5"
-	},
-	"dependencies": {
-		"react": "^19.1.0",
-		"react-dom": "^19.1.0",
-		"zod": "^3.24.4",
-		"zustand": "^5.0.4"
 	}
 }
