@@ -15,6 +15,7 @@
 		"typecheck": "npm run typecheck --workspaces --if-present",
 		"dev:backend": "npm --workspace @csshub/backend run dev",
 		"build": "npm --workspace @csshub/extension run build:prod",
+		"build:staging": "npm --workspace @csshub/extension run build:staging",
 		"build:preview": "npm --workspace @csshub/extension run build:preview",
 		"build:dev": "npm --workspace @csshub/extension run build:dev",
 		"typecheck:extension": "npm --workspace @csshub/extension run typecheck",

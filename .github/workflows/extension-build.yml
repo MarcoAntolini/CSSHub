@@ -4,21 +4,21 @@ on:
   pull_request:
     branches: ["*"]
   push:
-    branches: ["main"]
+    branches: ["staging"]
   workflow_dispatch:
     inputs:
       target:
         description: "Build target"
         required: true
-        default: "preview"
+        default: "staging"
         type: choice
         options:
-          - preview
+          - staging
           - production
 
 jobs:
-  build_preview:
-    if: github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'preview')
+  typecheck_pr:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -36,22 +36,41 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Validate preview backend URL variable
+  build_staging:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'staging')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Validate staging backend URL variable
         run: |
-          if [ -z "${{ vars.EXTENSION_PREVIEW_BACKEND_URL }}" ]; then
-            echo "Missing repository variable EXTENSION_PREVIEW_BACKEND_URL"
+          if [ -z "${{ vars.EXTENSION_STAGING_BACKEND_URL }}" ]; then
+            echo "Missing repository variable EXTENSION_STAGING_BACKEND_URL"
             exit 1
           fi
 
-      - name: Build extension (preview)
+      - name: Build extension (staging)
         env:
-          VITE_OAUTH_BACKEND_BASE_URL: ${{ vars.EXTENSION_PREVIEW_BACKEND_URL }}
-        run: npm run build:preview
+          VITE_OAUTH_BACKEND_BASE_URL: ${{ vars.EXTENSION_STAGING_BACKEND_URL }}
+        run: npm run build:staging
 
-      - name: Upload preview artifact
+      - name: Upload staging artifact
         uses: actions/upload-artifact@v4
         with:
-          name: extension-dist-preview
+          name: extension-dist-staging
           path: apps/extension/dist
 
   build_production:
