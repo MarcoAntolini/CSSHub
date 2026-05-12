@@ -1,6 +1,7 @@
-import { createRoot } from "react-dom/client";
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import "../public/popup.css";
 import {
 	extensionStateResponseSchema,
 	popupToBackgroundMessageSchema,
@@ -9,13 +10,17 @@ import {
 	type SubmissionIngestionResponse,
 	type SubmissionPayload,
 } from "./shared/contracts";
-import "../public/popup.css";
 
-const previewSelector = "iframe[title*='Preview' i]";
 const THRESHOLD_MIN = 0;
 const THRESHOLD_MAX = 100;
 const THRESHOLD_SAVE_DEBOUNCE_MS = 400;
-const NOT_IMPROVED_CODE = "SYNC_SKIPPED_NOT_IMPROVED";
+const SHOW_STATUS_DEMO = false;
+const SKIP_WARN_CODES = new Set([
+	"SYNC_SKIPPED_NOT_IMPROVED",
+	"SYNC_SKIPPED_THRESHOLD",
+	"SYNC_SKIPPED_INVALID_SCORE",
+	"SYNC_SKIPPED_DUPLICATE",
+]);
 const ERROR_LIKE_CODES = new Set([
 	"SYNC_AUTH_REQUIRED",
 	"SYNC_REPO_REQUIRED",
@@ -25,12 +30,215 @@ const ERROR_LIKE_CODES = new Set([
 	"GITHUB_UNAVAILABLE",
 	"NETWORK_ERROR",
 	"UNEXPECTED_ERROR",
+	"AUTH_GITHUB_UNAUTHORIZED",
+	"AUTH_STATE_MISMATCH",
+	"AUTH_OAUTH_CODE_MISSING",
 ]);
 const POPUP_ERRORS = {
 	loadState: "Could not load popup state",
 	saveThreshold: "Could not update threshold",
-	manualCapture: "Manual preview capture failed",
 } as const;
+
+type StatusTone = "success" | "warn" | "error" | "neutral";
+
+type SubmissionCardView = {
+	title: string;
+	meta: string;
+	tone: StatusTone;
+	statusText: string;
+	reason: string;
+	commitUrl?: string | null;
+};
+
+const STATUS_DEMO_CASES: Array<{ label: string; view: SubmissionCardView }> = [
+	{
+		label: "Commit success",
+		view: {
+			title: "Carrom",
+			meta: "99.2% match · 640 score · just now",
+			tone: "success",
+			statusText: "committed",
+			reason: "Submission committed to GitHub.",
+			commitUrl: "#",
+		},
+	},
+	{
+		label: "Skipped · best kept",
+		view: {
+			title: "Carrom",
+			meta: "98.5% match · 612 score · just now",
+			tone: "warn",
+			statusText: "skipped",
+			reason:
+				"Submission skipped: current 98.50% / 612 does not beat best 99.20% / 640.",
+		},
+	},
+	{
+		label: "Skipped · below threshold",
+		view: {
+			title: "Carrom",
+			meta: "82.4% match · 380 score · just now",
+			tone: "warn",
+			statusText: "skipped",
+			reason: "Submission below threshold.",
+		},
+	},
+	{
+		label: "Skipped · score is 0",
+		view: {
+			title: "Carrom",
+			meta: "— · 0 score · just now",
+			tone: "warn",
+			statusText: "skipped",
+			reason:
+				"Submission skipped because Last score is zero, unavailable, or invalid.",
+		},
+	},
+	{
+		label: "Skipped · duplicate",
+		view: {
+			title: "Carrom",
+			meta: "97.1% match · 540 score · just now",
+			tone: "warn",
+			statusText: "skipped",
+			reason:
+				"Duplicate submission skipped: same challenge, code, and score within 45s window.",
+		},
+	},
+	{
+		label: "Action needed · auth missing",
+		view: {
+			title: "Carrom",
+			meta: "97.1% match · 540 score · just now",
+			tone: "error",
+			statusText: "failed",
+			reason: "Submission accepted but GitHub is not authenticated.",
+		},
+	},
+	{
+		label: "Action needed · repo missing",
+		view: {
+			title: "Carrom",
+			meta: "97.1% match · 540 score · just now",
+			tone: "error",
+			statusText: "failed",
+			reason: "Submission accepted but no repository selected.",
+		},
+	},
+	{
+		label: "Error · repo/branch not found",
+		view: {
+			title: "Carrom",
+			meta: "97.1% match · 540 score · just now",
+			tone: "error",
+			statusText: "failed",
+			reason: "Repository or branch not found. Verify repository settings.",
+		},
+	},
+	{
+		label: "Error · GitHub rejected operation",
+		view: {
+			title: "Carrom",
+			meta: "97.1% match · 540 score · just now",
+			tone: "error",
+			statusText: "failed",
+			reason: "GitHub rejected this operation. Check repository and branch.",
+		},
+	},
+	{
+		label: "Error · rate limit",
+		view: {
+			title: "Carrom",
+			meta: "97.1% match · 540 score · just now",
+			tone: "error",
+			statusText: "failed",
+			reason: "GitHub rate limit reached. Retry in a few minutes.",
+		},
+	},
+	{
+		label: "Error · GitHub unavailable",
+		view: {
+			title: "Carrom",
+			meta: "97.1% match · 540 score · just now",
+			tone: "error",
+			statusText: "failed",
+			reason: "GitHub is temporarily unavailable. Try again shortly.",
+		},
+	},
+	{
+		label: "Error · network",
+		view: {
+			title: "Carrom",
+			meta: "97.1% match · 540 score · just now",
+			tone: "error",
+			statusText: "failed",
+			reason: "Network error while contacting GitHub services.",
+		},
+	},
+	{
+		label: "Error · unexpected",
+		view: {
+			title: "Carrom",
+			meta: "97.1% match · 540 score · just now",
+			tone: "error",
+			statusText: "failed",
+			reason: "Operation failed. Check settings and try again.",
+		},
+	},
+];
+
+const SubmissionCard = ({
+	view,
+}: {
+	view: SubmissionCardView;
+}): ReactElement => (
+	<div className="last-card">
+		<div className="last-row-head">
+			<span className="last-title" title={view.title}>
+				{view.title}
+			</span>
+			<span className={`last-status last-status-${view.tone}`}>
+				{view.statusText}
+			</span>
+		</div>
+		{view.meta ? <p className="last-meta">{view.meta}</p> : null}
+		{view.reason ? (
+			<p className={`last-reason last-reason-${view.tone}`}>{view.reason}</p>
+		) : null}
+		{view.commitUrl ? (
+			<a
+				href={view.commitUrl}
+				target="_blank"
+				rel="noreferrer"
+				className="last-commit-link"
+				onClick={(e) => {
+					if (view.commitUrl === "#") {
+						e.preventDefault();
+					}
+				}}
+			>
+				View commit ↗
+			</a>
+		) : null}
+	</div>
+);
+
+const relativeTime = (iso: string): string | null => {
+	const t = Date.parse(iso);
+	if (!Number.isFinite(t)) {
+		return null;
+	}
+	const diff = Date.now() - t;
+	const sec = Math.max(0, Math.round(diff / 1000));
+	if (sec < 5) return "just now";
+	if (sec < 60) return `${sec}s ago`;
+	const min = Math.round(sec / 60);
+	if (min < 60) return `${min}m ago`;
+	const hr = Math.round(min / 60);
+	if (hr < 24) return `${hr}h ago`;
+	const day = Math.round(hr / 24);
+	return `${day}d ago`;
+};
 
 type PopupNotice = {
 	level: "success" | "warn" | "error";
@@ -58,9 +266,8 @@ type PopupState = {
 const App = (): ReactElement => {
 	const [data, setData] = useState<PopupState | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [status, setStatus] = useState<"idle" | "capturing" | "saving" | "error">("idle");
+	const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
 	const [error, setError] = useState<string | null>(null);
-	const [capturePreview, setCapturePreview] = useState<string | null>(null);
 	const [thresholdDraft, setThresholdDraft] = useState(95);
 	const [notice, setNotice] = useState<PopupNotice | null>(null);
 	const hasLoadedOnceRef = useRef(false);
@@ -155,72 +362,40 @@ const App = (): ReactElement => {
 			});
 			return;
 		}
-		setData({ ...data, settings: { ...data.settings, threshold: clampThreshold(threshold) } });
-		setNotice({
-			level: "success",
-			message: `Threshold saved at ${clampThreshold(threshold)}%`,
+		setData({
+			...data,
+			settings: { ...data.settings, threshold: clampThreshold(threshold) },
 		});
 		setStatus("idle");
-	};
-
-	const handleCapture = async (): Promise<void> => {
-		const message = popupToBackgroundMessageSchema.parse({
-			action: "captureElement",
-			selector: previewSelector,
-		});
-		setStatus("capturing");
-		setError(null);
-		setCapturePreview(null);
-
-		try {
-			const response = await chrome.runtime.sendMessage(message);
-			if (!response?.ok || typeof response.data?.croppedDataUrl !== "string") {
-				setStatus("error");
-				setNotice({
-					level: "error",
-					message: POPUP_ERRORS.manualCapture,
-				});
-				return;
-			}
-			setCapturePreview(response.data.croppedDataUrl);
-			setNotice({
-				level: "success",
-				message: "Manual preview capture completed",
-			});
-			setStatus("idle");
-		} catch (_err) {
-			setStatus("error");
-			setNotice({
-				level: "error",
-				message: POPUP_ERRORS.manualCapture,
-			});
-		}
 	};
 
 	if (loading || !data) {
 		return (
 			<main className="popup popup-shell">
 				<h1 className="popup-title">CssHub</h1>
-				<p className="subtitle">{loading ? "Loading…" : "Something went wrong."}</p>
+				<p className="subtitle">
+					{loading ? "Loading…" : "Something went wrong."}
+				</p>
 			</main>
 		);
 	}
 
-	const { auth, settings, lastSubmission, lastSubmissionAccepted, lastIngestion } = data;
-	const statusTone = lastIngestion?.committed
+	const { auth, settings, lastSubmission, lastIngestion } = data;
+	const statusTone: StatusTone = lastIngestion?.committed
 		? "success"
-		: lastIngestion?.code === NOT_IMPROVED_CODE
-		? "warn"
 		: lastIngestion?.code && ERROR_LIKE_CODES.has(lastIngestion.code)
-		? "error"
-		: "neutral";
-	const statusText = lastIngestion?.committed
-		? "committed"
-		: lastIngestion?.code === NOT_IMPROVED_CODE
-		? "skipped · best kept"
-		: lastSubmissionAccepted
-		? "accepted"
-		: "skipped";
+			? "error"
+			: lastIngestion?.code && SKIP_WARN_CODES.has(lastIngestion.code)
+				? "warn"
+				: "neutral";
+	const statusText =
+		statusTone === "success"
+			? "committed"
+			: statusTone === "error"
+				? "failed"
+				: statusTone === "warn"
+					? "skipped"
+					: "—";
 
 	return (
 		<main className="popup popup-shell">
@@ -249,13 +424,51 @@ const App = (): ReactElement => {
 				<>
 					<section className="card card-sync">
 						<h2 className="card-heading">Submission flow</h2>
-						<p className="card-help">
-							On CSSBattle submit, CssHub automatically captures preview and sends data.
-						</p>
-						<label className="field-label" htmlFor="thr">
-							Match threshold (%)
-						</label>
-						<div className="threshold-row">
+						{settings.selectedRepoFullName ? (
+							<a
+								className="sync-target"
+								href={`https://github.com/${settings.selectedRepoFullName}/tree/${settings.selectedBranch ?? "main"}`}
+								target="_blank"
+								rel="noreferrer"
+							>
+								<span className="sync-target-label">Syncing to</span>
+								<span className="sync-target-repo">
+									{settings.selectedRepoFullName}
+								</span>
+								<span className="sync-target-branch">
+									· {settings.selectedBranch ?? "main"}
+								</span>
+							</a>
+						) : (
+							<p className="sync-target sync-target-empty">
+								<span className="sync-target-label">No repo selected.</span>
+								<button
+									type="button"
+									className="btn-link"
+									onClick={openSettingsPage}
+								>
+									Set up in Settings
+								</button>
+							</p>
+						)}
+						<div className="threshold-head">
+							<label className="field-label" htmlFor="thr">
+								Match threshold
+							</label>
+							<span className="threshold-value">{thresholdDraft}%</span>
+						</div>
+						<div className="threshold-controls">
+							<button
+								type="button"
+								className="threshold-step"
+								aria-label="Decrease threshold by 1"
+								disabled={status === "saving" || thresholdDraft <= THRESHOLD_MIN}
+								onClick={() =>
+									setThresholdDraft(clampThreshold(thresholdDraft - 1))
+								}
+							>
+								−
+							</button>
 							<input
 								id="thr"
 								className="field-slider"
@@ -271,68 +484,67 @@ const App = (): ReactElement => {
 									}
 								}}
 							/>
-							<input
-								className="field-input field-threshold-number"
-								type="number"
-								min={THRESHOLD_MIN}
-								max={THRESHOLD_MAX}
-								value={thresholdDraft}
-								disabled={status === "saving"}
-								onChange={(e) => {
-									const t = Number(e.target.value);
-									if (Number.isFinite(t)) {
-										setThresholdDraft(clampThreshold(t));
-									}
-								}}
-							/>
+							<button
+								type="button"
+								className="threshold-step"
+								aria-label="Increase threshold by 1"
+								disabled={status === "saving" || thresholdDraft >= THRESHOLD_MAX}
+								onClick={() =>
+									setThresholdDraft(clampThreshold(thresholdDraft + 1))
+								}
+							>
+								+
+							</button>
 						</div>
-						<p className="muted">Saved value: {settings.threshold}%</p>
-						<button
-							type="button"
-							className="btn-full"
-							onClick={() => void handleCapture()}
-							disabled={status === "capturing"}
-						>
-							{status === "capturing"
-								? "Running manual test…"
-								: "Run manual preview capture test"}
-						</button>
-						{capturePreview ? (
-							<img
-								src={capturePreview}
-								alt="Captured CSSBattle preview"
-								className="capture-preview"
-							/>
-						) : null}
+						<p className="threshold-status">
+							{thresholdDraft !== settings.threshold || status === "saving"
+								? "Saving…"
+								: "Saved"}
+						</p>
 					</section>
 
 					<section className="card card-compact">
 						<h2 className="card-heading">Last submission</h2>
 						{lastSubmission ? (
-							<div className="last-grid">
-								<span>{lastSubmission.challengeName}</span>
-								<span className="muted">
-									{lastSubmission.matchPct != null ? `${lastSubmission.matchPct}%` : "—"}
-								</span>
-								<span className={`last-status last-status-${statusTone}`}>
-									{statusText}
-								</span>
-								<span className={`last-result ${statusTone === "error" ? "last-result-error" : statusTone === "warn" ? "last-result-warn" : statusTone === "success" ? "last-result-success" : "muted"}`}>
-									{lastIngestion?.reason ?? ""}
-								</span>
-								{lastIngestion?.commitUrl ? (
-									<a href={lastIngestion.commitUrl} target="_blank" rel="noreferrer" className="commit-link">
-										Commit
-									</a>
-								) : null}
-							</div>
+							<SubmissionCard
+								view={{
+									title: lastSubmission.challengeName,
+									meta: [
+										lastSubmission.matchPct != null
+											? `${lastSubmission.matchPct}% match`
+											: null,
+										lastSubmission.score != null
+											? `${lastSubmission.score} score`
+											: null,
+										relativeTime(lastSubmission.submittedAt),
+									]
+										.filter((part): part is string => Boolean(part))
+										.join(" · "),
+									tone: statusTone,
+									statusText,
+									reason: lastIngestion?.reason ?? "",
+									commitUrl: lastIngestion?.commitUrl ?? null,
+								}}
+							/>
 						) : (
-							<p className="muted">None yet.</p>
+							<p className="last-empty">
+								No submission yet. Submit on CSSBattle to see it here.
+							</p>
 						)}
-						<button type="button" className="btn-secondary-full btn-tiny-margin" onClick={() => void load()}>
-							Refresh
-						</button>
 					</section>
+					{SHOW_STATUS_DEMO ? (
+						<section className="card card-compact">
+							<h2 className="card-heading">Status color demo</h2>
+							<div className="demo-stack">
+								{STATUS_DEMO_CASES.map((demoCase) => (
+									<div key={demoCase.label} className="demo-case">
+										<p className="demo-label">{demoCase.label}</p>
+										<SubmissionCard view={demoCase.view} />
+									</div>
+								))}
+							</div>
+						</section>
+					) : null}
 				</>
 			)}
 		</main>

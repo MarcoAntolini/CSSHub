@@ -922,6 +922,7 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 	let committed = false;
 	let commitUrl: string | null = null;
 	let skippedNotImproved = false;
+	let errorOccurred = false;
 	let reason = !hasScoredResult
 		? "Submission skipped because Last score is zero, unavailable, or invalid"
 		: accepted
@@ -934,64 +935,75 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 		: "SYNC_SKIPPED_INVALID_SCORE";
 	let recentEvents = state.recentEvents;
 
-	if (duplicate) {
-		reason = duplicateReasonMessage();
-		eventCode = "SYNC_SKIPPED_DUPLICATE";
-		recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
-	} else if (accepted) {
-		if (!state.githubToken) {
-			reason = "Submission accepted but GitHub is not authenticated";
-			eventCode = "SYNC_AUTH_REQUIRED";
+	try {
+		if (duplicate) {
+			reason = duplicateReasonMessage();
+			eventCode = "SYNC_SKIPPED_DUPLICATE";
 			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
-		} else if (!state.settings.selectedRepoFullName) {
-			reason = "Submission accepted but no repository selected";
-			eventCode = "SYNC_REPO_REQUIRED";
-			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
-		} else {
-			const branch = state.settings.selectedBranch ?? "main";
-			const currentMetrics: SavedSubmissionMetrics = {
-				score: data.payload.score ?? 0,
-				matchPct: data.payload.matchPct ?? 0,
-			};
-			const previousMetrics = await readBestSubmissionMetrics(
-				state.githubToken,
-				state.settings.selectedRepoFullName,
-				branch,
-				data.payload
-			);
-			if (previousMetrics && !isImprovedSubmission(currentMetrics, previousMetrics)) {
-				skippedNotImproved = true;
-				reason = notImprovedReasonMessage(currentMetrics, previousMetrics);
-				eventCode = "SYNC_SKIPPED_NOT_IMPROVED";
+		} else if (accepted) {
+			if (!state.githubToken) {
+				reason = "Submission accepted but GitHub is not authenticated";
+				eventCode = "SYNC_AUTH_REQUIRED";
+				recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
+			} else if (!state.settings.selectedRepoFullName) {
+				reason = "Submission accepted but no repository selected";
+				eventCode = "SYNC_REPO_REQUIRED";
 				recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
 			} else {
-				const files = await buildSubmissionFiles(data.payload);
-				const commitMessage = formatCommitMessage(
-					data.payload.score,
-					data.payload.matchPct
-				);
-				const commitResult = await commitFilesToRepo(
+				const branch = state.settings.selectedBranch ?? "main";
+				const currentMetrics: SavedSubmissionMetrics = {
+					score: data.payload.score ?? 0,
+					matchPct: data.payload.matchPct ?? 0,
+				};
+				const previousMetrics = await readBestSubmissionMetrics(
 					state.githubToken,
 					state.settings.selectedRepoFullName,
 					branch,
-					commitMessage,
-					files
+					data.payload
 				);
-				committed = true;
-				commitUrl = commitResult.commitUrl;
-				reason = "Submission committed to GitHub";
-				eventCode = "SYNC_COMMITTED";
-				recentEvents = pushEvent(
-					recentEvents,
-					"info",
-					reason,
-					commitUrl,
-					eventCode
-				);
+				if (previousMetrics && !isImprovedSubmission(currentMetrics, previousMetrics)) {
+					skippedNotImproved = true;
+					reason = notImprovedReasonMessage(currentMetrics, previousMetrics);
+					eventCode = "SYNC_SKIPPED_NOT_IMPROVED";
+					recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
+				} else {
+					const files = await buildSubmissionFiles(data.payload);
+					const commitMessage = formatCommitMessage(
+						data.payload.score,
+						data.payload.matchPct
+					);
+					const commitResult = await commitFilesToRepo(
+						state.githubToken,
+						state.settings.selectedRepoFullName,
+						branch,
+						commitMessage,
+						files
+					);
+					committed = true;
+					commitUrl = commitResult.commitUrl;
+					reason = "Submission committed to GitHub";
+					eventCode = "SYNC_COMMITTED";
+					recentEvents = pushEvent(
+						recentEvents,
+						"info",
+						reason,
+						commitUrl,
+						eventCode
+					);
+				}
 			}
+		} else {
+			recentEvents = pushEvent(recentEvents, "info", reason, null, eventCode);
 		}
-	} else {
-		recentEvents = pushEvent(recentEvents, "info", reason, null, eventCode);
+	} catch (error) {
+		errorOccurred = true;
+		committed = false;
+		commitUrl = null;
+		skippedNotImproved = false;
+		const safeError = toUserSafeError(error);
+		reason = safeError.message;
+		eventCode = safeError.code;
+		recentEvents = pushEvent(recentEvents, "error", reason, null, eventCode);
 	}
 
 	const responsePayload: SubmissionIngestionResponse =
@@ -1004,7 +1016,7 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 			commitUrl,
 		});
 
-	const shouldAdvanceDuplicateBaseline = !duplicate;
+	const shouldAdvanceDuplicateBaseline = !duplicate && !errorOccurred;
 
 	await saveStoredState({
 		...state,
@@ -1018,6 +1030,13 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 			: state.lastSubmissionFingerprint,
 		recentEvents,
 	});
+
+	if (errorOccurred) {
+		setActionBadge("error", "ERR");
+		showBrowserNotification("error", "CssHub error", reason);
+		sendResponse({ ok: false, error: reason });
+		return;
+	}
 
 	if (committed) {
 		setActionBadge("success", "OK");
