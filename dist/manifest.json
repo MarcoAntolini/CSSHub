@@ -22,6 +22,8 @@
 	"host_permissions": [
 		"https://api.github.com/*",
 		"https://github.com/*",
+		"https://*.vercel.app/*",
+		"http://localhost/*",
 		"https://cssbattle.dev/*",
 		"https://www.cssbattle.dev/*"
 	],

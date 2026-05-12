@@ -1,0 +1,19 @@
+{
+	"name": "@csshub/backend",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vercel dev --listen 3000",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@upstash/redis": "^1.35.6",
+		"zod": "^3.24.4"
+	},
+	"devDependencies": {
+		"@types/node": "^24.10.1",
+		"@vercel/node": "^5.3.24",
+		"typescript": "^5.9.3"
+	}
+}

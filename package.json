@@ -4,12 +4,16 @@
 	"description": "CssHub Chrome Extension",
 	"author": "CssHub",
 	"license": "MIT",
+	"private": true,
 	"keywords": [],
 	"type": "module",
+	"workspaces": ["apps/backend"],
 	"scripts": {
 		"dev": "vite build --watch --mode development",
 		"build": "vite build",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"dev:backend": "npm --workspace @csshub/backend run dev",
+		"typecheck:backend": "npm --workspace @csshub/backend run typecheck"
 	},
 	"devDependencies": {
 		"@types/chrome": "^0.1.24",

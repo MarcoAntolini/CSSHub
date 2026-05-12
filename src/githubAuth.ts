@@ -5,8 +5,19 @@ const ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token";
 const AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
 const DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 const GITHUB_CLIENT_ID = "Ov23likwEZqo4pEmKYVJ";
-const GITHUB_CLIENT_SECRET = "";
 const GITHUB_SCOPE = "repo read:user";
+const DEFAULT_BACKEND_URL = "http://localhost:3000";
+
+type OAuthStateResponse = {
+	state: string;
+	expiresInSec: number;
+};
+
+type OAuthExchangeResponse = {
+	accessToken: string;
+	tokenType: string;
+	scope: string;
+};
 
 const assertClientId = (): string => {
 	if (!GITHUB_CLIENT_ID) {
@@ -15,6 +26,38 @@ const assertClientId = (): string => {
 		);
 	}
 	return GITHUB_CLIENT_ID;
+};
+
+const getOAuthBackendBaseUrl = (): string => {
+	const raw = import.meta.env.VITE_OAUTH_BACKEND_BASE_URL ?? DEFAULT_BACKEND_URL;
+	return raw.replace(/\/+$/g, "");
+};
+
+const readJsonError = async (response: Response): Promise<string | null> => {
+	try {
+		const payload = (await response.json()) as { error?: unknown };
+		return typeof payload.error === "string" ? payload.error : null;
+	} catch (_error) {
+		return null;
+	}
+};
+
+const requestOAuthBackend = async <TResponse>(
+	path: string,
+	payload?: Record<string, string>
+): Promise<TResponse> => {
+	const response = await fetch(`${getOAuthBackendBaseUrl()}${path}`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: payload ? JSON.stringify(payload) : undefined,
+	});
+	if (!response.ok) {
+		const reason = await readJsonError(response);
+		throw new Error(reason ?? "OAuth backend request failed");
+	}
+	return (await response.json()) as TResponse;
 };
 
 export const startDeviceFlow = async () => {
@@ -106,34 +149,33 @@ export const buildGithubAuthorizeUrl = (
 	return `${AUTHORIZE_URL}?${params.toString()}`;
 };
 
-export const exchangeWebAuthCode = async (code: string): Promise<string> => {
-	const clientId = assertClientId();
-	if (!GITHUB_CLIENT_SECRET) {
+export const requestWebOAuthState = async (): Promise<OAuthStateResponse> => {
+	const data = await requestOAuthBackend<OAuthStateResponse>(
+		"/api/oauth/github/state"
+	);
+	if (!data?.state || typeof data.expiresInSec !== "number") {
 		throw new Error(
-			"OAuth web flow requires a GitHub client secret in githubAuth.ts (or a backend token exchange)."
+			"OAuth backend returned invalid state response"
 		);
 	}
+	return data;
+};
 
-	const response = await fetch(ACCESS_TOKEN_URL, {
-		method: "POST",
-		headers: {
-			Accept: "application/json",
-			"Content-Type": "application/x-www-form-urlencoded",
-		},
-		body: new URLSearchParams({
-			client_id: clientId,
-			client_secret: GITHUB_CLIENT_SECRET,
+export const exchangeWebAuthCode = async (
+	code: string,
+	state: string,
+	redirectUri: string
+): Promise<string> => {
+	const payload = await requestOAuthBackend<OAuthExchangeResponse>(
+		"/api/oauth/github/exchange",
+		{
 			code,
-		}),
-	});
-
-	if (!response.ok) {
-		throw new Error("GitHub web auth token exchange failed");
+			state,
+			redirectUri,
+		}
+	);
+	if (!payload?.accessToken) {
+		throw new Error("OAuth backend did not return an access token");
 	}
-
-	const data = await response.json();
-	if (typeof data.access_token === "string") {
-		return data.access_token;
-	}
-	throw new Error(data.error_description ?? "GitHub web auth failed");
+	return payload.accessToken;
 };

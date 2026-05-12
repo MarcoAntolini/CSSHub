@@ -16,3 +16,5 @@ npm-debug.log*
 
 .env
 .cursor
+.vercel
+apps/backend/.vercel

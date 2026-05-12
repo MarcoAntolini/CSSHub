@@ -13,6 +13,7 @@ import {
 import {
 	buildGithubAuthorizeUrl,
 	exchangeWebAuthCode,
+	requestWebOAuthState,
 	startDeviceFlow,
 	pollDeviceFlow,
 } from "./githubAuth";
@@ -558,7 +559,7 @@ const handleStartGithubWebFlow: Handler<"startGithubWebFlow"> = async (
 	sendResponse
 ) => {
 	const redirectUri = chrome.identity.getRedirectURL("github");
-	const state = crypto.randomUUID();
+	const { state } = await requestWebOAuthState();
 	const authUrl = buildGithubAuthorizeUrl(redirectUri, state);
 	const redirectedTo = await runLaunchWebAuthFlow(authUrl);
 	const url = new URL(redirectedTo);
@@ -571,7 +572,7 @@ const handleStartGithubWebFlow: Handler<"startGithubWebFlow"> = async (
 		throw new Error("Missing OAuth authorization code");
 	}
 
-	const accessToken = await exchangeWebAuthCode(code);
+	const accessToken = await exchangeWebAuthCode(code, state, redirectUri);
 	const username = await fetchAuthenticatedUser(accessToken);
 	const current = await getStoredState();
 	await saveStoredState({
