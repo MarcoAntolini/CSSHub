@@ -20,6 +20,19 @@ CssHub is a Chrome extension that syncs CSSBattle submissions to GitHub.
 - Preview build: `npm run build:preview`
 - Production build: `npm run build` (fails if backend URL is localhost/missing)
 
+## CI Automation (GitHub Actions)
+
+The repo includes `.github/workflows/extension-build.yml`.
+
+- On pull request and push to `main`: automatic preview build.
+- On manual run (`workflow_dispatch`): choose `preview` or `production`.
+- Build artifacts are uploaded automatically (`apps/extension/dist`).
+
+Set these repository variables in GitHub (`Settings` -> `Secrets and variables` -> `Actions` -> `Variables`):
+
+- `EXTENSION_PREVIEW_BACKEND_URL` (example: `https://your-preview-backend.vercel.app`)
+- `EXTENSION_PRODUCTION_BACKEND_URL` (example: `https://your-backend.vercel.app`)
+
 ## Install
 
 [Chrome extension](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)

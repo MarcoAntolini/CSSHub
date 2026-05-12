@@ -1,0 +1,92 @@
+name: Extension Build
+
+on:
+  pull_request:
+    branches: ["*"]
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Build target"
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - production
+
+jobs:
+  build_preview:
+    if: github.event_name == 'pull_request' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.target == 'preview')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Validate preview backend URL variable
+        run: |
+          if [ -z "${{ vars.EXTENSION_PREVIEW_BACKEND_URL }}" ]; then
+            echo "Missing repository variable EXTENSION_PREVIEW_BACKEND_URL"
+            exit 1
+          fi
+
+      - name: Build extension (preview)
+        env:
+          VITE_OAUTH_BACKEND_BASE_URL: ${{ vars.EXTENSION_PREVIEW_BACKEND_URL }}
+        run: npm run build:preview
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-dist-preview
+          path: apps/extension/dist
+
+  build_production:
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'production'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Validate production backend URL variable
+        run: |
+          if [ -z "${{ vars.EXTENSION_PRODUCTION_BACKEND_URL }}" ]; then
+            echo "Missing repository variable EXTENSION_PRODUCTION_BACKEND_URL"
+            exit 1
+          fi
+
+      - name: Build extension (production)
+        env:
+          VITE_OAUTH_BACKEND_BASE_URL: ${{ vars.EXTENSION_PRODUCTION_BACKEND_URL }}
+        run: npm run build
+
+      - name: Upload production artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-dist-production
+          path: apps/extension/dist
