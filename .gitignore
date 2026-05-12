@@ -17,6 +17,11 @@ npm-debug.log*
 /release
 
 .env
+*.env.local
+*.env.*.local
+apps/extension/.env.local
+apps/extension/.env.*.local
+apps/backend/.env.local
 .cursor
 .vercel
 apps/backend/.vercel

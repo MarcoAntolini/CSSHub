@@ -29,8 +29,16 @@ const assertClientId = (): string => {
 };
 
 const getOAuthBackendBaseUrl = (): string => {
-	const raw = import.meta.env.VITE_OAUTH_BACKEND_BASE_URL ?? DEFAULT_BACKEND_URL;
-	return raw.replace(/\/+$/g, "");
+	const raw = import.meta.env.VITE_OAUTH_BACKEND_BASE_URL?.trim();
+	if (raw) {
+		return raw.replace(/\/+$/g, "");
+	}
+	if (import.meta.env.PROD) {
+		throw new Error(
+			"Missing VITE_OAUTH_BACKEND_BASE_URL in production build"
+		);
+	}
+	return DEFAULT_BACKEND_URL;
 };
 
 const readJsonError = async (response: Response): Promise<string | null> => {
