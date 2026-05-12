@@ -1,3 +1,7 @@
+import { ensureBackendEnvLoaded } from "./loadEnv";
+
+ensureBackendEnvLoaded();
+
 const getRequiredEnv = (name: string): string => {
 	const value = process.env[name];
 	if (!value) {

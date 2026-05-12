@@ -4,13 +4,13 @@ const DEVICE_CODE_URL = "https://github.com/login/device/code";
 const ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token";
 const AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
 const DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
-const GITHUB_CLIENT_ID = "Ov23likwEZqo4pEmKYVJ";
 const GITHUB_SCOPE = "repo read:user";
 const DEFAULT_BACKEND_URL = "http://localhost:3000";
 
 type OAuthStateResponse = {
 	state: string;
 	expiresInSec: number;
+	githubClientId: string;
 };
 
 type OAuthExchangeResponse = {
@@ -19,13 +19,14 @@ type OAuthExchangeResponse = {
 	scope: string;
 };
 
-const assertClientId = (): string => {
-	if (!GITHUB_CLIENT_ID) {
+const getDeviceFlowClientId = (): string => {
+	const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID?.trim();
+	if (!clientId) {
 		throw new Error(
-			"GitHub OAuth client id is not configured. Set it in githubAuth.ts before testing auth."
+			"Missing VITE_GITHUB_CLIENT_ID for GitHub device OAuth flow."
 		);
 	}
-	return GITHUB_CLIENT_ID;
+	return clientId;
 };
 
 const getOAuthBackendBaseUrl = (): string => {
@@ -69,7 +70,7 @@ const requestOAuthBackend = async <TResponse>(
 };
 
 export const startDeviceFlow = async () => {
-	const clientId = assertClientId();
+	const clientId = getDeviceFlowClientId();
 
 	const response = await fetch(DEVICE_CODE_URL, {
 		method: "POST",
@@ -107,7 +108,7 @@ export const startDeviceFlow = async () => {
 export const pollDeviceFlow = async (
 	deviceCode: string
 ): Promise<string | null> => {
-	const clientId = assertClientId();
+	const clientId = getDeviceFlowClientId();
 
 	const response = await fetch(ACCESS_TOKEN_URL, {
 		method: "POST",
@@ -143,10 +144,10 @@ export const pollDeviceFlow = async (
 };
 
 export const buildGithubAuthorizeUrl = (
+	clientId: string,
 	redirectUri: string,
 	state: string
 ): string => {
-	const clientId = assertClientId();
 	const params = new URLSearchParams({
 		client_id: clientId,
 		redirect_uri: redirectUri,
@@ -161,7 +162,11 @@ export const requestWebOAuthState = async (): Promise<OAuthStateResponse> => {
 	const data = await requestOAuthBackend<OAuthStateResponse>(
 		"/api/oauth/github/state"
 	);
-	if (!data?.state || typeof data.expiresInSec !== "number") {
+	if (
+		!data?.state ||
+		typeof data.expiresInSec !== "number" ||
+		!data.githubClientId
+	) {
 		throw new Error(
 			"OAuth backend returned invalid state response"
 		);

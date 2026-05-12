@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const ALLOWED_METHODS = "POST, OPTIONS";
+const ALLOWED_METHODS = "GET, POST, OPTIONS";
 const ALLOWED_HEADERS = "Content-Type";
 
 const resolveAllowOrigin = (originHeader: string | undefined): string => {

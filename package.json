@@ -27,7 +27,9 @@
 		"typecheck": "npm run typecheck --workspaces --if-present",
 		"typecheck:all": "npm run typecheck --workspaces --if-present",
 		"typecheck:backend": "npm --workspace @csshub/backend run typecheck",
-		"typecheck:extension": "npm --workspace @csshub/extension run typecheck"
+		"typecheck:extension": "npm --workspace @csshub/extension run typecheck",
+		"doctor:oauth": "node scripts/doctor-oauth.mjs",
+		"derive:manifest-key": "node scripts/derive-manifest-key.mjs"
 	},
 	"devDependencies": {
 		"concurrently": "^9.2.1"

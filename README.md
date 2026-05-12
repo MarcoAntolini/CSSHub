@@ -5,7 +5,7 @@ CssHub is a Chrome extension that syncs CSSBattle submissions to GitHub.
 ## Monorepo Layout
 
 - `apps/extension`: Chrome extension
-- `apps/backend`: Vercel OAuth backend (`/api/oauth/github/state`, `/api/oauth/github/exchange`)
+- `apps/backend`: Vercel OAuth backend (`/api/oauth/github/state`, `/api/oauth/github/exchange`, `/api/oauth/github/health`)
 
 ## Development (Phase 1.5)
 
@@ -29,6 +29,15 @@ Legacy aliases still available for compatibility:
 - `npm run build:staging` -> `npm run build:extension:staging`
 - `npm run build:preview` -> `npm run build:extension:preview`
 - `npm run build:dev` -> `npm run build:extension:dev`
+
+## Web OAuth redirect stability
+
+GitHub OAuth Apps accept a single callback URL, so extension ID must stay stable for web OAuth.
+
+1. Set `EXTENSION_MANIFEST_KEY` in extension env files (`apps/extension/.env.*`).
+1. Build extension (`npm run dev` or `npm run build:*`) so manifest key is injected.
+1. Verify runtime redirect in extension settings (`chrome.identity.getRedirectURL("github")`).
+1. Register that exact URL as GitHub OAuth App Authorization callback URL.
 
 ## CI Automation (GitHub Actions)
 

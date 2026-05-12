@@ -3,6 +3,7 @@ import { handleCorsPreflight, setCorsHeaders } from "../../../lib/cors";
 import { rejectMethod, getClientIp } from "../../../lib/http";
 import { checkRateLimit } from "../../../lib/rateLimit";
 import { issueOAuthState } from "../../../lib/oauthState";
+import { backendEnv } from "../../../lib/env";
 
 const STATE_RATE_LIMIT = {
 	limit: 20,
@@ -34,5 +35,8 @@ export default async function handler(
 	}
 
 	const payload = await issueOAuthState();
-	res.status(200).json(payload);
+	res.status(200).json({
+		...payload,
+		githubClientId: backendEnv.githubClientId,
+	});
 }

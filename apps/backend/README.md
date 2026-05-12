@@ -27,3 +27,14 @@ npm run dev:backend
 ```
 
 This starts `vercel dev` on `http://localhost:3000`.
+
+## OAuth health check
+
+Use this endpoint to validate backend OAuth setup without running the full auth flow:
+
+```bash
+curl http://localhost:3000/api/oauth/github/health
+```
+
+- `200` -> required OAuth env vars are configured
+- `503` -> one or more required env vars are missing (`missingRequired`)

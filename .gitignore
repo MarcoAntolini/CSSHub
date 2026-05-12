@@ -25,3 +25,5 @@ apps/backend/.env.local
 .cursor
 .vercel
 apps/backend/.vercel
+
+apps/extension/dist.*

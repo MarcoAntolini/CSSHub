@@ -12,5 +12,4 @@
 
 ## TODO NEXT
 
-- non funziona il login oauth nel dev mode
 - rimuovere contorno dai loghi (photopea?)

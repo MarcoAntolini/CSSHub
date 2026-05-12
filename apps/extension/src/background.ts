@@ -777,8 +777,8 @@ const handleStartGithubWebFlow: Handler<"startGithubWebFlow"> = async (
 	sendResponse
 ) => {
 	const redirectUri = chrome.identity.getRedirectURL("github");
-	const { state } = await requestWebOAuthState();
-	const authUrl = buildGithubAuthorizeUrl(redirectUri, state);
+	const { state, githubClientId } = await requestWebOAuthState();
+	const authUrl = buildGithubAuthorizeUrl(githubClientId, redirectUri, state);
 	const redirectedTo = await runLaunchWebAuthFlow(authUrl);
 	const url = new URL(redirectedTo);
 	const returnedState = url.searchParams.get("state");
