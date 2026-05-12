@@ -224,6 +224,21 @@ const App = (): ReactElement => {
 		await loadState();
 	};
 
+	const clearActivityLog = async (): Promise<void> => {
+		setBusy(true);
+		setError(null);
+		const message = popupToBackgroundMessageSchema.parse({
+			action: "clearRecentEvents",
+		});
+		const response = await chrome.runtime.sendMessage(message);
+		setBusy(false);
+		if (!response?.ok) {
+			setError(response?.error ?? "Could not clear activity log");
+			return;
+		}
+		setData((prev) => (prev ? { ...prev, recentEvents: [] } : prev));
+	};
+
 	const clearRepoSelection = async (): Promise<void> => {
 		if (!data) {
 			return;
@@ -433,6 +448,14 @@ const App = (): ReactElement => {
 
 			<section className="settings-section">
 				<h2>Activity log</h2>
+				<p className="muted">
+					Operational timeline only. Technical debug details are intentionally hidden.
+				</p>
+				<div className="btn-stack">
+					<button type="button" className="btn btn-ghost" onClick={() => void clearActivityLog()} disabled={busy || recentEvents.length === 0}>
+						Clear log
+					</button>
+				</div>
 				{recentEvents.length === 0 ? (
 					<p className="empty-state">No events yet.</p>
 				) : (

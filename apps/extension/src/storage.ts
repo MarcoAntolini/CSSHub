@@ -123,3 +123,13 @@ export const clearAuthState = async (): Promise<StoredState> => {
 	await chrome.storage.session.remove(TOKEN_KEY);
 	return next;
 };
+
+export const clearRecentEvents = async (): Promise<StoredState> => {
+	const current = await getStoredState();
+	const next: StoredState = {
+		...current,
+		recentEvents: [],
+	};
+	await saveStoredState(next);
+	return next;
+};

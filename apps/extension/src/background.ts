@@ -24,7 +24,12 @@ import {
 	listUserRepos,
 	type CommitFile,
 } from "./githubClient";
-import { clearAuthState, getStoredState, saveStoredState } from "./storage";
+import {
+	clearAuthState,
+	clearRecentEvents,
+	getStoredState,
+	saveStoredState,
+} from "./storage";
 
 const toBase64 = (bytes: Uint8Array): string => {
 	let output = "";
@@ -351,17 +356,111 @@ const formatCommitMessage = (
 const DUPLICATE_WINDOW_MS = 45 * 1000;
 const MAX_EVENTS = 15;
 const MAX_REASONABLE_SCORE = 100_000;
+type SyncEventCode =
+	| "SYNC_COMMITTED"
+	| "SYNC_SKIPPED_DUPLICATE"
+	| "SYNC_SKIPPED_THRESHOLD"
+	| "SYNC_SKIPPED_INVALID_SCORE"
+	| "SYNC_AUTH_REQUIRED"
+	| "SYNC_REPO_REQUIRED"
+	| "AUTH_STATE_MISMATCH"
+	| "AUTH_OAUTH_CODE_MISSING"
+	| "AUTH_GITHUB_UNAUTHORIZED"
+	| "GITHUB_NOT_FOUND"
+	| "GITHUB_CONFLICT"
+	| "GITHUB_RATE_LIMIT"
+	| "GITHUB_UNAVAILABLE"
+	| "NETWORK_ERROR"
+	| "UNEXPECTED_ERROR";
+
+const parseGithubStatus = (message: string): number | null => {
+	const matched = message.match(/GitHub request failed \((\d{3})\)/);
+	if (!matched) {
+		return null;
+	}
+	const status = Number(matched[1]);
+	return Number.isFinite(status) ? status : null;
+};
+
+const getRawErrorMessage = (error: unknown): string =>
+	error instanceof Error ? error.message : "Unexpected background failure";
+
+const toUserSafeError = (
+	error: unknown
+): { message: string; code: SyncEventCode } => {
+	const rawMessage = getRawErrorMessage(error);
+	const githubStatus = parseGithubStatus(rawMessage);
+
+	if (rawMessage.includes("OAuth state mismatch")) {
+		return {
+			message: "GitHub login validation failed. Please try again.",
+			code: "AUTH_STATE_MISMATCH",
+		};
+	}
+	if (rawMessage.includes("Missing OAuth authorization code")) {
+		return {
+			message: "GitHub login did not return an authorization code.",
+			code: "AUTH_OAUTH_CODE_MISSING",
+		};
+	}
+	if (githubStatus === 401 || githubStatus === 403) {
+		return {
+			message: "GitHub authentication failed. Reconnect your account.",
+			code: "AUTH_GITHUB_UNAUTHORIZED",
+		};
+	}
+	if (githubStatus === 404) {
+		return {
+			message: "Repository or branch not found. Verify repository settings.",
+			code: "GITHUB_NOT_FOUND",
+		};
+	}
+	if (githubStatus === 409 || githubStatus === 422) {
+		return {
+			message: "GitHub rejected this operation. Check repository and branch.",
+			code: "GITHUB_CONFLICT",
+		};
+	}
+	if (githubStatus === 429) {
+		return {
+			message: "GitHub rate limit reached. Retry in a few minutes.",
+			code: "GITHUB_RATE_LIMIT",
+		};
+	}
+	if (githubStatus !== null && githubStatus >= 500) {
+		return {
+			message: "GitHub is temporarily unavailable. Try again shortly.",
+			code: "GITHUB_UNAVAILABLE",
+		};
+	}
+	if (
+		rawMessage.includes("Failed to fetch") ||
+		rawMessage.includes("NetworkError")
+	) {
+		return {
+			message: "Network error while contacting GitHub services.",
+			code: "NETWORK_ERROR",
+		};
+	}
+
+	return {
+		message: "Operation failed. Check settings and try again.",
+		code: "UNEXPECTED_ERROR",
+	};
+};
 
 const pushEvent = (
 	events: SyncEvent[],
 	level: SyncEvent["level"],
 	message: string,
-	commitUrl: string | null = null
+	commitUrl: string | null = null,
+	code?: SyncEventCode
 ): SyncEvent[] => {
 	const next: SyncEvent = {
 		id: crypto.randomUUID(),
 		timestamp: new Date().toISOString(),
 		level,
+		code,
 		message,
 		commitUrl,
 	};
@@ -615,6 +714,14 @@ const handleLogoutGithub: Handler<"logoutGithub"> = async (_data, sendResponse) 
 	sendResponse({ ok: true });
 };
 
+const handleClearRecentEvents: Handler<"clearRecentEvents"> = async (
+	_data,
+	sendResponse
+) => {
+	await clearRecentEvents();
+	sendResponse({ ok: true });
+};
+
 const handleListRepos: Handler<"listRepos"> = async (_data, sendResponse) => {
 	const state = await getStoredState();
 	if (!state.githubToken) {
@@ -666,18 +773,26 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 		: accepted
 		? "Submission accepted by threshold"
 		: "Submission below threshold";
+	let eventCode: SyncEventCode = hasScoredResult
+		? accepted
+			? "SYNC_COMMITTED"
+			: "SYNC_SKIPPED_THRESHOLD"
+		: "SYNC_SKIPPED_INVALID_SCORE";
 	let recentEvents = state.recentEvents;
 
 	if (duplicate) {
 		reason = "Duplicate submission skipped";
-		recentEvents = pushEvent(recentEvents, "warn", reason);
+		eventCode = "SYNC_SKIPPED_DUPLICATE";
+		recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
 	} else if (accepted) {
 		if (!state.githubToken) {
 			reason = "Submission accepted but GitHub is not authenticated";
-			recentEvents = pushEvent(recentEvents, "warn", reason);
+			eventCode = "SYNC_AUTH_REQUIRED";
+			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
 		} else if (!state.settings.selectedRepoFullName) {
 			reason = "Submission accepted but no repository selected";
-			recentEvents = pushEvent(recentEvents, "warn", reason);
+			eventCode = "SYNC_REPO_REQUIRED";
+			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
 		} else {
 			const branch = state.settings.selectedBranch ?? "main";
 			const files = await buildSubmissionFiles(data.payload);
@@ -695,10 +810,17 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 			committed = true;
 			commitUrl = commitResult.commitUrl;
 			reason = "Submission committed to GitHub";
-			recentEvents = pushEvent(recentEvents, "info", reason, commitUrl);
+			eventCode = "SYNC_COMMITTED";
+			recentEvents = pushEvent(
+				recentEvents,
+				"info",
+				reason,
+				commitUrl,
+				eventCode
+			);
 		}
 	} else {
-		recentEvents = pushEvent(recentEvents, "info", reason);
+		recentEvents = pushEvent(recentEvents, "info", reason, null, eventCode);
 	}
 
 	const responsePayload: SubmissionIngestionResponse =
@@ -736,6 +858,7 @@ const actionHandlers: {
 	startGithubWebFlow: handleStartGithubWebFlow,
 	loginWithPat: handleLoginWithPat,
 	logoutGithub: handleLogoutGithub,
+	clearRecentEvents: handleClearRecentEvents,
 	listRepos: handleListRepos,
 	createRepo: handleCreateRepo,
 	cssbattleSubmission: handleCssbattleSubmission,
@@ -759,19 +882,24 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 	) => Promise<void>;
 
 	void handler(data, sendResponse, _sender).catch((error: unknown) => {
-		const message =
-			error instanceof Error ? error.message : "Unexpected background failure";
+		const safeError = toUserSafeError(error);
 		void getStoredState()
 			.then((state) =>
 				saveStoredState({
 					...state,
-					recentEvents: pushEvent(state.recentEvents, "error", message),
+					recentEvents: pushEvent(
+						state.recentEvents,
+						"error",
+						safeError.message,
+						null,
+						safeError.code
+					),
 				})
 			)
 			.catch(() => undefined);
 		sendResponse({
 			ok: false,
-			error: message,
+			error: safeError.message,
 		});
 	});
 

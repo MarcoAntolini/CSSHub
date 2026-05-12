@@ -80,6 +80,7 @@ export const syncEventSchema = z.object({
 	id: z.string(),
 	timestamp: z.string(),
 	level: z.enum(["info", "warn", "error"]),
+	code: z.string().min(1).optional(),
 	message: z.string(),
 	commitUrl: z.string().url().nullable(),
 });
@@ -119,6 +120,9 @@ export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
 		action: z.literal("createRepo"),
 		name: z.string().min(1),
 		private: z.boolean(),
+	}),
+	z.object({
+		action: z.literal("clearRecentEvents"),
 	}),
 	z.object({
 		action: z.literal("cssbattleSubmission"),
