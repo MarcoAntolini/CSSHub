@@ -11,15 +11,24 @@ CssHub is a Chrome extension that syncs CSSBattle submissions to GitHub.
 
 1. Configure backend (`apps/backend/.env.local`) from `apps/backend/.env.example`.
 1. Configure extension (`apps/extension/.env.development.local`) from `apps/extension/.env.development.example`.
-1. Run backend: `npm run dev:backend`.
-1. Run extension build watch: `npm run dev:extension`.
+1. Run full local stack (backend + extension): `npm run dev`.
+1. Optional backend-only run: `npm run dev:backend`.
+1. Optional extension-only run: `npm run dev:extension`.
 1. Load unpacked extension from `apps/extension/dist`.
 
 ## Preview and Production
 
-- Staging build: `npm run build:staging`
-- Preview build (legacy): `npm run build:preview`
-- Production build: `npm run build` (fails if backend URL is localhost/missing)
+- Full workspace build: `npm run build`
+- Extension production build: `npm run build:extension:prod` (or `npm run build:extension`)
+- Extension staging build: `npm run build:extension:staging`
+- Extension preview build: `npm run build:extension:preview`
+- Extension development build: `npm run build:extension:dev`
+
+Legacy aliases still available for compatibility:
+
+- `npm run build:staging` -> `npm run build:extension:staging`
+- `npm run build:preview` -> `npm run build:extension:preview`
+- `npm run build:dev` -> `npm run build:extension:dev`
 
 ## CI Automation (GitHub Actions)
 

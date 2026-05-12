@@ -10,15 +10,26 @@
 		"apps/*"
 	],
 	"scripts": {
-		"dev": "npm --workspace @csshub/extension run dev",
-		"dev:extension": "npm --workspace @csshub/extension run dev",
-		"typecheck": "npm run typecheck --workspaces --if-present",
+		"dev": "concurrently -k -n backend,extension \"npm run dev:backend\" \"npm run dev:extension\"",
+		"dev:all": "npm run dev",
 		"dev:backend": "npm --workspace @csshub/backend run dev",
-		"build": "npm --workspace @csshub/extension run build:prod",
-		"build:staging": "npm --workspace @csshub/extension run build:staging",
-		"build:preview": "npm --workspace @csshub/extension run build:preview",
-		"build:dev": "npm --workspace @csshub/extension run build:dev",
-		"typecheck:extension": "npm --workspace @csshub/extension run typecheck",
-		"typecheck:backend": "npm --workspace @csshub/backend run typecheck"
+		"dev:extension": "npm --workspace @csshub/extension run dev",
+		"build": "npm run build --workspaces --if-present",
+		"build:all": "npm run build --workspaces --if-present",
+		"build:extension": "npm --workspace @csshub/extension run build:prod",
+		"build:extension:prod": "npm --workspace @csshub/extension run build:prod",
+		"build:extension:staging": "npm --workspace @csshub/extension run build:staging",
+		"build:extension:preview": "npm --workspace @csshub/extension run build:preview",
+		"build:extension:dev": "npm --workspace @csshub/extension run build:dev",
+		"build:staging": "npm run build:extension:staging",
+		"build:preview": "npm run build:extension:preview",
+		"build:dev": "npm run build:extension:dev",
+		"typecheck": "npm run typecheck --workspaces --if-present",
+		"typecheck:all": "npm run typecheck --workspaces --if-present",
+		"typecheck:backend": "npm --workspace @csshub/backend run typecheck",
+		"typecheck:extension": "npm --workspace @csshub/extension run typecheck"
+	},
+	"devDependencies": {
+		"concurrently": "^9.2.1"
 	}
 }

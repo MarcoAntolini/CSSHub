@@ -17,6 +17,12 @@ Copy `.env.example` to `.env.local` and configure:
 Run from repo root:
 
 ```bash
+npm run dev
+```
+
+or run backend only:
+
+```bash
 npm run dev:backend
 ```
 

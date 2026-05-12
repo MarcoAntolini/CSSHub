@@ -4,8 +4,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vercel dev --listen 3000",
-		"typecheck": "tsc --noEmit"
+		"dev": "npm run serve",
+		"serve": "vercel dev --listen 3000 --yes",
+		"dev:all": "npm run dev",
+		"typecheck": "tsc --noEmit",
+		"typecheck:all": "npm run typecheck"
 	},
 	"dependencies": {
 		"@upstash/redis": "^1.35.6",
@@ -14,6 +17,7 @@
 	"devDependencies": {
 		"@types/node": "^24.10.1",
 		"@vercel/node": "^5.3.24",
-		"typescript": "^5.9.3"
+		"typescript": "^5.9.3",
+		"vercel": "^53.4.0"
 	}
 }
