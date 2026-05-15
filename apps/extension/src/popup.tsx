@@ -19,6 +19,7 @@ const THRESHOLD_MIN = 0;
 const THRESHOLD_MAX = 100;
 const THRESHOLD_SAVE_DEBOUNCE_MS = 400;
 const SHOW_STATUS_DEMO = false;
+const POPUP_TOAST_THEME = "light" as const;
 const POPUP_ERRORS = {
 	loadState: "Could not load popup state",
 	saveThreshold: "Could not update threshold",
@@ -344,7 +345,12 @@ const App = (): ReactElement => {
 		return (
 			<>
 				{createPortal(
-					<Toaster theme="dark" richColors position="top-center" closeButton />,
+					<Toaster
+						theme={POPUP_TOAST_THEME}
+						richColors
+						position="top-center"
+						closeButton
+					/>,
 					document.body,
 				)}
 				<main className="popup popup-shell">
@@ -371,7 +377,12 @@ const App = (): ReactElement => {
 	return (
 		<>
 			{createPortal(
-				<Toaster theme="dark" richColors position="top-center" closeButton />,
+				<Toaster
+					theme={POPUP_TOAST_THEME}
+					richColors
+					position="top-center"
+					closeButton
+				/>,
 				document.body,
 			)}
 			<main className="popup popup-shell">

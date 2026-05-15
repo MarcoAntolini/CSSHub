@@ -1,89 +1,75 @@
+<div align="center">
+
 # CssHub
 
-CssHub is a Chrome extension that syncs CSSBattle submissions to GitHub.
+**Automatically sync your [CSSBattle](https://cssbattle.dev) submissions to GitHub.**
 
-## Monorepo Layout
+[![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)
 
-- `apps/extension`: Chrome extension
-- `apps/backend`: Vercel OAuth backend (`/api/oauth/github/state`, `/api/oauth/github/exchange`, `/api/oauth/github/health`)
+</div>
 
-## Development (Phase 1.5)
+---
 
-1. Configure backend (`apps/backend/.env.local`) from `apps/backend/.env.example`.
-1. Configure extension (`apps/extension/.env.development.local`) from `apps/extension/.env.development.example`.
-1. Run full local stack (backend + extension): `npm run dev`.
-1. Optional backend-only run: `npm run dev:backend`.
-1. Optional extension-only run: `npm run dev:extension`.
-1. Load unpacked extension from `apps/extension/dist`.
+## What is CssHub?
 
-## Preview and Production
+CssHub is a **Chrome extension** that pushes your CSSBattle solutions into a **GitHub repository** you choose—so every pass becomes a commit you can browse, diff, and share like normal code.
 
-- Full workspace build: `npm run build`
-- Extension production build: `npm run build:extension:prod` (or `npm run build:extension`)
-- Extension staging build: `npm run build:extension:staging`
-- Extension preview build: `npm run build:extension:preview`
-- Extension development build: `npm run build:extension:dev`
+No copy-paste, no drag-and-drop zip files: you play on CSSBattle, CssHub keeps your repo up to date.
 
-Legacy aliases still available for compatibility:
+## Why CssHub?
 
-- `npm run build:staging` -> `npm run build:extension:staging`
-- `npm run build:preview` -> `npm run build:extension:preview`
-- `npm run build:dev` -> `npm run build:extension:dev`
+- **One place for your battles** — Challenges and submissions live in a repo structure you control.
+- **Git history as your progress log** — See how your solutions evolved over time.
+- **Backup & portfolio** — Your work stays on GitHub even if you clear browser data (once synced).
+- **Built for CSSBattle** — Works on the official play experience you already use.
 
-## Web OAuth redirect stability
+## Screenshot
 
-GitHub OAuth Apps accept a single callback URL, so extension ID must stay stable for web OAuth.
+_Screenshots coming soon._  
+When they are ready, add images here (for example under `docs/screenshots/`) so newcomers immediately see the popup and settings flow.
 
-1. Set `EXTENSION_MANIFEST_KEY` in extension env files (`apps/extension/.env.*`).
-1. Build extension (`npm run dev` or `npm run build:*`) so manifest key is injected.
-1. Verify runtime redirect in extension settings (`chrome.identity.getRedirectURL("github")`).
-1. Register that exact URL as GitHub OAuth App Authorization callback URL.
+<!-- Example (uncomment when files exist):
+<p align="center">
+  <img src="docs/screenshots/popup.png" alt="CssHub popup" width="420" />
+</p>
+-->
 
-## CI Automation (GitHub Actions)
+## Supported platform
 
-The repo includes `.github/workflows/extension-build.yml`.
+- **[CSSBattle](https://cssbattle.dev)** — `cssbattle.dev` and `www.cssbattle.dev` (play URLs).
 
-- On pull request: automatic typecheck only.
-- On push to `staging`: automatic staging build.
-- On manual run (`workflow_dispatch`): choose `staging` or `production`.
-- Build artifacts are uploaded automatically (`apps/extension/dist`).
+Use **Google Chrome** (or another Chromium browser with Manifest V3 support).
 
-Set these repository variables in GitHub (`Settings` -> `Secrets and variables` -> `Actions` -> `Variables`):
+## Installation
 
-- `EXTENSION_STAGING_BACKEND_URL` (example: `https://your-staging-backend.vercel.app`)
-- `EXTENSION_PRODUCTION_BACKEND_URL` (example: `https://your-backend.vercel.app`)
+### 1. Chrome Web Store (recommended)
 
-## GitHub + Vercel Setup (Step by Step)
+**[Install CssHub from the Chrome Web Store](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)** — updates install automatically.
 
-1. Create a dedicated `staging` branch in GitHub.
-1. In Vercel, import the repo with project root set to `apps/backend`.
-1. In Vercel project settings, configure these env vars for both Preview and Production:
+### 2. Manual install (developers)
 
-- `GITHUB_CLIENT_ID`
-- `GITHUB_CLIENT_SECRET`
-- `ALLOWED_EXTENSION_IDS`
-- `UPSTASH_REDIS_REST_URL` (recommended)
-- `UPSTASH_REDIS_REST_TOKEN` (recommended)
+If you build from source, load the unpacked extension from `apps/extension/dist` after a build. Full setup (env files, local OAuth backend, scripts) is in **[`apps/extension/README.md`](apps/extension/README.md)**.
 
-1. Push to `staging` once so Vercel creates the staging branch deployment URL.
-1. Copy the stable Vercel branch URL for `staging`.
-1. In GitHub repo variables, set:
+## After you install
 
-- `EXTENSION_STAGING_BACKEND_URL` = staging branch URL
-- `EXTENSION_PRODUCTION_BACKEND_URL` = production backend URL
+1. Pin **CssHub** from the puzzle menu if you like quick access.
+2. Open **CssHub** → **Settings** (or the extension options page).
+3. **Sign in with GitHub** (pick the method you prefer in settings).
+4. Choose the **repository** (and branch, if you use something other than the default).
+5. Open a **CSSBattle** play page and solve as usual—CssHub syncs your submission to GitHub when you use the extension flow on that challenge.
 
-1. Verify workflows:
+If something fails, check the in-extension activity log in settings for a short, human-readable message.
 
-- open PR -> only typecheck job runs
-- push to `staging` -> staging extension artifact is generated
-- run workflow manually with `production` target -> production artifact is generated
+## Privacy in plain English
 
-1. For Chrome Web Store release, use artifact `extension-dist-production`.
+- CssHub needs **GitHub access** only to write to **your** chosen repo (and related metadata like branches).
+- Your **GitHub token is stored in the extension on your device**, not on a CssHub “account” in the cloud.
+- CssHub only runs on **CSSBattle** pages it is designed for, plus **GitHub** for sign-in and sync.
+- For a technical breakdown (OAuth backend, data flows), see **[`apps/extension/README.md`](apps/extension/README.md)** and **[`apps/backend/README.md`](apps/backend/README.md)**.
 
-## Install
+## Contributing
 
-[Chrome extension](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)
+Ideas, issues, and pull requests are welcome.
 
-## Contribution
-
-Suggestions and pull requests are welcome.
+If CssHub saves you time, consider **starring** this repository—it helps others discover it.  
+Want a feature? Open an issue and describe the workflow you have in mind.

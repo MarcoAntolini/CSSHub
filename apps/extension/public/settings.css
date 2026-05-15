@@ -12,7 +12,7 @@
 }
 
 html {
-	font-family: "JetBrains Mono", ui-monospace, monospace;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 	font-size: 15px;
 	line-height: 1.5;
 }
@@ -127,6 +127,7 @@ body {
 	align-items: center;
 	justify-content: center;
 	gap: 0.35rem;
+	min-height: 44px;
 	border: 1px solid rgba(148, 163, 184, 0.25);
 	background: rgba(30, 41, 59, 0.9);
 	color: #f8fafc;
@@ -137,6 +138,16 @@ body {
 	font-family: inherit;
 	cursor: pointer;
 	transition: background 0.15s, border-color 0.15s;
+}
+
+.btn:focus-visible,
+.repo-picker-item:focus-visible,
+.help-badge:focus-visible,
+.device-github-again-link:focus-visible,
+.event-link:focus-visible,
+.btn-link:focus-visible {
+	outline: 2px solid rgba(56, 189, 248, 0.85);
+	outline-offset: 2px;
 }
 
 .btn:hover:not(:disabled) {
@@ -226,7 +237,7 @@ body {
 }
 
 .repo-panel-btn {
-	min-height: 2.125rem;
+	min-height: 44px;
 	padding: 0.42rem 0.8rem;
 	font-size: 0.78rem;
 	font-weight: 600;
@@ -481,17 +492,22 @@ body {
 
 .help-badge {
 	flex-shrink: 0;
-	width: 1.35rem;
-	height: 1.35rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	/* Readable inline help: modest circle + legible “?” (not 44px chrome-heavy). */
+	width: 1.5rem;
+	height: 1.5rem;
 	padding: 0;
 	border-radius: 999px;
 	border: 1px solid rgba(148, 163, 184, 0.45);
 	background: rgba(30, 41, 59, 0.85);
 	color: #cbd5e1;
-	font-size: 0.72rem;
+	font-size: 0.76rem;
 	font-weight: 800;
 	line-height: 1;
 	cursor: pointer;
+	touch-action: manipulation;
 	transition:
 		background 0.15s,
 		border-color 0.15s,
@@ -638,20 +654,48 @@ body {
 	opacity: 0.5;
 }
 
+.switch input:focus-visible + .switch-slider {
+	outline: 2px solid rgba(56, 189, 248, 0.85);
+	outline-offset: 2px;
+}
+
 .section-headline {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: space-between;
 	gap: 0.75rem;
 	margin-bottom: 0.65rem;
 }
 
+.pat-input-row {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 0.5rem;
+	align-items: stretch;
+}
+
+.pat-visibility-toggle {
+	min-width: 64px;
+}
+
 .section-headline h2 {
-	margin-bottom: 0;
+	margin: 0;
+	line-height: 1.2;
+	padding-top: 0.22rem;
+}
+
+/* Activity log: anchor heading to top row; keep Clear log compact but readable (not min-height: 0). */
+.section-headline .btn {
+	min-height: 2rem;
+	align-self: flex-start;
+	padding: 0.34rem 0.78rem;
+	font-size: 0.74rem;
+	line-height: 1.25;
 }
 
 .btn-small {
-	padding: 0.35rem 0.7rem;
+	min-height: 34px;
+	padding: 0.3rem 0.68rem;
 	font-size: 0.75rem;
 }
 
@@ -903,9 +947,12 @@ body {
 }
 
 .device-github-again-link {
+	display: inline-flex;
+	align-items: center;
 	font: inherit;
 	font-size: 0.76rem;
 	font-weight: 600;
+	min-height: 44px;
 	padding: 0;
 	border: none;
 	background: none;
@@ -989,6 +1036,7 @@ body {
 
 .repo-picker-item {
 	text-align: left;
+	min-height: 44px;
 	padding: 0.55rem 0.65rem;
 	border-radius: 8px;
 	border: 1px solid transparent;
@@ -1018,4 +1066,55 @@ body {
 
 .empty-state-activity {
 	padding-bottom: 0;
+}
+
+.settings-loading-shell {
+	opacity: 0.95;
+}
+
+.loading-shell-card {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.loading-shell-line {
+	height: 0.8rem;
+	border-radius: 999px;
+	background: linear-gradient(90deg, rgba(51, 65, 85, 0.65), rgba(71, 85, 105, 0.9), rgba(51, 65, 85, 0.65));
+	background-size: 200% 100%;
+	animation: shell-shimmer 1.2s linear infinite;
+}
+
+.loading-shell-line-lg {
+	width: 72%;
+}
+
+.loading-shell-line-sm {
+	width: 42%;
+}
+
+@keyframes shell-shimmer {
+	from {
+		background-position: 200% 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.btn,
+	.help-badge,
+	.repo-picker-item,
+	.switch-slider,
+	.switch-slider::before,
+	.loading-shell-line {
+		transition: none;
+		animation: none;
+	}
+
+	.btn-spinner {
+		animation: none;
+		border-top-color: rgba(255, 255, 255, 0.28);
+	}
 }

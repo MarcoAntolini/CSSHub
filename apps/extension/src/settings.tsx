@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
-import type { ReactElement } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	deviceFlowStartResponseSchema,
@@ -55,6 +55,9 @@ const EVENT_BADGE_LABELS: Partial<Record<string, string>> = {
 	UNEXPECTED_ERROR: "unexpected error",
 };
 
+const MODAL_FOCUSABLE_SELECTOR =
+	'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 const getEventBadgeLabel = (event: SyncEvent): string => {
 	if (event.code) {
 		return EVENT_BADGE_LABELS[event.code] ?? event.code.toLowerCase().replace(/_/g, " ");
@@ -96,6 +99,7 @@ const App = (): ReactElement => {
 	const [webAuthInProgress, setWebAuthInProgress] = useState(false);
 
 	const [patToken, setPatToken] = useState("");
+	const [patTokenVisible, setPatTokenVisible] = useState(false);
 	const [patTutorialOpen, setPatTutorialOpen] = useState(false);
 	const [readmeInfoOpen, setReadmeInfoOpen] = useState(false);
 	const [deviceFlow, setDeviceFlow] = useState<{
@@ -120,6 +124,14 @@ const App = (): ReactElement => {
 	const [branchesLoading, setBranchesLoading] = useState(false);
 	const [createBranchName, setCreateBranchName] = useState("");
 	const [createBranchFrom, setCreateBranchFrom] = useState("");
+	const appMainRef = useRef<HTMLElement | null>(null);
+	const modalRestoreFocusRef = useRef<HTMLElement | null>(null);
+	const createModalRef = useRef<HTMLDivElement | null>(null);
+	const pickModalRef = useRef<HTMLDivElement | null>(null);
+	const createNameInputRef = useRef<HTMLInputElement | null>(null);
+	const pickSearchInputRef = useRef<HTMLInputElement | null>(null);
+	const wasCreateOpenRef = useRef(false);
+	const wasPickOpenRef = useRef(false);
 
 	const pushToast = useCallback((payload: UiNotice): void => {
 		if (payload.level === "success") {
@@ -132,6 +144,79 @@ const App = (): ReactElement => {
 		}
 		toast.warning(payload.message);
 	}, []);
+
+	const storeModalTriggerFocus = useCallback((): void => {
+		const active = document.activeElement;
+		if (active instanceof HTMLElement) {
+			modalRestoreFocusRef.current = active;
+		}
+	}, []);
+
+	const restoreModalTriggerFocus = useCallback((): void => {
+		const target = modalRestoreFocusRef.current;
+		modalRestoreFocusRef.current = null;
+		if (target && document.contains(target)) {
+			target.focus();
+		}
+	}, []);
+
+	const closeCreateModal = useCallback((): void => {
+		setCreateOpen(false);
+	}, []);
+
+	const openCreateModal = useCallback((): void => {
+		storeModalTriggerFocus();
+		setCreateOpen(true);
+	}, [storeModalTriggerFocus]);
+
+	const closePickModal = useCallback((): void => {
+		setPickOpen(false);
+	}, []);
+
+	const trapModalFocus = useCallback(
+		(event: ReactKeyboardEvent<HTMLDivElement>, container: HTMLDivElement | null): void => {
+			if (event.key !== "Tab" || !container) {
+				return;
+			}
+			const focusable = Array.from(
+				container.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR)
+			).filter((element) => !element.hasAttribute("aria-hidden"));
+			if (focusable.length === 0) {
+				event.preventDefault();
+				container.focus();
+				return;
+			}
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+			const active = document.activeElement;
+			if (event.shiftKey && active === first) {
+				event.preventDefault();
+				last.focus();
+				return;
+			}
+			if (!event.shiftKey && active === last) {
+				event.preventDefault();
+				first.focus();
+			}
+		},
+		[]
+	);
+
+	const onModalKeyDown = useCallback(
+		(
+			event: ReactKeyboardEvent<HTMLDivElement>,
+			container: HTMLDivElement | null,
+			closeModal: () => void
+		): void => {
+			if (event.key === "Escape") {
+				event.preventDefault();
+				closeModal();
+				return;
+			}
+			trapModalFocus(event, container);
+		},
+		[trapModalFocus]
+	);
 
 	const loadState = useCallback(async (): Promise<void> => {
 		setLoading(true);
@@ -189,6 +274,48 @@ const App = (): ReactElement => {
 			}
 		};
 	}, []);
+
+	useEffect(() => {
+		const modalOpen = createOpen || pickOpen;
+		const main = appMainRef.current;
+		if (main) {
+			if (modalOpen) {
+				main.setAttribute("aria-hidden", "true");
+				main.setAttribute("inert", "");
+			} else {
+				main.removeAttribute("aria-hidden");
+				main.removeAttribute("inert");
+			}
+		}
+		document.body.style.overflow = modalOpen ? "hidden" : "";
+		return () => {
+			document.body.style.overflow = "";
+		};
+	}, [createOpen, pickOpen]);
+
+	useEffect(() => {
+		if (createOpen && !wasCreateOpenRef.current) {
+			window.requestAnimationFrame(() => {
+				createNameInputRef.current?.focus();
+			});
+		}
+		if (!createOpen && wasCreateOpenRef.current && !pickOpen) {
+			restoreModalTriggerFocus();
+		}
+		wasCreateOpenRef.current = createOpen;
+	}, [createOpen, pickOpen, restoreModalTriggerFocus]);
+
+	useEffect(() => {
+		if (pickOpen && !wasPickOpenRef.current) {
+			window.requestAnimationFrame(() => {
+				pickSearchInputRef.current?.focus();
+			});
+		}
+		if (!pickOpen && wasPickOpenRef.current && !createOpen) {
+			restoreModalTriggerFocus();
+		}
+		wasPickOpenRef.current = pickOpen;
+	}, [createOpen, pickOpen, restoreModalTriggerFocus]);
 
 	useEffect(() => {
 		if (!data?.auth.isAuthenticated || !data.settings.selectedRepoFullName) {
@@ -462,6 +589,7 @@ const App = (): ReactElement => {
 			return;
 		}
 		setPatToken("");
+		setPatTokenVisible(false);
 		pushToast({
 			level: "success",
 			message: "GitHub account connected",
@@ -540,6 +668,7 @@ const App = (): ReactElement => {
 	};
 
 	const openPickModal = async (): Promise<void> => {
+		storeModalTriggerFocus();
 		setPickOpen(true);
 		setPickSearch("");
 		setPickSelected(null);
@@ -679,9 +808,17 @@ const App = (): ReactElement => {
 					<Toaster theme="dark" richColors position="top-center" closeButton />,
 					document.body,
 				)}
-				<div className="settings-root">
-					<p className="muted">Loading…</p>
-				</div>
+				<main className="settings-root settings-loading-shell" aria-busy="true" aria-live="polite">
+					<h1 className="settings-brand">CssHub</h1>
+					<p className="settings-tagline">
+						Sync CSSBattle submissions to GitHub — configure account and repository here.
+					</p>
+					<div className="settings-section loading-shell-card" role="status" aria-label="Loading settings">
+						<div className="loading-shell-line loading-shell-line-lg" />
+						<div className="loading-shell-line" />
+						<div className="loading-shell-line loading-shell-line-sm" />
+					</div>
+				</main>
 			</>
 		);
 	}
@@ -697,7 +834,7 @@ const App = (): ReactElement => {
 				<Toaster theme="dark" richColors position="top-center" closeButton />,
 				document.body,
 			)}
-			<div className="settings-root">
+			<main ref={appMainRef} className="settings-root">
 				<h1 className="settings-brand">CssHub</h1>
 				<p className="settings-tagline">
 					Sync CSSBattle submissions to GitHub — configure account and repository here.
@@ -863,15 +1000,27 @@ const App = (): ReactElement => {
 								<div className="auth-method-actions">
 									<div className="row row-tight">
 										<label htmlFor="pat-settings">Token</label>
-										<input
-											id="pat-settings"
-											type="password"
-											autoComplete="off"
-											placeholder="github_pat_… or ghp_…"
-											value={patToken}
-											onChange={(e) => setPatToken(e.target.value)}
-											disabled={busy || webAuthInProgress}
-										/>
+										<div className="pat-input-row">
+											<input
+												id="pat-settings"
+												type={patTokenVisible ? "text" : "password"}
+												autoComplete="off"
+												placeholder="github_pat_… or ghp_…"
+												value={patToken}
+												onChange={(e) => setPatToken(e.target.value)}
+												disabled={busy || webAuthInProgress}
+											/>
+											<button
+												type="button"
+												className="btn btn-ghost pat-visibility-toggle"
+												onClick={() => setPatTokenVisible((visible) => !visible)}
+												aria-label={patTokenVisible ? "Hide personal access token" : "Show personal access token"}
+												aria-pressed={patTokenVisible}
+												disabled={busy || webAuthInProgress}
+											>
+												{patTokenVisible ? "Hide" : "Show"}
+											</button>
+										</div>
 									</div>
 									<button type="button" className="btn" onClick={() => void loginPat()} disabled={busy || webAuthInProgress}>
 										Sign in with token
@@ -908,7 +1057,7 @@ const App = (): ReactElement => {
 										Clear selection
 									</button>
 								</div>
-								<button type="button" className="btn btn-primary repo-panel-btn repo-toolbar-primary" onClick={() => setCreateOpen(true)} disabled={busy}>
+								<button type="button" className="btn btn-primary repo-panel-btn repo-toolbar-primary" onClick={openCreateModal} disabled={busy}>
 									Create new…
 								</button>
 							</div>
@@ -1046,7 +1195,7 @@ const App = (): ReactElement => {
 					<>
 						<p className="muted">No repository selected for sync.</p>
 						<div className="btn-stack">
-							<button type="button" className="btn btn-primary" onClick={() => setCreateOpen(true)} disabled={busy}>
+							<button type="button" className="btn btn-primary" onClick={openCreateModal} disabled={busy}>
 								Create repository…
 							</button>
 							<button type="button" className="btn" onClick={openPickModal} disabled={busy}>
@@ -1115,15 +1264,28 @@ const App = (): ReactElement => {
 					</ul>
 				)}
 			</section>
+			</main>
 
 			{createOpen ? (
-				<div className="modal-backdrop" role="presentation" onClick={() => setCreateOpen(false)}>
-					<div className="modal-panel" role="dialog" onClick={(e) => e.stopPropagation()}>
-						<div className="modal-head">Create repository</div>
+				<div className="modal-backdrop" role="presentation" onClick={closeCreateModal}>
+					<div
+						ref={createModalRef}
+						className="modal-panel"
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="create-repository-title"
+						tabIndex={-1}
+						onClick={(e) => e.stopPropagation()}
+						onKeyDown={(event) => onModalKeyDown(event, createModalRef.current, closeCreateModal)}
+					>
+						<h2 className="modal-head" id="create-repository-title">
+							Create repository
+						</h2>
 						<div className="modal-body">
 							<div className="row">
 								<label htmlFor="cr-name">Name</label>
 								<input
+									ref={createNameInputRef}
 									id="cr-name"
 									type="text"
 									value={createName}
@@ -1142,7 +1304,7 @@ const App = (): ReactElement => {
 							</div>
 						</div>
 						<div className="modal-foot">
-							<button type="button" className="btn btn-ghost" onClick={() => setCreateOpen(false)}>
+							<button type="button" className="btn btn-ghost" onClick={closeCreateModal}>
 								Cancel
 							</button>
 							<button type="button" className="btn btn-primary" onClick={() => void confirmCreateRepo()} disabled={busy}>
@@ -1154,13 +1316,25 @@ const App = (): ReactElement => {
 			) : null}
 
 			{pickOpen ? (
-				<div className="modal-backdrop" role="presentation" onClick={() => setPickOpen(false)}>
-					<div className="modal-panel" role="dialog" onClick={(e) => e.stopPropagation()}>
-						<div className="modal-head">Choose repository</div>
+				<div className="modal-backdrop" role="presentation" onClick={closePickModal}>
+					<div
+						ref={pickModalRef}
+						className="modal-panel"
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="choose-repository-title"
+						tabIndex={-1}
+						onClick={(e) => e.stopPropagation()}
+						onKeyDown={(event) => onModalKeyDown(event, pickModalRef.current, closePickModal)}
+					>
+						<h2 className="modal-head" id="choose-repository-title">
+							Choose repository
+						</h2>
 						<div className="modal-body">
 							<div className="row">
 								<label htmlFor="pick-q">Search</label>
 								<input
+									ref={pickSearchInputRef}
 									id="pick-q"
 									type="text"
 									value={pickSearch}
@@ -1168,11 +1342,14 @@ const App = (): ReactElement => {
 									placeholder="owner/repo…"
 								/>
 							</div>
-							<div className="repo-picker-list">
+							<div className="repo-picker-list" role="listbox" aria-label="Available repositories">
 								{filteredPickList.map((r) => (
 									<button
 										key={r.id}
+										id={`repo-option-${r.id}`}
 										type="button"
+										role="option"
+										aria-selected={pickSelected?.id === r.id}
 										className={`repo-picker-item ${pickSelected?.id === r.id ? "selected" : ""}`}
 										onClick={() => setPickSelected(r)}
 									>
@@ -1186,7 +1363,7 @@ const App = (): ReactElement => {
 							) : null}
 						</div>
 						<div className="modal-foot">
-							<button type="button" className="btn btn-ghost" onClick={() => setPickOpen(false)}>
+							<button type="button" className="btn btn-ghost" onClick={closePickModal}>
 								Cancel
 							</button>
 							<button type="button" className="btn btn-primary" onClick={() => void confirmPickRepo()} disabled={busy || !pickSelected}>
@@ -1196,7 +1373,6 @@ const App = (): ReactElement => {
 					</div>
 				</div>
 			) : null}
-		</div>
 		</>
 	);
 };
