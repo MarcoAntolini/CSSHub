@@ -1,4 +1,59 @@
+/* Dark default — aligned with settings.html */
 :root {
+	--popup-bg: #020617;
+	--surface: rgba(15, 23, 42, 0.92);
+	--surface-muted: rgba(30, 41, 59, 0.55);
+	--surface-info: rgba(249, 115, 22, 0.12);
+	--text-primary: #e2e8f0;
+	--text-secondary: #94a3b8;
+	--text-muted: #64748b;
+	--text-subtle: #475569;
+	--accent: #f97316;
+	--accent-strong: #fb923c;
+	--accent-ring: rgba(249, 115, 22, 0.28);
+	--border-default: rgba(148, 163, 184, 0.15);
+	--border-strong: rgba(148, 163, 184, 0.28);
+	--radius-sm: 8px;
+	--radius-md: 10px;
+	--radius-pill: 999px;
+	--inline-error-text: #fecaca;
+	--inline-error-bg: rgba(127, 29, 29, 0.35);
+	--inline-error-border: rgba(248, 113, 113, 0.35);
+	--empty-sync-text: #fcd34d;
+	--empty-sync-bg: rgba(146, 64, 14, 0.35);
+	--empty-sync-border: rgba(251, 191, 36, 0.35);
+	--commit-link-text: #fdba74;
+	--commit-link-bg: rgba(249, 115, 22, 0.14);
+	--commit-link-border: rgba(251, 146, 60, 0.35);
+	--commit-link-hover-bg: rgba(249, 115, 22, 0.24);
+	--commit-link-hover-border: rgba(251, 146, 60, 0.5);
+	--commit-link-hover-text: #ffedd5;
+	--btn-primary-text: #fff7ed;
+	--btn-primary-bg: linear-gradient(135deg, #ea580c, #c2410c);
+	--btn-primary-border: rgba(249, 115, 22, 0.5);
+	--btn-primary-hover-bg: linear-gradient(
+		135deg,
+		color-mix(in srgb, #ea580c 88%, white),
+		color-mix(in srgb, #c2410c 85%, white)
+	);
+	--btn-secondary-hover-bg: rgba(30, 41, 59, 0.85);
+	--status-success-text: #86efac;
+	--status-success-bg: rgba(22, 101, 52, 0.35);
+	--status-success-border: rgba(74, 222, 128, 0.35);
+	--status-warn-text: #fdba74;
+	--status-warn-bg: rgba(146, 64, 14, 0.4);
+	--status-warn-border: rgba(251, 146, 60, 0.35);
+	--status-error-text: #fca5a5;
+	--status-error-bg: rgba(127, 29, 29, 0.4);
+	--status-error-border: rgba(248, 113, 113, 0.35);
+	--status-neutral-text: #94a3b8;
+	--status-neutral-bg: rgba(51, 65, 85, 0.55);
+	--status-neutral-border: rgba(148, 163, 184, 0.28);
+	color: var(--text-primary);
+	background: var(--popup-bg);
+}
+
+[data-theme="light"] {
 	--popup-bg: #f1f5f9;
 	--surface: #ffffff;
 	--surface-muted: #f8fafc;
@@ -12,9 +67,23 @@
 	--accent-ring: rgba(2, 132, 199, 0.2);
 	--border-default: #e2e8f0;
 	--border-strong: #cbd5e1;
-	--radius-sm: 8px;
-	--radius-md: 10px;
-	--radius-pill: 999px;
+	--inline-error-text: #991b1b;
+	--inline-error-bg: #fef2f2;
+	--inline-error-border: #fecaca;
+	--empty-sync-text: #92400e;
+	--empty-sync-bg: #fef3c7;
+	--empty-sync-border: #fde68a;
+	--commit-link-text: #0c4a6e;
+	--commit-link-bg: #f0f9ff;
+	--commit-link-border: #bae6fd;
+	--commit-link-hover-bg: #e0f2fe;
+	--commit-link-hover-border: #7dd3fc;
+	--commit-link-hover-text: #0c4a6e;
+	--btn-primary-text: #f8fafc;
+	--btn-primary-bg: #0f172a;
+	--btn-primary-border: #0f172a;
+	--btn-primary-hover-bg: #1e293b;
+	--btn-secondary-hover-bg: #f8fafc;
 	--status-success-text: #166534;
 	--status-success-bg: #dcfce7;
 	--status-success-border: #86efac;
@@ -27,8 +96,6 @@
 	--status-neutral-text: #475569;
 	--status-neutral-bg: #e2e8f0;
 	--status-neutral-border: #cbd5e1;
-	color: #1f2937;
-	background: var(--popup-bg);
 }
 
 *,
@@ -61,9 +128,9 @@ body {
 	padding: 0.5rem 0.65rem;
 	font-size: 0.78rem;
 	line-height: 1.35;
-	color: #991b1b;
-	background: #fef2f2;
-	border: 1px solid #fecaca;
+	color: var(--inline-error-text);
+	background: var(--inline-error-bg);
+	border: 1px solid var(--inline-error-border);
 	border-radius: 6px;
 }
 
@@ -81,10 +148,50 @@ body {
 	gap: 8px;
 }
 
+.popup-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
 .popup-title {
 	font-size: 1.05rem;
 	font-weight: 700;
 	letter-spacing: -0.02em;
+	flex: 1;
+	min-width: 0;
+}
+
+.theme-toggle {
+	width: 32px;
+	height: 32px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--border-default);
+	border-radius: var(--radius-sm);
+	background: var(--surface-muted);
+	color: var(--text-secondary);
+	cursor: pointer;
+	font-family: inherit;
+	flex-shrink: 0;
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease,
+		color 0.15s ease;
+}
+
+.theme-toggle:hover {
+	background: var(--surface);
+	border-color: var(--border-strong);
+	color: var(--text-primary);
+}
+
+.theme-toggle svg {
+	width: 16px;
+	height: 16px;
 }
 
 .btn-link {
@@ -115,6 +222,7 @@ body {
 	z-index: 99999 !important;
 }
 
+[data-sonner-toaster][data-theme="dark"],
 [data-sonner-toaster][data-theme="light"] {
 	--normal-bg: var(--surface);
 	--normal-text: var(--text-primary);
@@ -176,6 +284,8 @@ body {
 	padding: 8px 10px;
 	font-size: 0.85rem;
 	font-family: inherit;
+	background: var(--surface-muted);
+	color: var(--text-primary);
 }
 
 .field-input:focus {
@@ -228,13 +338,13 @@ a.sync-target:hover {
 }
 
 .sync-target-empty {
-	background: #fef3c7;
-	border-color: #fde68a;
-	color: #92400e;
+	background: var(--empty-sync-bg);
+	border-color: var(--empty-sync-border);
+	color: var(--empty-sync-text);
 }
 
 .sync-target-empty .sync-target-label {
-	color: #92400e;
+	color: var(--empty-sync-text);
 	text-transform: none;
 	letter-spacing: 0;
 	font-size: 0.78rem;
@@ -322,13 +432,13 @@ a.sync-target:hover {
 }
 
 .btn-full {
-	background: var(--text-primary);
-	color: #f8fafc;
-	border-color: var(--text-primary);
+	background: var(--btn-primary-bg);
+	color: var(--btn-primary-text);
+	border-color: var(--btn-primary-border);
 }
 
 .btn-full:hover:not(:disabled) {
-	background: #1e293b;
+	background: var(--btn-primary-hover-bg);
 }
 
 .btn-full:disabled {
@@ -343,7 +453,7 @@ a.sync-target:hover {
 }
 
 .btn-secondary-full:hover:not(:disabled) {
-	background: #f8fafc;
+	background: var(--btn-secondary-hover-bg);
 }
 
 .card-sync {
@@ -415,19 +525,19 @@ a.sync-target:hover {
 	min-height: 36px;
 	font-size: 0.75rem;
 	font-weight: 600;
-	color: var(--accent-strong);
+	color: var(--commit-link-text);
 	text-decoration: none;
 	padding: 8px 12px;
 	border-radius: var(--radius-pill);
-	background: var(--surface-info);
-	border: 1px solid #bae6fd;
+	background: var(--commit-link-bg);
+	border: 1px solid var(--commit-link-border);
 	transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .last-commit-link:hover {
-	background: #e0f2fe;
-	border-color: #7dd3fc;
-	color: #0c4a6e;
+	background: var(--commit-link-hover-bg);
+	border-color: var(--commit-link-hover-border);
+	color: var(--commit-link-hover-text);
 }
 
 .last-empty {
@@ -501,6 +611,7 @@ a.sync-target:hover {
 		.btn-full,
 		.btn-secondary-full,
 		.threshold-step,
+		.theme-toggle,
 		.sync-target,
 		.last-commit-link,
 		.field-slider
@@ -509,4 +620,3 @@ a.sync-target:hover {
 	outline-offset: 2px;
 	box-shadow: 0 0 0 3px var(--accent-ring);
 }
-

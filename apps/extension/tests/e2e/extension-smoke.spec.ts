@@ -164,6 +164,25 @@ test("popup renders unauthenticated CTA", async () => {
 	}
 });
 
+test("popup defaults to dark theme and persists light mode preference", async () => {
+	const launched = await launchExtension();
+	try {
+		const page = await launched.context.newPage();
+		await page.goto(`chrome-extension://${launched.extensionId}/popup.html`);
+
+		await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+		await page.getByRole("button", { name: "Switch to light mode" }).click();
+		await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+
+		await page.reload();
+		await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+		await page.getByRole("button", { name: "Switch to dark mode" }).click();
+		await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+	} finally {
+		await closeExtension(launched);
+	}
+});
+
 test("settings renders auth section for signed-out users", async () => {
 	const launched = await launchExtension();
 	try {

@@ -1,7 +1,14 @@
-import type { ReactElement } from "react";
+import type { ReactElement, SVGProps } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "../public/popup.css";
+import {
+	applyPopupTheme,
+	DEFAULT_POPUP_THEME,
+	loadPopupTheme,
+	savePopupTheme,
+	type PopupTheme,
+} from "./popupTheme";
 import {
 	extensionStateResponseSchema,
 	popupToBackgroundMessageSchema,
@@ -11,6 +18,9 @@ import {
 	type SubmissionPayload,
 } from "./shared/contracts";
 import { getIngestionTone, type StatusTone } from "./shared/eventTone";
+
+applyPopupTheme(DEFAULT_POPUP_THEME);
+void loadPopupTheme().then(applyPopupTheme);
 
 const THRESHOLD_MIN = 0;
 const THRESHOLD_MAX = 100;
@@ -230,6 +240,95 @@ const openSettingsPage = (): void => {
 	void chrome.tabs.create({ url });
 };
 
+const SunIcon = (props: SVGProps<SVGSVGElement>): ReactElement => (
+	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" {...props}>
+		<circle cx="12" cy="12" r="4" />
+		<path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+	</svg>
+);
+
+const MoonIcon = (props: SVGProps<SVGSVGElement>): ReactElement => (
+	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" {...props}>
+		<path d="M21 14.5A8.5 8.5 0 1 1 9.5 3a7 7 0 0 0 11.5 11.5z" />
+	</svg>
+);
+
+const usePopupTheme = (): {
+	theme: PopupTheme;
+	toggleTheme: () => void;
+} => {
+	const [theme, setTheme] = useState<PopupTheme>(DEFAULT_POPUP_THEME);
+
+	useEffect(() => {
+		let cancelled = false;
+		void loadPopupTheme().then((stored) => {
+			if (cancelled) {
+				return;
+			}
+			setTheme(stored);
+			applyPopupTheme(stored);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	const toggleTheme = useCallback((): void => {
+		setTheme((current) => {
+			const next: PopupTheme = current === "dark" ? "light" : "dark";
+			applyPopupTheme(next);
+			void savePopupTheme(next);
+			return next;
+		});
+	}, []);
+
+	return { theme, toggleTheme };
+};
+
+const ThemeToggle = ({
+	theme,
+	onToggle,
+}: {
+	theme: PopupTheme;
+	onToggle: () => void;
+}): ReactElement => {
+	const isDark = theme === "dark";
+	return (
+		<button
+			type="button"
+			className="theme-toggle"
+			onClick={onToggle}
+			aria-pressed={isDark}
+			aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+			title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+		>
+			{isDark ? <SunIcon /> : <MoonIcon />}
+		</button>
+	);
+};
+
+const PopupHeader = ({
+	theme,
+	onToggleTheme,
+	showSettingsLink,
+}: {
+	theme: PopupTheme;
+	onToggleTheme: () => void;
+	showSettingsLink: boolean;
+}): ReactElement => (
+	<header className="popup-header">
+		<h1 className="popup-title">CssHub</h1>
+		<div className="popup-header-actions">
+			<ThemeToggle theme={theme} onToggle={onToggleTheme} />
+			{showSettingsLink ? (
+				<button type="button" className="btn-link" onClick={openSettingsPage}>
+					Settings
+				</button>
+			) : null}
+		</div>
+	</header>
+);
+
 type PopupState = {
 	auth: AuthStatus;
 	settings: ExtensionSettings;
@@ -239,6 +338,7 @@ type PopupState = {
 };
 
 const App = (): ReactElement => {
+	const { theme, toggleTheme } = usePopupTheme();
 	const [data, setData] = useState<PopupState | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
@@ -350,7 +450,11 @@ const App = (): ReactElement => {
 	if (loading || !data) {
 		return (
 			<main className="popup popup-shell">
-				<h1 className="popup-title">CssHub</h1>
+				<PopupHeader
+					theme={theme}
+					onToggleTheme={toggleTheme}
+					showSettingsLink={false}
+				/>
 				<p className="subtitle">
 					{loading ? "Loading…" : (errorMessage ?? "Something went wrong.")}
 				</p>
@@ -376,14 +480,11 @@ const App = (): ReactElement => {
 					{errorMessage}
 				</p>
 			) : null}
-			<header className="popup-header">
-				<h1 className="popup-title">CssHub</h1>
-				{auth.isAuthenticated ? (
-					<button type="button" className="btn-link" onClick={openSettingsPage}>
-						Settings
-					</button>
-				) : null}
-			</header>
+			<PopupHeader
+				theme={theme}
+				onToggleTheme={toggleTheme}
+				showSettingsLink={auth.isAuthenticated}
+			/>
 
 			{!auth.isAuthenticated ? (
 				<section className="card">
