@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="apps/extension/public/icons/icon_128.png" alt="CssHub" width="96" height="96" />
-
-# CssHub
+<img src="apps/extension/public/banner.png" alt="CssHub banner" width="800" />
 
 **Automatically sync your [CSSBattle](https://cssbattle.dev) submissions to GitHub.**
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)
+[![release](https://img.shields.io/badge/release-v0.1.0-blue)](https://github.com/MarcoAntolini/CSSHub/releases)
+[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 </div>
 

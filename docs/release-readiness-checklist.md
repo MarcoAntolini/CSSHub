@@ -19,17 +19,17 @@ Use this checklist before publishing to Chrome Web Store.
 - [x] `npm run lint` passes (0 errors)
 - [x] `npm run test:security` passes (default gate: secrets + critical dependencies)
 - [ ] `npm run test:security:strict` reviewed (strict gate: secrets + high/moderate/critical dependencies)
-- [ ] `npm run build` passes with production envs set (including `VITE_OAUTH_BACKEND_BASE_URL`)
+- [x] `npm run build:extension:prod` passes with `VITE_OAUTH_BACKEND_BASE_URL` set (full `npm run build` includes backend workspace)
 - [ ] GitHub Actions `Quality Gates` workflow passes and uploads `security-report` artifact
 
 ## Performance
 
-See [`performance.md`](./performance.md) for SLOs and manual matrix.
+See [`performance.md`](./performance.md) for SLOs and manual matrix. Automated gates verified 2026-05-15.
 
-- [x] `npm run build:extension:prod` + `npm run check:bundle-budgets` pass (see [`bundle-baseline.md`](./bundle-baseline.md))
-- [ ] Unit perf tests pass (`syncSubmission`, `contentScriptStats`)
-- [ ] E2E `submission-perf.spec.ts` passes (mocked GitHub, &lt; 8 s SLO)
-- [ ] Manual Chrome Web Store perf matrix completed on production `dist/`
+- [x] `npm run build:extension:prod` + `npm run check:bundle-budgets` pass (set `VITE_OAUTH_BACKEND_BASE_URL`; see [`bundle-baseline.md`](./bundle-baseline.md))
+- [x] Unit perf tests pass (`syncSubmission`, `contentScriptStats`, `contentScript.dom` — part of `npm run test`)
+- [x] E2E `submission-perf.spec.ts` passes (mocked GitHub, &lt; 8 s SLO; included in `npm run test:e2e`)
+- [ ] Manual Chrome Web Store perf matrix completed on production `dist/` (see [`performance.md`](./performance.md) § Manual matrix)
 - [ ] `docs/performance-signoff-YYYY-MM-DD.md` recorded (optional audit trail)
 
 ## Security

@@ -140,7 +140,7 @@ Priority by risk/ROI, not blocking release if gates are green.
 | Artifact | Size (gzip) |
 |----------|-------------|
 | `background.js` | 26.2 KB (8.9 KB) |
-| `settings.js` | 27.5 KB (7.6 KB) |
+| `settings.js` | 31.3 KB (9.0 KB) |
 | `popup.js` | 5.8 KB (2.2 KB) |
 | `contentScript.js` | 5.3 KB (2.3 KB) |
 | `assets/vendor-react-*.js` | 185.4 KB (57.8 KB) |
