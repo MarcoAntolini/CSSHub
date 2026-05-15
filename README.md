@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="apps/extension/public/icons/icon_128.png" alt="CssHub" width="96" height="96" />
+
 # CssHub
 
 **Automatically sync your [CSSBattle](https://cssbattle.dev) submissions to GitHub.**
