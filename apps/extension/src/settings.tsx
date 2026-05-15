@@ -69,6 +69,17 @@ const getEventBadgeLabel = (event: SyncEvent): string => {
 	return event.level === "info" ? "info" : event.level;
 };
 
+const formatActivityTimestamp = (iso: string): string => {
+	const d = new Date(iso);
+	if (Number.isNaN(d.getTime())) {
+		return iso;
+	}
+	return d.toLocaleString(undefined, {
+		dateStyle: "medium",
+		timeStyle: "short",
+	});
+};
+
 const validateBranchName = (
 	value: string,
 	existingBranchNames: Set<string>
@@ -1262,25 +1273,44 @@ const App = (): ReactElement => {
 							</button>
 						</div>
 						<p className="muted">
-							Operational timeline only. Technical debug details are intentionally hidden.
+							Recent sync outcomes. For warnings and errors, the short code under the message matches what
+							CssHub uses internally (not a stack trace).
 						</p>
 						{recentEvents.length === 0 ? (
 							<p className="empty-state empty-state-activity">No events yet.</p>
 						) : (
-							<ul className="event-list">
+							<ul className="event-list" aria-label="Activity log">
 								{recentEvents.map((ev) => {
 									const tone = getSyncEventTone(ev);
+									const showCode =
+										Boolean(ev.code) && (tone === "error" || tone === "warn");
 									return (
 										<li key={ev.id} className={`event event-tone-${tone}`}>
-											<span>{new Date(ev.timestamp).toLocaleString()}</span>
-											<span className={`event-pill event-pill-${tone}`}>
-												{getEventBadgeLabel(ev)}
-											</span>
-											<span>{ev.message}</span>
+											<div className="event-head">
+												<span className={`event-pill event-pill-${tone}`}>
+													{getEventBadgeLabel(ev)}
+												</span>
+												<time className="event-time" dateTime={ev.timestamp}>
+													{formatActivityTimestamp(ev.timestamp)}
+												</time>
+											</div>
+											<p className="event-message">{ev.message}</p>
+											{showCode ? (
+												<p className="event-code" aria-label="Event code">
+													{ev.code}
+												</p>
+											) : null}
 											{ev.commitUrl ? (
-												<a href={ev.commitUrl} target="_blank" rel="noreferrer" className={`event-link event-link-${tone}`}>
-													View commit
-												</a>
+												<div className="event-foot">
+													<a
+														href={ev.commitUrl}
+														target="_blank"
+														rel="noreferrer"
+														className={`event-link event-link-${tone}`}
+													>
+														View commit
+													</a>
+												</div>
 											) : null}
 										</li>
 									);

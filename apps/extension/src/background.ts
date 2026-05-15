@@ -619,11 +619,20 @@ const isImprovedSubmission = (
 	return current.score > previous.score;
 };
 
+const formatSubmissionLine = (m: SavedSubmissionMetrics): string =>
+	`${m.matchPct.toFixed(2)}% match · ${m.score} score`;
+
 const notImprovedReasonMessage = (
 	current: SavedSubmissionMetrics,
 	previous: SavedSubmissionMetrics
-): string =>
-	`Submission skipped: current ${current.matchPct.toFixed(2)}% / ${current.score} does not beat best ${previous.matchPct.toFixed(2)}% / ${previous.score}.`;
+): string => {
+	const best = formatSubmissionLine(previous);
+	const now = formatSubmissionLine(current);
+	if (current.matchPct === previous.matchPct && current.score === previous.score) {
+		return `Repository left unchanged: this run matches your best on this branch (${best}). Only a strictly better match % or score triggers a new commit.`;
+	}
+	return `Repository left unchanged: best on this branch is ${best}. This run was ${now}, which is not an improvement.`;
+};
 
 const hasPositiveLastScore = (payload: SubmissionPayload): boolean =>
 	typeof payload.score === "number" &&
