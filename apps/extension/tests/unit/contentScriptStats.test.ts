@@ -28,9 +28,19 @@ describe("parseScoreFromText", () => {
 	});
 });
 
+const loadFixture = (): void => {
+	const parsed = new DOMParser().parseFromString(
+		readFileSync(FIXTURE_PATH, "utf8"),
+		"text/html"
+	);
+	document.head.innerHTML = parsed.head.innerHTML;
+	document.body.innerHTML = parsed.body.innerHTML;
+	document.title = parsed.title;
+};
+
 describe("extractStatsFromDocument", () => {
 	beforeEach(() => {
-		document.body.innerHTML = readFileSync(FIXTURE_PATH, "utf8");
+		loadFixture();
 	});
 
 	it("reads stats from fixture DOM", () => {

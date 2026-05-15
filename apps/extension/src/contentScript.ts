@@ -1,75 +1,38 @@
-import { contentScriptTabMessageSchema } from "./shared/contracts";
+import {
+	CLICKABLE_SELECTOR,
+	extractCodeFromCmLines,
+	findTargetImage,
+	getChallengeIdFromPathname,
+	getChallengeNameFromTitle,
+	getElementDimensions,
+	PREVIEW_SELECTOR,
+	isSubmitControlText,
+	type ElementDimensions,
+} from "./contentScriptDom";
 import {
 	didStatsChange,
 	extractStatsFromDocument,
 	type SubmissionStats,
 } from "./contentScriptStats";
+import { contentScriptTabMessageSchema } from "./shared/contracts";
 
-const PREVIEW_SELECTOR = "iframe[title*='Preview' i]";
-const SUBMIT_LABEL = /submit/i;
-const CLICKABLE_SELECTOR = "button, [role='button'], input[type='submit'], a";
 const POST_SUBMIT_SETTLE_DELAY_MS = 750;
 const POST_SUBMIT_WAIT_TIMEOUT_MS = 20_000;
 const POST_SUBMIT_POLL_INTERVAL_MS = 300;
 const EXTENSION_CONTEXT_INVALIDATED = "Extension context invalidated";
-
-type ElementDimensions = {
-	x: number;
-	y: number;
-	width: number;
-	height: number;
-};
 
 const isExtensionContextInvalidated = (error: unknown): boolean =>
 	error instanceof Error && error.message.includes(EXTENSION_CONTEXT_INVALIDATED);
 
 const getElementPositionAndDimensions = (
 	selector: string
-): ElementDimensions | null => {
-	const element = document.querySelector(selector);
-	if (!element) {
-		return null;
-	}
+): ElementDimensions | null =>
+	getElementDimensions(document, selector, window.devicePixelRatio || 1);
 
-	const rect = element.getBoundingClientRect();
-	const devicePixelRatio = window.devicePixelRatio || 1;
-	const dimensions = {
-		x: rect.left * devicePixelRatio,
-		y: rect.top * devicePixelRatio,
-		width: rect.width * devicePixelRatio,
-		height: rect.height * devicePixelRatio,
-	};
+const getChallengeId = (): string => getChallengeIdFromPathname(window.location.pathname);
 
-	if (dimensions.width <= 0 || dimensions.height <= 0) {
-		return null;
-	}
-
-	return dimensions;
-};
-
-const getChallengeId = (): string => {
-	const match = window.location.pathname.match(/^\/play\/(\d+)/);
-	return match?.[1] ?? "unknown";
-};
-
-const getChallengeName = (): string => {
-	const title = document.title.trim();
-	const targetMatch = title.match(/Target\s*#?\d+\s*:\s*(.+)$/i);
-	if (targetMatch?.[1]) {
-		return targetMatch[1].trim();
-	}
-
-	return `Target-${getChallengeId()}`;
-};
-
-const extractCodeFromVisibleDomLines = (): string => {
-	const lines = Array.from(document.querySelectorAll(".cm-line")).map((line) =>
-		Array.from(line.childNodes)
-			.map((node) => node.textContent ?? "")
-			.join("")
-	);
-	return lines.join("\n").trim();
-};
+const getChallengeName = (): string =>
+	getChallengeNameFromTitle(document.title, getChallengeId());
 
 const extractCode = async (): Promise<string> => {
 	try {
@@ -86,49 +49,13 @@ const extractCode = async (): Promise<string> => {
 		// e.g. extension context invalidated — fall back to visible lines only
 	}
 
-	return extractCodeFromVisibleDomLines();
+	return extractCodeFromCmLines(document);
 };
 
 const extractStats = (): SubmissionStats => extractStatsFromDocument(document);
 
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => window.setTimeout(resolve, ms));
-
-const isTargetImage = (img: HTMLImageElement): boolean => {
-	const altText = (img.getAttribute("alt") ?? "").toLowerCase();
-	const className = img.className.toString().toLowerCase();
-	const src = img.getAttribute("src") ?? "";
-
-	return (
-		altText.includes("target") ||
-		altText.includes("battle") ||
-		className.includes("target") ||
-		src.startsWith("/targets/")
-	);
-};
-
-const getTargetImage = (): { type: "dataUrl" | "url"; value: string } | null => {
-	const imgCandidates = Array.from(document.querySelectorAll("img"));
-	for (const img of imgCandidates) {
-		if (isTargetImage(img)) {
-			return { type: "url", value: img.currentSrc || img.src };
-		}
-	}
-
-	const canvasCandidate = document.querySelector("canvas");
-	if (canvasCandidate instanceof HTMLCanvasElement) {
-		try {
-			return {
-				type: "dataUrl",
-				value: canvasCandidate.toDataURL("image/png"),
-			};
-		} catch (_error) {
-			return null;
-		}
-	}
-
-	return null;
-};
 
 const capturePreviewImage = async (): Promise<string | null> => {
 	const message = {
@@ -194,7 +121,7 @@ const processSubmission = async (): Promise<void> => {
 			score: postSubmitStats.score,
 			matchPct: postSubmitStats.matchPct,
 			code: await extractCode(),
-			targetImage: getTargetImage(),
+			targetImage: findTargetImage(document),
 			resultImageDataUrl,
 		};
 
@@ -252,7 +179,7 @@ const installSubmitListeners = (): void => {
 				clickable instanceof HTMLInputElement
 					? clickable.value
 					: clickable.textContent?.trim() ?? "";
-			if (!SUBMIT_LABEL.test(text)) {
+			if (!isSubmitControlText(text)) {
 				return;
 			}
 			void processSubmission();

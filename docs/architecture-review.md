@@ -133,7 +133,7 @@ Priority by risk/ROI, not blocking release if gates are green.
 4. **Shared response helper** — `sendBackgroundMessage` + ok/error parsing exists in settings; popup still inlines `chrome.runtime.sendMessage`. A tiny `shared/messaging.ts` would DRY without over-abstracting.
 5. ~~**Bundle size**~~ — **Done (Phase 4):** `manualChunks` (`vendor-react`, `vendor-sonner`, `vendor`); popup no longer loads sonner; budgets in `perf-budgets.json` + `npm run check:bundle-budgets`. See [`bundle-baseline.md`](./bundle-baseline.md).
 6. ~~**`packages/shared`**~~ — **Done (Phase 5):** `@csshub/shared` with extension contracts + OAuth schemas; backend exchange/state and extension `githubAuth` consume shared Zod types.
-7. **Content script resilience** — DOM selectors are inherently brittle; document selector inventory and add integration tests with fixture HTML when CSSBattle markup shifts.
+7. ~~**Content script resilience**~~ — **Done (Phase 6):** selector inventory in [`content-script-selectors.md`](./content-script-selectors.md); pure parsers in `contentScriptDom.ts` / `contentScriptStats.ts`; fixture HTML + jsdom tests (`contentScript.dom.test.ts`, `contentScriptStats.test.ts`).
 
 ## Performance baseline (production build, 2026-05-15)
 
@@ -162,5 +162,6 @@ See backend README and `scripts/test-security.mjs` for operational gates.
 
 - [`privacy-data-map.md`](./privacy-data-map.md) — data inventory and flows
 - [`bundle-baseline.md`](./bundle-baseline.md) — before/after bundle sizes (Phase 4)
+- [`content-script-selectors.md`](./content-script-selectors.md) — DOM selector inventory (Phase 6)
 - [`release-readiness-checklist.md`](./release-readiness-checklist.md) — pre-store checklist
 - [`.cursor/plans/csshub_rollout_plan_acfb5bfe.plan.md`](../.cursor/plans/csshub_rollout_plan_acfb5bfe.plan.md) — phased rollout status
