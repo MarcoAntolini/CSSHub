@@ -56,6 +56,17 @@ body {
 	color: var(--text-primary);
 }
 
+.popup-inline-error {
+	margin: 0 0 0.75rem;
+	padding: 0.5rem 0.65rem;
+	font-size: 0.78rem;
+	line-height: 1.35;
+	color: #991b1b;
+	background: #fef2f2;
+	border: 1px solid #fecaca;
+	border-radius: 6px;
+}
+
 .popup-shell {
 	display: flex;
 	flex-direction: column;

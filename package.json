@@ -36,6 +36,7 @@
 		"test:security": "node scripts/test-security.mjs",
 		"test:security:strict": "node scripts/test-security.mjs --strict",
 		"test:security:json": "node scripts/test-security.mjs --json",
+		"check:bundle-budgets": "node scripts/check-bundle-budgets.mjs",
 		"doctor:oauth": "node scripts/doctor-oauth.mjs",
 		"derive:manifest-key": "node scripts/derive-manifest-key.mjs"
 	},

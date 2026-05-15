@@ -466,18 +466,26 @@ const updateBranchRef = async (
 	);
 };
 
+export type CommitFilesOptions = {
+	/** When set (e.g. from a prior listBranchBlobPaths), skips a second recursive tree fetch. */
+	existingPaths?: Set<string>;
+};
+
 export const commitFilesToRepo = async (
 	token: string,
 	repoFullName: string,
 	branch: string,
 	message: string,
-	files: CommitFile[]
+	files: CommitFile[],
+	options?: CommitFilesOptions
 ): Promise<CommitResult> => {
 	const { owner, repo } = parseRepoFullName(repoFullName);
 
 	const headSha = await getBranchHeadSha(token, owner, repo, branch);
 	const headCommit = await getCommit(token, owner, repo, headSha);
-	const existingPaths = await getTreePaths(token, owner, repo, headCommit.tree.sha);
+	const existingPaths =
+		options?.existingPaths ??
+		(await getTreePaths(token, owner, repo, headCommit.tree.sha));
 
 	const treeEntries: Array<{
 		path: string;

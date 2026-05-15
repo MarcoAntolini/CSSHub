@@ -22,6 +22,16 @@ Use this checklist before publishing to Chrome Web Store.
 - [ ] `npm run build` passes with production envs set (including `VITE_OAUTH_BACKEND_BASE_URL`)
 - [ ] GitHub Actions `Quality Gates` workflow passes and uploads `security-report` artifact
 
+## Performance
+
+See [`performance.md`](./performance.md) for SLOs and manual matrix.
+
+- [ ] `npm run build:extension:prod` + `npm run check:bundle-budgets` pass
+- [ ] Unit perf tests pass (`syncSubmission`, `contentScriptStats`)
+- [ ] E2E `submission-perf.spec.ts` passes (mocked GitHub, &lt; 8 s SLO)
+- [ ] Manual Chrome Web Store perf matrix completed on production `dist/`
+- [ ] `docs/performance-signoff-YYYY-MM-DD.md` recorded (optional audit trail)
+
 ## Security
 
 - [x] No hardcoded secrets in source, docs, env examples, or artifacts

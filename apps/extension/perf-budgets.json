@@ -1,0 +1,15 @@
+{
+	"entries": {
+		"background.js": 12,
+		"contentScript.js": 4,
+		"popup.js": 12,
+		"settings.js": 15
+	},
+	"chunks": {
+		"vendor-react": 60,
+		"vendor-sonner": 12,
+		"vendor": 20,
+		"eventTone": 5
+	},
+	"totalJsGzipMaxKb": 130
+}

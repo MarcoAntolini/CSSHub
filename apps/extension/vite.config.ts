@@ -116,6 +116,22 @@ export default defineConfig(({ mode }) => {
 					entryFileNames: "[name].js",
 					chunkFileNames: "assets/[name]-[hash].js",
 					assetFileNames: "[name].[ext]",
+					manualChunks(id) {
+						if (!id.includes("node_modules")) {
+							return undefined;
+						}
+						if (id.includes("sonner")) {
+							return "vendor-sonner";
+						}
+						if (
+							id.includes("react-dom") ||
+							id.includes("/react/") ||
+							id.endsWith("/react")
+						) {
+							return "vendor-react";
+						}
+						return "vendor";
+					},
 				},
 			},
 		},

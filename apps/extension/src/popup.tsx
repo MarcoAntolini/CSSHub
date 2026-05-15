@@ -1,10 +1,7 @@
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import "../public/popup.css";
-import { Toaster, toast } from "sonner";
-import "sonner/dist/styles.css";
 import {
 	extensionStateResponseSchema,
 	popupToBackgroundMessageSchema,
@@ -19,7 +16,6 @@ const THRESHOLD_MIN = 0;
 const THRESHOLD_MAX = 100;
 const THRESHOLD_SAVE_DEBOUNCE_MS = 400;
 const SHOW_STATUS_DEMO = false;
-const POPUP_TOAST_THEME = "light" as const;
 const POPUP_ERRORS = {
 	loadState: "Could not load popup state",
 	saveThreshold: "Could not update threshold",
@@ -246,6 +242,7 @@ const App = (): ReactElement => {
 	const [data, setData] = useState<PopupState | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [thresholdDraft, setThresholdDraft] = useState(95);
 	const hasLoadedOnceRef = useRef(false);
 
@@ -259,7 +256,7 @@ const App = (): ReactElement => {
 		});
 		const response = await chrome.runtime.sendMessage(message);
 		if (!response?.ok) {
-			toast.error(POPUP_ERRORS.loadState);
+			setErrorMessage(POPUP_ERRORS.loadState);
 			if (shouldShowLoading) {
 				setLoading(false);
 			}
@@ -268,13 +265,14 @@ const App = (): ReactElement => {
 		}
 		const parsed = extensionStateResponseSchema.safeParse(response.data);
 		if (!parsed.success) {
-			toast.error(POPUP_ERRORS.loadState);
+			setErrorMessage(POPUP_ERRORS.loadState);
 			if (shouldShowLoading) {
 				setLoading(false);
 			}
 			setStatus("error");
 			return;
 		}
+		setErrorMessage(null);
 		setData({
 			auth: parsed.data.auth,
 			settings: parsed.data.settings,
@@ -307,9 +305,10 @@ const App = (): ReactElement => {
 			const response = await chrome.runtime.sendMessage(message);
 			if (!response?.ok) {
 				setStatus("error");
-				toast.error(response?.error ?? POPUP_ERRORS.saveThreshold);
+				setErrorMessage(response?.error ?? POPUP_ERRORS.saveThreshold);
 				return;
 			}
+			setErrorMessage(null);
 			setData({
 				...data,
 				settings: { ...data.settings, threshold: next },
@@ -350,23 +349,12 @@ const App = (): ReactElement => {
 
 	if (loading || !data) {
 		return (
-			<>
-				{createPortal(
-					<Toaster
-						theme={POPUP_TOAST_THEME}
-						richColors
-						position="top-center"
-						closeButton
-					/>,
-					document.body,
-				)}
-				<main className="popup popup-shell">
-					<h1 className="popup-title">CssHub</h1>
-					<p className="subtitle">
-						{loading ? "Loading…" : "Something went wrong."}
-					</p>
-				</main>
-			</>
+			<main className="popup popup-shell">
+				<h1 className="popup-title">CssHub</h1>
+				<p className="subtitle">
+					{loading ? "Loading…" : (errorMessage ?? "Something went wrong.")}
+				</p>
+			</main>
 		);
 	}
 
@@ -382,17 +370,12 @@ const App = (): ReactElement => {
 					: "—";
 
 	return (
-		<>
-			{createPortal(
-				<Toaster
-					theme={POPUP_TOAST_THEME}
-					richColors
-					position="top-center"
-					closeButton
-				/>,
-				document.body,
-			)}
-			<main className="popup popup-shell">
+		<main className="popup popup-shell">
+			{errorMessage ? (
+				<p className="popup-inline-error" role="alert">
+					{errorMessage}
+				</p>
+			) : null}
 			<header className="popup-header">
 				<h1 className="popup-title">CssHub</h1>
 				{auth.isAuthenticated ? (
@@ -537,7 +520,6 @@ const App = (): ReactElement => {
 				</>
 			)}
 		</main>
-		</>
 	);
 };
 

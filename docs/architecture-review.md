@@ -135,17 +135,19 @@ Priority by risk/ROI, not blocking release if gates are green.
 6. **`packages/shared`** — Promote `contracts.ts` (+ types) when backend needs the same schemas; until then duplication risk is low (backend is OAuth-only).
 7. **Content script resilience** — DOM selectors are inherently brittle; document selector inventory and add integration tests with fixture HTML when CSSBattle markup shifts.
 
-## Performance baseline (dev build, 2026-05-15)
+## Performance baseline (production build, 2026-05-15)
 
 | Artifact | Size (gzip) |
 |----------|-------------|
-| `background.js` | 25.7 KB (8.8 KB) |
-| `settings.js` | 28.0 KB (7.8 KB) |
-| `popup.js` | 6.1 KB (2.2 KB) |
-| `contentScript.js` | 5.4 KB (2.3 KB) |
-| `assets/eventTone-*.js` | 229 KB (71 KB) — largest chunk |
+| `background.js` | 26.2 KB (8.9 KB) |
+| `settings.js` | 27.5 KB (7.6 KB) |
+| `popup.js` | 5.8 KB (2.2 KB) |
+| `contentScript.js` | 5.3 KB (2.3 KB) |
+| `assets/vendor-react-*.js` | 185.4 KB (57.8 KB) |
+| `assets/vendor-sonner-*.js` | 33.0 KB (9.3 KB) — settings only |
+| `assets/eventTone-*.js` | 1.3 KB (0.7 KB) |
 
-Track these on release branches; investigate if `eventTone` shared chunk grows further.
+Enforced in CI via `npm run check:bundle-budgets` after `build:extension:prod`. See [`performance.md`](./performance.md).
 
 ## Security architecture (cross-cutting)
 

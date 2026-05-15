@@ -37,7 +37,10 @@ import {
 	getStoredState,
 	saveStoredState,
 } from "./storage";
-import { buildRootReadmeContent } from "./rootReadme";
+import {
+	fingerprintSubmission,
+	processCssbattleSubmission,
+} from "./submission/syncSubmission";
 
 const toBase64 = (bytes: Uint8Array): string => {
 	let output = "";
@@ -411,10 +414,7 @@ const formatCommitMessage = (
 	return `Score: ${scoreValue} (${matchValue}% match) - CSSHub`;
 };
 
-const DUPLICATE_WINDOW_MS = 45 * 1000;
-const DUPLICATE_WINDOW_SECONDS = Math.floor(DUPLICATE_WINDOW_MS / 1000);
 const MAX_EVENTS = 15;
-const MAX_REASONABLE_SCORE = 100_000;
 const BADGE_CLEAR_TIMEOUT_MS = 10_000;
 type SyncEventCode =
 	| "SYNC_COMMITTED"
@@ -576,81 +576,6 @@ const pushEvent = (
 	};
 	return [next, ...events].slice(0, MAX_EVENTS);
 };
-
-const fingerprintSubmission = (payload: SubmissionPayload): string => {
-	const compact = JSON.stringify({
-		challengeId: payload.challengeId,
-		score: payload.score,
-		matchPct: payload.matchPct,
-		code: payload.code,
-	});
-	let hash = 0;
-	for (let index = 0; index < compact.length; index += 1) {
-		hash = (hash << 5) - hash + compact.charCodeAt(index);
-		hash |= 0;
-	}
-	return String(hash);
-};
-
-const isDuplicateSubmission = (
-	payload: SubmissionPayload,
-	lastSubmission: SubmissionPayload | null,
-	lastFingerprint: string | null
-): boolean => {
-	if (!lastSubmission || !lastFingerprint) {
-		return false;
-	}
-	const currentFingerprint = fingerprintSubmission(payload);
-	if (currentFingerprint !== lastFingerprint) {
-		return false;
-	}
-	const now = Date.parse(payload.submittedAt);
-	const before = Date.parse(lastSubmission.submittedAt);
-	if (Number.isNaN(now) || Number.isNaN(before)) {
-		return false;
-	}
-	return now - before <= DUPLICATE_WINDOW_MS;
-};
-
-const duplicateReasonMessage = (): string =>
-	`Duplicate submission skipped: same challenge, code, and score within ${DUPLICATE_WINDOW_SECONDS}s window.`;
-
-const isImprovedSubmission = (
-	current: SavedSubmissionMetrics,
-	previous: SavedSubmissionMetrics
-): boolean => {
-	if (current.matchPct > previous.matchPct) {
-		return true;
-	}
-	if (current.matchPct < previous.matchPct) {
-		return false;
-	}
-	return current.score > previous.score;
-};
-
-const formatSubmissionLine = (m: SavedSubmissionMetrics): string =>
-	`${m.matchPct.toFixed(2)}% match · ${m.score} score`;
-
-const notImprovedReasonMessage = (
-	current: SavedSubmissionMetrics,
-	previous: SavedSubmissionMetrics
-): string => {
-	const best = formatSubmissionLine(previous);
-	const now = formatSubmissionLine(current);
-	if (current.matchPct === previous.matchPct && current.score === previous.score) {
-		return `Repository left unchanged: this run matches your best on this branch (${best}). Only a strictly better match % or score triggers a new commit.`;
-	}
-	return `Repository left unchanged: best on this branch is ${best}. This run was ${now}, which is not an improvement.`;
-};
-
-const hasPositiveLastScore = (payload: SubmissionPayload): boolean =>
-	typeof payload.score === "number" &&
-	Number.isFinite(payload.score) &&
-	payload.score > 0 &&
-	payload.score <= MAX_REASONABLE_SCORE &&
-	typeof payload.matchPct === "number" &&
-	Number.isFinite(payload.matchPct) &&
-	payload.matchPct > 0;
 
 type MessageResponse = { ok: boolean; data?: unknown; error?: string };
 type SendResponse = (response: MessageResponse) => void;
@@ -972,121 +897,44 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 	const state = await getStoredState();
 	const threshold = state.settings.threshold;
 	const matchPct = data.payload.matchPct ?? -1;
-	const hasScoredResult = hasPositiveLastScore(data.payload);
+	const hasScoredResult =
+		typeof data.payload.score === "number" &&
+		Number.isFinite(data.payload.score) &&
+		data.payload.score > 0 &&
+		typeof data.payload.matchPct === "number" &&
+		Number.isFinite(data.payload.matchPct) &&
+		data.payload.matchPct > 0;
 	const accepted = hasScoredResult && matchPct >= threshold;
-	const duplicate = isDuplicateSubmission(
-		data.payload,
-		state.lastSubmission,
-		state.lastSubmissionFingerprint
-	);
+
 	let committed = false;
 	let commitUrl: string | null = null;
 	let skippedNotImproved = false;
 	let errorOccurred = false;
-	let reason = !hasScoredResult
-		? "Submission skipped because Last score is zero, unavailable, or invalid"
-		: accepted
-		? "Submission accepted by threshold"
-		: "Submission below threshold";
-	let eventCode: SyncEventCode = hasScoredResult
-		? accepted
-			? "SYNC_COMMITTED"
-			: "SYNC_SKIPPED_THRESHOLD"
-		: "SYNC_SKIPPED_INVALID_SCORE";
+	let reason = "";
+	let eventCode: SyncEventCode = "UNEXPECTED_ERROR";
 	let recentEvents = state.recentEvents;
+	let duplicate = false;
+	let shouldAdvanceDuplicateBaseline = false;
 
 	try {
-		if (duplicate) {
-			reason = duplicateReasonMessage();
-			eventCode = "SYNC_SKIPPED_DUPLICATE";
-			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
-		} else if (accepted) {
-			if (!state.githubToken) {
-				reason = "Submission accepted but GitHub is not authenticated";
-				eventCode = "SYNC_AUTH_REQUIRED";
-				recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
-			} else if (!state.settings.selectedRepoFullName) {
-				reason = "Submission accepted but no repository selected";
-				eventCode = "SYNC_REPO_REQUIRED";
-				recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
-			} else {
-				const branch = state.settings.selectedBranch ?? "main";
-				const currentMetrics: SavedSubmissionMetrics = {
-					score: data.payload.score ?? 0,
-					matchPct: data.payload.matchPct ?? 0,
-				};
-				const previousMetrics = await readBestSubmissionMetrics(
-					state.githubToken,
-					state.settings.selectedRepoFullName,
-					branch,
-					data.payload
-				);
-				if (previousMetrics && !isImprovedSubmission(currentMetrics, previousMetrics)) {
-					skippedNotImproved = true;
-					reason = notImprovedReasonMessage(currentMetrics, previousMetrics);
-					eventCode = "SYNC_SKIPPED_NOT_IMPROVED";
-					recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
-				} else {
-					const files = await buildSubmissionFiles(data.payload);
-					const readmeMode = state.settings.repositoryReadmeMode ?? "managed-section";
-					if (readmeMode !== "off") {
-						try {
-							const existingPaths = await listBranchBlobPaths(
-								state.githubToken,
-								state.settings.selectedRepoFullName,
-								branch
-							);
-							const existingReadme = await fetchRepoUtf8File(
-								state.githubToken,
-								state.settings.selectedRepoFullName,
-								branch,
-								"README.md"
-							);
-							const rootReadme = buildRootReadmeContent({
-								mode: readmeMode,
-								existingReadme,
-								existingBlobPaths: existingPaths,
-								challengeFolder: challengeFolderPath(data.payload),
-								challengeTitle: formatChallengeTitle(data.payload),
-							});
-							if (rootReadme !== null) {
-								files.push({
-									path: "README.md",
-									content: rootReadme,
-									encoding: "utf-8",
-								});
-							}
-						} catch (readmeError) {
-							console.warn("CssHub: root README update skipped", readmeError);
-						}
-					}
-					const commitMessage = formatCommitMessage(
-						data.payload.score,
-						data.payload.matchPct
-					);
-					const commitResult = await commitFilesToRepo(
-						state.githubToken,
-						state.settings.selectedRepoFullName,
-						branch,
-						commitMessage,
-						files
-					);
-					committed = true;
-					commitUrl = commitResult.commitUrl;
-					reason = "Submission committed to GitHub";
-					eventCode = "SYNC_COMMITTED";
-					recentEvents = pushEvent(
-						recentEvents,
-						"info",
-						reason,
-						commitUrl,
-						eventCode
-					);
-				}
-			}
-		} else {
-			recentEvents = pushEvent(recentEvents, "info", reason, null, eventCode);
-		}
+		const result = await processCssbattleSubmission(data.payload, state, {
+			readBestSubmissionMetrics,
+			buildSubmissionFiles,
+			listBranchBlobPaths,
+			fetchRepoUtf8File,
+			commitFilesToRepo,
+			challengeFolderPath,
+			formatChallengeTitle,
+			formatCommitMessage,
+		});
+		reason = result.reason;
+		eventCode = result.eventCode;
+		committed = result.committed;
+		commitUrl = result.commitUrl;
+		skippedNotImproved = result.skippedNotImproved;
+		duplicate = result.duplicate;
+		recentEvents = result.recentEvents;
+		shouldAdvanceDuplicateBaseline = result.shouldAdvanceDuplicateBaseline;
 	} catch (error) {
 		errorOccurred = true;
 		committed = false;
@@ -1096,6 +944,7 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 		reason = safeError.message;
 		eventCode = safeError.code;
 		recentEvents = pushEvent(recentEvents, "error", reason, null, eventCode);
+		shouldAdvanceDuplicateBaseline = false;
 	}
 
 	const responsePayload: SubmissionIngestionResponse =
@@ -1107,8 +956,6 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 			committed,
 			commitUrl,
 		});
-
-	const shouldAdvanceDuplicateBaseline = !duplicate && !errorOccurred;
 
 	await saveStoredState({
 		...state,
