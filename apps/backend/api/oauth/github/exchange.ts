@@ -1,25 +1,14 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { z } from "zod";
+import {
+	githubOAuthTokenRawSchema,
+	oauthExchangeRequestSchema,
+} from "@csshub/shared";
 import { handleCorsPreflight, setCorsHeaders } from "../../../lib/cors";
 import { backendEnv } from "../../../lib/env";
 import { rejectMethod, getClientIp } from "../../../lib/http";
 import { checkRateLimit } from "../../../lib/rateLimit";
 import { consumeOAuthState } from "../../../lib/oauthState";
 import { isAllowedRedirectUri } from "../../../lib/oauth";
-
-const exchangePayloadSchema = z.object({
-	code: z.string().min(1),
-	state: z.string().min(1),
-	redirectUri: z.string().url(),
-});
-
-const githubExchangeSchema = z.object({
-	access_token: z.string().min(1).optional(),
-	token_type: z.string().optional(),
-	scope: z.string().optional(),
-	error: z.string().optional(),
-	error_description: z.string().optional(),
-});
 
 const EXCHANGE_RATE_LIMIT = {
 	limit: 12,
@@ -49,7 +38,7 @@ const exchangeCodeForToken = async (
 	}
 
 	const raw = await response.json();
-	const parsed = githubExchangeSchema.safeParse(raw);
+	const parsed = githubOAuthTokenRawSchema.safeParse(raw);
 	if (!parsed.success) {
 		throw new Error("Invalid GitHub token response");
 	}
@@ -89,7 +78,7 @@ export default async function handler(
 		return;
 	}
 
-	const parsedPayload = exchangePayloadSchema.safeParse(req.body);
+	const parsedPayload = oauthExchangeRequestSchema.safeParse(req.body);
 	if (!parsedPayload.success) {
 		res.status(400).json({ error: "Invalid request payload" });
 		return;

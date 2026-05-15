@@ -7,10 +7,11 @@
 		"dev": "npm run serve",
 		"serve": "vercel dev --listen 3000 --yes",
 		"dev:all": "npm run dev",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsc --build",
 		"typecheck:all": "npm run typecheck"
 	},
 	"dependencies": {
+		"@csshub/shared": "*",
 		"@upstash/redis": "^1.35.6",
 		"dotenv": "^17.4.2",
 		"zod": "^3.24.4"

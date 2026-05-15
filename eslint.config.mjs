@@ -9,6 +9,7 @@ export default tseslint.config(
 			"node_modules/**",
 			"apps/**/dist/**",
 			"apps/**/test-results/**",
+			"packages/**/dist/**",
 			".cursor/**",
 		],
 	},
@@ -40,6 +41,14 @@ export default tseslint.config(
 		rules: {
 			"react-hooks/rules-of-hooks": "error",
 			"react-hooks/exhaustive-deps": "warn",
+		},
+	},
+	{
+		files: ["packages/shared/**/*.ts"],
+		languageOptions: {
+			globals: {
+				...globals.node,
+			},
 		},
 	},
 	{

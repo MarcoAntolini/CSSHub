@@ -31,7 +31,7 @@ Popup HTML preloaded the shared chunk (included sonner even though popup used in
 | `assets/vendor-react-*.js` | 185 KB | 57.8 KB | React + react-dom |
 | `assets/vendor-sonner-*.js` | 33 KB | 9.3 KB | Settings only |
 | `assets/vendor-*.js` | 58 KB | 14.3 KB | Primarily zod |
-| `assets/contracts-*.js` | 2.3 KB | 0.9 KB | Shared schemas |
+| `assets/schemas-*.js` (`@csshub/shared`) | 2.6 KB | 1.0 KB | Shared Zod contracts |
 | `assets/messaging-*.js` | 1.9 KB | 1.0 KB | UI → background client |
 
 ### Goals vs results

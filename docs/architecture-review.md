@@ -39,7 +39,7 @@ flowchart TB
 | `scripts/` | Root tooling (`test-security.mjs`) |
 | `docs/` | Privacy, release, architecture notes |
 
-Shared types and Zod schemas live in `apps/extension/src/shared/` (not yet extracted to `packages/shared`).
+Shared Zod contracts and OAuth wire schemas live in [`packages/shared`](../packages/shared/) (`@csshub/shared`). Extension keeps UI-only helpers in `apps/extension/src/shared/` (`messaging.ts`, `eventTone.ts`).
 
 ## Extension modules and responsibilities
 
@@ -132,7 +132,7 @@ Priority by risk/ROI, not blocking release if gates are green.
 3. **Align runtime contracts** — Remove or re-wire unused `cropImage` / `getElementPositionAndDimensions` entries in `runtimeMessageSchema` if no caller remains.
 4. **Shared response helper** — `sendBackgroundMessage` + ok/error parsing exists in settings; popup still inlines `chrome.runtime.sendMessage`. A tiny `shared/messaging.ts` would DRY without over-abstracting.
 5. ~~**Bundle size**~~ — **Done (Phase 4):** `manualChunks` (`vendor-react`, `vendor-sonner`, `vendor`); popup no longer loads sonner; budgets in `perf-budgets.json` + `npm run check:bundle-budgets`. See [`bundle-baseline.md`](./bundle-baseline.md).
-6. **`packages/shared`** — Promote `contracts.ts` (+ types) when backend needs the same schemas; until then duplication risk is low (backend is OAuth-only).
+6. ~~**`packages/shared`**~~ — **Done (Phase 5):** `@csshub/shared` with extension contracts + OAuth schemas; backend exchange/state and extension `githubAuth` consume shared Zod types.
 7. **Content script resilience** — DOM selectors are inherently brittle; document selector inventory and add integration tests with fixture HTML when CSSBattle markup shifts.
 
 ## Performance baseline (production build, 2026-05-15)

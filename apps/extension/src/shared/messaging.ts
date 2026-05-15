@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { popupToBackgroundMessageSchema } from "./contracts";
+import { popupToBackgroundMessageSchema } from "@csshub/shared";
 
 export type BackgroundResponse<T = unknown> =
 	| { ok: true; data?: T }

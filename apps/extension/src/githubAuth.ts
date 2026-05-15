@@ -1,4 +1,8 @@
-import { deviceFlowStartResponseSchema } from "./shared/contracts";
+import {
+	deviceFlowStartResponseSchema,
+	oauthExchangeResponseSchema,
+	oauthStateResponseSchema,
+} from "@csshub/shared";
 
 const DEVICE_CODE_URL = "https://github.com/login/device/code";
 const ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token";
@@ -6,18 +10,6 @@ const AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
 const DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 const GITHUB_SCOPE = "repo read:user";
 const DEFAULT_BACKEND_URL = "http://localhost:3000";
-
-type OAuthStateResponse = {
-	state: string;
-	expiresInSec: number;
-	githubClientId: string;
-};
-
-type OAuthExchangeResponse = {
-	accessToken: string;
-	tokenType: string;
-	scope: string;
-};
 
 const getDeviceFlowClientId = (): string => {
 	const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID?.trim();
@@ -158,20 +150,13 @@ export const buildGithubAuthorizeUrl = (
 	return `${AUTHORIZE_URL}?${params.toString()}`;
 };
 
-export const requestWebOAuthState = async (): Promise<OAuthStateResponse> => {
-	const data = await requestOAuthBackend<OAuthStateResponse>(
-		"/api/oauth/github/state"
-	);
-	if (
-		!data?.state ||
-		typeof data.expiresInSec !== "number" ||
-		!data.githubClientId
-	) {
-		throw new Error(
-			"OAuth backend returned invalid state response"
-		);
+export const requestWebOAuthState = async () => {
+	const data = await requestOAuthBackend<unknown>("/api/oauth/github/state");
+	const parsed = oauthStateResponseSchema.safeParse(data);
+	if (!parsed.success) {
+		throw new Error("OAuth backend returned invalid state response");
 	}
-	return data;
+	return parsed.data;
 };
 
 export const exchangeWebAuthCode = async (
@@ -179,16 +164,14 @@ export const exchangeWebAuthCode = async (
 	state: string,
 	redirectUri: string
 ): Promise<string> => {
-	const payload = await requestOAuthBackend<OAuthExchangeResponse>(
-		"/api/oauth/github/exchange",
-		{
-			code,
-			state,
-			redirectUri,
-		}
-	);
-	if (!payload?.accessToken) {
+	const data = await requestOAuthBackend<unknown>("/api/oauth/github/exchange", {
+		code,
+		state,
+		redirectUri,
+	});
+	const parsed = oauthExchangeResponseSchema.safeParse(data);
+	if (!parsed.success) {
 		throw new Error("OAuth backend did not return an access token");
 	}
-	return payload.accessToken;
+	return parsed.data.accessToken;
 };

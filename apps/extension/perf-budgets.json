@@ -9,7 +9,8 @@
 		"vendor-react": 60,
 		"vendor-sonner": 12,
 		"vendor": 20,
-		"eventTone": 5
+		"schemas": 2,
+		"messaging": 2
 	},
 	"totalJsGzipMaxKb": 130
 }

@@ -7,7 +7,8 @@
 	"private": true,
 	"type": "module",
 	"workspaces": [
-		"apps/*"
+		"apps/*",
+		"packages/*"
 	],
 	"scripts": {
 		"dev": "concurrently -k -n backend,extension \"npm run dev:backend\" \"npm run dev:extension\"",
@@ -26,9 +27,10 @@
 		"build:dev": "npm run build:extension:dev",
 		"test": "npm run test --workspaces --if-present",
 		"test:e2e": "npm run test:e2e --workspaces --if-present",
-		"lint": "eslint \"apps/**/*.{ts,tsx}\" \"scripts/**/*.mjs\"",
+		"lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" \"scripts/**/*.mjs\"",
 		"lint:fix": "npm run lint -- --fix",
-		"typecheck": "npm run typecheck --workspaces --if-present",
+		"typecheck": "tsc --build",
+		"typecheck:shared": "npm --workspace @csshub/shared run typecheck",
 		"typecheck:all": "npm run typecheck --workspaces --if-present",
 		"typecheck:backend": "npm --workspace @csshub/backend run typecheck",
 		"typecheck:extension": "npm --workspace @csshub/extension run typecheck",

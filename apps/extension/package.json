@@ -16,7 +16,7 @@
 		"build:dev": "vite build --mode development",
 		"build:staging": "vite build --mode staging",
 		"build:preview": "vite build --mode preview",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsc --build",
 		"typecheck:all": "npm run typecheck",
 		"test": "vitest run",
 		"test:e2e": "npm run build:dev && playwright test"
@@ -33,6 +33,7 @@
 		"vitest": "^3.2.4"
 	},
 	"dependencies": {
+		"@csshub/shared": "*",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0",
 		"sonner": "^2.0.7",
