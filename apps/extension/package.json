@@ -18,9 +18,11 @@
 		"build:preview": "vite build --mode preview",
 		"typecheck": "tsc --noEmit",
 		"typecheck:all": "npm run typecheck",
-		"test": "vitest run"
+		"test": "vitest run",
+		"test:e2e": "npm run build:dev && playwright test"
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.60.0",
 		"@types/chrome": "^0.1.24",
 		"@types/react": "^19.1.5",
 		"@types/react-dom": "^19.1.5",

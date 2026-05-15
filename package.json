@@ -24,10 +24,13 @@
 		"build:staging": "npm run build:extension:staging",
 		"build:preview": "npm run build:extension:preview",
 		"build:dev": "npm run build:extension:dev",
+		"test": "npm run test --workspaces --if-present",
+		"test:e2e": "npm run test:e2e --workspaces --if-present",
 		"typecheck": "npm run typecheck --workspaces --if-present",
 		"typecheck:all": "npm run typecheck --workspaces --if-present",
 		"typecheck:backend": "npm --workspace @csshub/backend run typecheck",
 		"typecheck:extension": "npm --workspace @csshub/extension run typecheck",
+		"audit:deps": "npm audit --workspaces",
 		"doctor:oauth": "node scripts/doctor-oauth.mjs",
 		"derive:manifest-key": "node scripts/derive-manifest-key.mjs"
 	},

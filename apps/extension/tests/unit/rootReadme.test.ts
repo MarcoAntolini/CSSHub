@@ -5,7 +5,7 @@ import {
 	buildRootReadmeContent,
 	collectChallengeKeys,
 	injectManagedReadmeSection,
-} from "./rootReadme";
+} from "../../src/rootReadme";
 
 describe("collectChallengeKeys", () => {
 	it("merges tree paths with the current challenge folder", () => {

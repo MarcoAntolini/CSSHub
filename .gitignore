@@ -28,3 +28,7 @@ apps/backend/.env.local
 apps/backend/.vercel
 
 apps/extension/dist.*
+
+# Playwright (extension e2e)
+apps/extension/test-results/
+apps/extension/playwright-report/
