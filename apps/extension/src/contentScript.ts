@@ -1,3 +1,4 @@
+import { contentScriptTabMessageSchema } from "./shared/contracts";
 import {
 	didStatsChange,
 	extractStatsFromDocument,
@@ -17,24 +18,6 @@ type ElementDimensions = {
 	y: number;
 	width: number;
 	height: number;
-};
-
-type RuntimeMessage =
-	| { action: "getElementPositionAndDimensions"; selector: string };
-
-const isRuntimeMessage = (value: unknown): value is RuntimeMessage => {
-	if (!value || typeof value !== "object" || !("action" in value)) {
-		return false;
-	}
-
-	const message = value as Record<string, unknown>;
-	if (
-		message.action === "getElementPositionAndDimensions" &&
-		typeof message.selector === "string"
-	) {
-		return message.selector.length > 0;
-	}
-	return false;
 };
 
 const isExtensionContextInvalidated = (error: unknown): boolean =>
@@ -279,13 +262,13 @@ const installSubmitListeners = (): void => {
 };
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-	if (!isRuntimeMessage(request)) {
+	const parsed = contentScriptTabMessageSchema.safeParse(request);
+	if (!parsed.success) {
 		return;
 	}
-	const data = request;
 
-	if (data.action === "getElementPositionAndDimensions") {
-		sendResponse(getElementPositionAndDimensions(data.selector));
+	if (parsed.data.action === "getElementPositionAndDimensions") {
+		sendResponse(getElementPositionAndDimensions(parsed.data.selector));
 	}
 });
 

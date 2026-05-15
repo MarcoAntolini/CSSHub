@@ -10,14 +10,20 @@ import {
 	type PopupTheme,
 } from "./popupTheme";
 import {
+	extensionSettingsSchema,
 	extensionStateResponseSchema,
-	popupToBackgroundMessageSchema,
 	type AuthStatus,
 	type ExtensionSettings,
 	type SubmissionIngestionResponse,
 	type SubmissionPayload,
 } from "./shared/contracts";
 import { getIngestionTone, type StatusTone } from "./shared/eventTone";
+import {
+	BackgroundError,
+	parseBackgroundOk,
+	parseBackgroundOkVoid,
+	sendBackgroundMessage,
+} from "./shared/messaging";
 
 applyPopupTheme(DEFAULT_POPUP_THEME);
 void loadPopupTheme().then(applyPopupTheme);
@@ -351,36 +357,34 @@ const App = (): ReactElement => {
 		if (shouldShowLoading) {
 			setLoading(true);
 		}
-		const message = popupToBackgroundMessageSchema.parse({
-			action: "getExtensionState",
-		});
-		const response = await chrome.runtime.sendMessage(message);
-		if (!response?.ok) {
-			setErrorMessage(POPUP_ERRORS.loadState);
+		try {
+			const response = await sendBackgroundMessage({
+				action: "getExtensionState",
+			});
+			const parsed = parseBackgroundOk(
+				response,
+				extensionStateResponseSchema,
+				POPUP_ERRORS.loadState
+			);
+			setErrorMessage(null);
+			setData({
+				auth: parsed.auth,
+				settings: extensionSettingsSchema.parse(parsed.settings),
+				lastSubmission: parsed.lastSubmission,
+				lastSubmissionAccepted: parsed.lastSubmissionAccepted,
+				lastIngestion: parsed.lastIngestion,
+			});
+			setThresholdDraft(parsed.settings.threshold);
+		} catch (error) {
+			setErrorMessage(
+				error instanceof BackgroundError ? error.message : POPUP_ERRORS.loadState
+			);
 			if (shouldShowLoading) {
 				setLoading(false);
 			}
 			setStatus("error");
 			return;
 		}
-		const parsed = extensionStateResponseSchema.safeParse(response.data);
-		if (!parsed.success) {
-			setErrorMessage(POPUP_ERRORS.loadState);
-			if (shouldShowLoading) {
-				setLoading(false);
-			}
-			setStatus("error");
-			return;
-		}
-		setErrorMessage(null);
-		setData({
-			auth: parsed.data.auth,
-			settings: parsed.data.settings,
-			lastSubmission: parsed.data.lastSubmission,
-			lastSubmissionAccepted: parsed.data.lastSubmissionAccepted,
-			lastIngestion: parsed.data.lastIngestion,
-		});
-		setThresholdDraft(parsed.data.settings.threshold);
 		hasLoadedOnceRef.current = true;
 		if (shouldShowLoading) {
 			setLoading(false);
@@ -395,23 +399,31 @@ const App = (): ReactElement => {
 			}
 			const next = clampThreshold(threshold);
 			setStatus("saving");
-			const message = popupToBackgroundMessageSchema.parse({
-				action: "saveSettings",
-				settings: {
-					...data.settings,
-					threshold: next,
-				},
-			});
-			const response = await chrome.runtime.sendMessage(message);
-			if (!response?.ok) {
+			try {
+				const response = await sendBackgroundMessage({
+					action: "saveSettings",
+					settings: {
+						...data.settings,
+						threshold: next,
+					},
+				});
+				parseBackgroundOkVoid(response, POPUP_ERRORS.saveThreshold);
+			} catch (error) {
 				setStatus("error");
-				setErrorMessage(response?.error ?? POPUP_ERRORS.saveThreshold);
+				setErrorMessage(
+					error instanceof BackgroundError
+						? error.message
+						: POPUP_ERRORS.saveThreshold
+				);
 				return;
 			}
 			setErrorMessage(null);
 			setData({
 				...data,
-				settings: { ...data.settings, threshold: next },
+				settings: extensionSettingsSchema.parse({
+					...data.settings,
+					threshold: next,
+				}),
 			});
 			setStatus("idle");
 		},

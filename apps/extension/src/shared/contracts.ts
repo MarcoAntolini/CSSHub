@@ -1,25 +1,18 @@
 import { z } from "zod";
 
-export const runtimeMessageSchema = z.discriminatedUnion("action", [
-	z.object({
-		action: z.literal("captureElement"),
-		selector: z.string().min(1),
-	}),
+export const captureElementMessageSchema = z.object({
+	action: z.literal("captureElement"),
+	selector: z.string().min(1),
+});
+
+export const contentScriptTabMessageSchema = z.discriminatedUnion("action", [
 	z.object({
 		action: z.literal("getElementPositionAndDimensions"),
 		selector: z.string().min(1),
 	}),
-	z.object({
-		action: z.literal("cropImage"),
-		dataUrl: z.string().startsWith("data:image/"),
-		x: z.number(),
-		y: z.number(),
-		width: z.number().positive(),
-		height: z.number().positive(),
-	}),
 ]);
 
-export type RuntimeMessage = z.infer<typeof runtimeMessageSchema>;
+export type ContentScriptTabMessage = z.infer<typeof contentScriptTabMessageSchema>;
 
 export const elementDimensionsSchema = z.object({
 	x: z.number(),
@@ -100,7 +93,7 @@ export const syncEventSchema = z.object({
 export type SyncEvent = z.infer<typeof syncEventSchema>;
 
 export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
-	runtimeMessageSchema.options[0],
+	captureElementMessageSchema,
 	z.object({
 		action: z.literal("getExtensionState"),
 	}),
