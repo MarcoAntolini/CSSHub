@@ -104,20 +104,32 @@ export const getStoredState = async (): Promise<StoredState> => {
 	const lastIngestion = submissionIngestionResponseSchema.safeParse(state.lastIngestion);
 	const recentEvents = syncEventSchema.array().safeParse(state.recentEvents);
 
-	return {
-		githubToken:
-			sessionToken,
-		auth: {
-			isAuthenticated: Boolean(state.auth?.isAuthenticated),
-			username:
-				typeof state.auth?.username === "string" ? state.auth.username : null,
-			method:
-				state.auth?.method === "device" ||
-				state.auth?.method === "web" ||
-				state.auth?.method === "pat"
-					? state.auth.method
-					: null,
-		},
+	const hasSessionToken = Boolean(sessionToken);
+	const authFromLocal: AuthStatus = {
+		isAuthenticated: Boolean(state.auth?.isAuthenticated),
+		username:
+			typeof state.auth?.username === "string" ? state.auth.username : null,
+		method:
+			state.auth?.method === "device" ||
+			state.auth?.method === "web" ||
+			state.auth?.method === "pat"
+				? state.auth.method
+				: null,
+	};
+	// Token lives in session storage; auth flags live in local. If the session was cleared
+	// (browser restart, profile reset) but local still says signed in, treat as logged out
+	// and heal local so UI and API handlers stay aligned.
+	const auth: AuthStatus = hasSessionToken
+		? authFromLocal
+		: {
+				isAuthenticated: false,
+				username: null,
+				method: null,
+			};
+
+	const next: StoredState = {
+		githubToken: sessionToken,
+		auth,
 		settings,
 		lastSubmission: lastSubmission.success ? lastSubmission.data : null,
 		lastSubmissionAccepted:
@@ -131,6 +143,14 @@ export const getStoredState = async (): Promise<StoredState> => {
 				? state.lastSubmissionFingerprint
 				: null,
 	};
+
+	if (!hasSessionToken && authFromLocal.isAuthenticated) {
+		void saveStoredState(next).catch(() => {
+			/* ignore persistence failures */
+		});
+	}
+
+	return next;
 };
 
 export const saveStoredState = async (state: StoredState): Promise<void> => {

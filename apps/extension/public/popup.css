@@ -68,30 +68,8 @@ body {
 	line-height: 1.3;
 }
 
-.notice {
-	font-size: 0.75rem;
-	line-height: 1.3;
-	border: 1px solid;
-	border-radius: 8px;
-	padding: 7px 9px;
-}
-
-.notice-success {
-	color: #166534;
-	background: #dcfce7;
-	border-color: #86efac;
-}
-
-.notice-warn {
-	color: #92400e;
-	background: #ffedd5;
-	border-color: #fdba74;
-}
-
-.notice-error {
-	color: #991b1b;
-	background: #fee2e2;
-	border-color: #fca5a5;
+[data-sonner-toaster] {
+	z-index: 99999 !important;
 }
 
 .card {
@@ -448,8 +426,3 @@ a.sync-target:hover {
 	font-weight: 600;
 }
 
-.error {
-	color: #b91c1c;
-	font-size: 0.76rem;
-	line-height: 1.3;
-}

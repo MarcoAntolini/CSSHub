@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
 import type { ReactElement } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	deviceFlowStartResponseSchema,
 	extensionStateResponseSchema,
@@ -17,6 +18,8 @@ import {
 } from "./shared/contracts";
 import { getSyncEventTone } from "./shared/eventTone";
 import "../public/settings.css";
+import { Toaster, toast } from "sonner";
+import "sonner/dist/styles.css";
 
 type LoadedState = {
 	auth: AuthStatus;
@@ -32,7 +35,6 @@ type UiNotice = {
 	level: "success" | "warn" | "error";
 	message: string;
 };
-type UiToast = UiNotice & { id: number };
 const BRANCH_NAME_PATTERN = /^[A-Za-z0-9._/-]+$/;
 const EVENT_BADGE_LABELS: Partial<Record<string, string>> = {
 	SYNC_COMMITTED: "committed",
@@ -92,10 +94,9 @@ const App = (): ReactElement => {
 	const [loading, setLoading] = useState(true);
 	const [busy, setBusy] = useState(false);
 	const [webAuthInProgress, setWebAuthInProgress] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-	const [toast, setToast] = useState<UiToast | null>(null);
 
 	const [patToken, setPatToken] = useState("");
+	const [patTutorialOpen, setPatTutorialOpen] = useState(false);
 	const [deviceFlow, setDeviceFlow] = useState<{
 		deviceCode: string;
 		userCode: string;
@@ -103,6 +104,8 @@ const App = (): ReactElement => {
 		verificationUriComplete: string | null;
 		interval: number;
 	} | null>(null);
+	const [deviceCopyOk, setDeviceCopyOk] = useState(false);
+	const deviceCopyOkTimerRef = useRef<number | null>(null);
 
 	const [createOpen, setCreateOpen] = useState(false);
 	const [createName, setCreateName] = useState("");
@@ -118,39 +121,37 @@ const App = (): ReactElement => {
 	const [createBranchFrom, setCreateBranchFrom] = useState("");
 
 	const pushToast = useCallback((payload: UiNotice): void => {
-		setToast({
-			...payload,
-			id: Date.now(),
-		});
-	}, []);
-
-	useEffect(() => {
-		if (!toast) {
+		if (payload.level === "success") {
+			toast.success(payload.message);
 			return;
 		}
-		const timeout = window.setTimeout(() => {
-			setToast((current) => (current?.id === toast.id ? null : current));
-		}, 3200);
-		return () => {
-			window.clearTimeout(timeout);
-		};
-	}, [toast]);
+		if (payload.level === "error") {
+			toast.error(payload.message);
+			return;
+		}
+		toast.warning(payload.message);
+	}, []);
 
 	const loadState = useCallback(async (): Promise<void> => {
 		setLoading(true);
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "getExtensionState",
 		});
 		const response = await chrome.runtime.sendMessage(message);
 		if (!response?.ok) {
-			setError(response?.error ?? "Failed to load settings");
+			pushToast({
+				level: "error",
+				message: response?.error ?? "Failed to load settings",
+			});
 			setLoading(false);
 			return;
 		}
 		const parsed = extensionStateResponseSchema.safeParse(response.data);
 		if (!parsed.success) {
-			setError("Invalid server response");
+			pushToast({
+				level: "error",
+				message: "Invalid server response",
+			});
 			setLoading(false);
 			return;
 		}
@@ -164,11 +165,29 @@ const App = (): ReactElement => {
 			recentEvents: parsed.data.recentEvents,
 		});
 		setLoading(false);
-	}, []);
+	}, [pushToast]);
 
 	useEffect(() => {
 		void loadState();
 	}, [loadState]);
+
+	useEffect(() => {
+		if (!deviceFlow) {
+			setDeviceCopyOk(false);
+			if (deviceCopyOkTimerRef.current !== null) {
+				window.clearTimeout(deviceCopyOkTimerRef.current);
+				deviceCopyOkTimerRef.current = null;
+			}
+		}
+	}, [deviceFlow]);
+
+	useEffect(() => {
+		return () => {
+			if (deviceCopyOkTimerRef.current !== null) {
+				window.clearTimeout(deviceCopyOkTimerRef.current);
+			}
+		};
+	}, []);
 
 	useEffect(() => {
 		if (!data?.auth.isAuthenticated || !data.settings.selectedRepoFullName) {
@@ -228,7 +247,6 @@ const App = (): ReactElement => {
 		next: ExtensionSettings
 	): Promise<boolean> => {
 		setBusy(true);
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "saveSettings",
 			settings: next,
@@ -236,10 +254,9 @@ const App = (): ReactElement => {
 		const response = await chrome.runtime.sendMessage(message);
 		setBusy(false);
 		if (!response?.ok) {
-			setError(response?.error ?? "Could not save settings");
 			pushToast({
 				level: "error",
-				message: "Could not save settings",
+				message: response?.error ?? "Could not save settings",
 			});
 			return false;
 		}
@@ -257,7 +274,10 @@ const App = (): ReactElement => {
 		});
 		const response = await chrome.runtime.sendMessage(message);
 		if (!response?.ok) {
-			setError(response?.error ?? "Could not list repositories");
+			pushToast({
+				level: "error",
+				message: response?.error ?? "Could not list repositories",
+			});
 			return [];
 		}
 		const parsed = repoSchema.array().safeParse(response.data);
@@ -271,7 +291,10 @@ const App = (): ReactElement => {
 		});
 		const response = await chrome.runtime.sendMessage(message);
 		if (!response?.ok) {
-			setError(response?.error ?? "Could not list branches");
+			pushToast({
+				level: "error",
+				message: response?.error ?? "Could not list branches",
+			});
 			return [];
 		}
 		const parsed = branchSchema.array().safeParse(response.data);
@@ -279,19 +302,18 @@ const App = (): ReactElement => {
 	};
 
 	const beginWebFlow = async (): Promise<void> => {
+		setDeviceFlow(null);
 		setBusy(true);
 		setWebAuthInProgress(true);
-		setError(null);
 		try {
 			const message = popupToBackgroundMessageSchema.parse({
 				action: "startGithubWebFlow",
 			});
 			const response = await chrome.runtime.sendMessage(message);
 			if (!response?.ok) {
-				setError(response?.error ?? "Web OAuth failed");
 				pushToast({
 					level: "error",
-					message: "Web OAuth failed",
+					message: response?.error ?? "Web OAuth failed",
 				});
 				return;
 			}
@@ -307,24 +329,31 @@ const App = (): ReactElement => {
 	};
 
 	const beginDeviceFlow = async (): Promise<void> => {
+		setWebAuthInProgress(false);
+		setDeviceCopyOk(false);
+		if (deviceCopyOkTimerRef.current !== null) {
+			window.clearTimeout(deviceCopyOkTimerRef.current);
+			deviceCopyOkTimerRef.current = null;
+		}
 		setBusy(true);
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "startGithubDeviceFlow",
 		});
 		const response = await chrome.runtime.sendMessage(message);
 		setBusy(false);
 		if (!response?.ok) {
-			setError(response?.error ?? "Device flow failed");
 			pushToast({
 				level: "error",
-				message: "Device flow failed",
+				message: response?.error ?? "Device flow failed",
 			});
 			return;
 		}
 		const payload = deviceFlowStartResponseSchema.safeParse(response.data);
 		if (!payload.success) {
-			setError("Invalid device flow response");
+			pushToast({
+				level: "error",
+				message: "Invalid device flow response",
+			});
 			return;
 		}
 		setDeviceFlow({
@@ -344,7 +373,6 @@ const App = (): ReactElement => {
 			return;
 		}
 		setBusy(true);
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "pollGithubDeviceFlow",
 			deviceCode: deviceFlow.deviceCode,
@@ -352,18 +380,16 @@ const App = (): ReactElement => {
 		const response = await chrome.runtime.sendMessage(message);
 		setBusy(false);
 		if (!response?.ok) {
-			setError(response?.error ?? "Polling failed");
 			pushToast({
 				level: "error",
-				message: "Polling failed",
+				message: response?.error ?? "Polling failed",
 			});
 			return;
 		}
 		if (response.data?.status === "pending") {
-			setError("Still waiting — approve on GitHub first.");
 			pushToast({
 				level: "warn",
-				message: "Waiting for GitHub approval",
+				message: "Approve the device login on GitHub first, then try again.",
 			});
 			return;
 		}
@@ -377,13 +403,50 @@ const App = (): ReactElement => {
 		}
 	};
 
+	const copyDeviceUserCode = async (): Promise<void> => {
+		if (!deviceFlow) {
+			return;
+		}
+		try {
+			await navigator.clipboard.writeText(deviceFlow.userCode);
+			pushToast({
+				level: "success",
+				message: "User code copied",
+			});
+			setDeviceCopyOk(true);
+			if (deviceCopyOkTimerRef.current !== null) {
+				window.clearTimeout(deviceCopyOkTimerRef.current);
+			}
+			deviceCopyOkTimerRef.current = window.setTimeout(() => {
+				setDeviceCopyOk(false);
+				deviceCopyOkTimerRef.current = null;
+			}, 2500);
+		} catch {
+			pushToast({
+				level: "warn",
+				message: "Could not copy — select the code manually",
+			});
+		}
+	};
+
+	const openDeviceVerification = (): void => {
+		if (!deviceFlow) {
+			return;
+		}
+		void chrome.tabs.create({
+			url: deviceFlow.verificationUriComplete ?? deviceFlow.verificationUri,
+		});
+	};
+
 	const loginPat = async (): Promise<void> => {
 		if (!patToken.trim()) {
-			setError("Paste a token");
+			pushToast({
+				level: "warn",
+				message: "Paste a token",
+			});
 			return;
 		}
 		setBusy(true);
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "loginWithPat",
 			token: patToken.trim(),
@@ -391,10 +454,9 @@ const App = (): ReactElement => {
 		const response = await chrome.runtime.sendMessage(message);
 		setBusy(false);
 		if (!response?.ok) {
-			setError(response?.error ?? "PAT login failed");
 			pushToast({
 				level: "error",
-				message: "PAT login failed",
+				message: response?.error ?? "PAT login failed",
 			});
 			return;
 		}
@@ -408,17 +470,15 @@ const App = (): ReactElement => {
 
 	const logout = async (): Promise<void> => {
 		setBusy(true);
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "logoutGithub",
 		});
 		const response = await chrome.runtime.sendMessage(message);
 		setBusy(false);
 		if (!response?.ok) {
-			setError(response?.error ?? "Logout failed");
 			pushToast({
 				level: "error",
-				message: "Logout failed",
+				message: response?.error ?? "Logout failed",
 			});
 			return;
 		}
@@ -432,17 +492,15 @@ const App = (): ReactElement => {
 
 	const clearActivityLog = async (): Promise<void> => {
 		setBusy(true);
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "clearRecentEvents",
 		});
 		const response = await chrome.runtime.sendMessage(message);
 		setBusy(false);
 		if (!response?.ok) {
-			setError(response?.error ?? "Could not clear activity log");
 			pushToast({
 				level: "error",
-				message: "Could not clear activity log",
+				message: response?.error ?? "Could not clear activity log",
 			});
 			return;
 		}
@@ -507,11 +565,13 @@ const App = (): ReactElement => {
 
 	const confirmCreateRepo = async (): Promise<void> => {
 		if (!createName.trim()) {
-			setError("Repository name required");
+			pushToast({
+				level: "warn",
+				message: "Repository name required",
+			});
 			return;
 		}
 		setBusy(true);
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "createRepo",
 			name: createName.trim(),
@@ -520,10 +580,9 @@ const App = (): ReactElement => {
 		const response = await chrome.runtime.sendMessage(message);
 		setBusy(false);
 		if (!response?.ok) {
-			setError(response?.error ?? "Create failed");
 			pushToast({
 				level: "error",
-				message: "Repository creation failed",
+				message: response?.error ?? "Repository creation failed",
 			});
 			return;
 		}
@@ -538,7 +597,10 @@ const App = (): ReactElement => {
 
 	const confirmCreateBranch = async (): Promise<void> => {
 		if (!data?.settings.selectedRepoFullName) {
-			setError("Select a repository first");
+			pushToast({
+				level: "warn",
+				message: "Select a repository first",
+			});
 			return;
 		}
 
@@ -546,7 +608,6 @@ const App = (): ReactElement => {
 		const existing = new Set(branches.map((branch) => branch.name));
 		const validationError = validateBranchName(newBranchName, existing);
 		if (validationError) {
-			setError(validationError);
 			pushToast({
 				level: "warn",
 				message: validationError,
@@ -554,14 +615,15 @@ const App = (): ReactElement => {
 			return;
 		}
 
+		const repoMeta =
+			data.repos.find((r) => r.fullName === data.settings.selectedRepoFullName) ?? null;
 		const fromBranch =
 			createBranchFrom ||
 			data.settings.selectedBranch ||
-			selectedRepoMeta?.defaultBranch ||
+			repoMeta?.defaultBranch ||
 			branches[0]?.name ||
 			"";
 		if (!fromBranch) {
-			setError("No source branch available");
 			pushToast({
 				level: "warn",
 				message: "No source branch available",
@@ -570,7 +632,6 @@ const App = (): ReactElement => {
 		}
 
 		setBusy(true);
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "createBranch",
 			repoFullName: data.settings.selectedRepoFullName,
@@ -580,10 +641,9 @@ const App = (): ReactElement => {
 		const response = await chrome.runtime.sendMessage(message);
 		setBusy(false);
 		if (!response?.ok) {
-			setError(response?.error ?? "Could not create branch");
 			pushToast({
 				level: "error",
-				message: "Branch creation failed",
+				message: response?.error ?? "Branch creation failed",
 			});
 			return;
 		}
@@ -613,9 +673,15 @@ const App = (): ReactElement => {
 
 	if (loading || !data) {
 		return (
-			<div className="settings-root">
-				<p className="muted">Loading…</p>
-			</div>
+			<>
+				{createPortal(
+					<Toaster theme="dark" richColors position="top-center" closeButton />,
+					document.body,
+				)}
+				<div className="settings-root">
+					<p className="muted">Loading…</p>
+				</div>
+			</>
 		);
 	}
 
@@ -625,27 +691,23 @@ const App = (): ReactElement => {
 		null;
 
 	return (
-		<div className="settings-root">
-			<h1 className="settings-brand">CssHub</h1>
-			<p className="settings-tagline">
-				Sync CSSBattle submissions to GitHub — configure account and repository here.
-			</p>
+		<>
+			{createPortal(
+				<Toaster theme="dark" richColors position="top-center" closeButton />,
+				document.body,
+			)}
+			<div className="settings-root">
+				<h1 className="settings-brand">CssHub</h1>
+				<p className="settings-tagline">
+					Sync CSSBattle submissions to GitHub — configure account and repository here.
+				</p>
 
-			{error ? <p className="error-text">{error}</p> : null}
-			{toast ? (
-				<div className={`settings-toast settings-toast-${toast.level}`} role="status" aria-live="polite">
-					{toast.message}
-				</div>
-			) : null}
-
-			<section className="settings-section">
+				<section className="settings-section">
 				<h2>GitHub account</h2>
 				{auth.isAuthenticated ? (
 					<>
 						<p className="muted">
 							Signed in as <strong className="mono">{auth.username}</strong>
-							{" · "}
-							<span className="mono">{auth.method ?? "?"}</span>
 						</p>
 						<div className="btn-stack">
 							<button type="button" className="btn btn-ghost" onClick={logout} disabled={busy}>
@@ -655,46 +717,167 @@ const App = (): ReactElement => {
 					</>
 				) : (
 					<>
-						<p className="muted">Choose how to connect:</p>
-						<div className="btn-stack">
-							<button type="button" className="btn btn-primary" onClick={beginWebFlow} disabled={busy || webAuthInProgress}>
-								{webAuthInProgress ? "Connecting GitHub…" : "Web OAuth"}
-							</button>
-							<button type="button" className="btn" onClick={beginDeviceFlow} disabled={busy || webAuthInProgress}>
-								Device code
-							</button>
-						</div>
-						{webAuthInProgress ? (
-							<p className="auth-progress">
-								<span className="spinner" aria-hidden="true" />
-								Connecting GitHub…
-							</p>
-						) : null}
-						{deviceFlow ? (
-							<div className="device-flow">
-								<p>
-									Code: <strong>{deviceFlow.userCode}</strong>
-								</p>
-								<button type="button" className="btn btn-primary" onClick={() => void pollDevice()} disabled={busy}>
-									I approved — finish login
-								</button>
+						<p className="muted auth-methods-intro">Pick any method — they all grant the same access CssHub needs.</p>
+						<div className="auth-methods" role="list">
+							<div className="auth-method-card" role="listitem">
+								<div className="auth-method-head">
+									<h3 className="auth-method-title">Browser sign-in</h3>
+								</div>
+								<div className="auth-method-actions">
+									<button
+										type="button"
+										className="btn btn-primary btn-auth-browser"
+										onClick={() => void beginWebFlow()}
+										disabled={busy || webAuthInProgress}
+										aria-busy={webAuthInProgress}
+										aria-label={webAuthInProgress ? "Connecting with GitHub" : undefined}
+									>
+										<span className={webAuthInProgress ? "btn-auth-browser-label is-busy" : "btn-auth-browser-label"}>
+											Continue with GitHub
+										</span>
+										{webAuthInProgress ? (
+											<span className="btn-auth-browser-busy" aria-hidden="true">
+												<span className="btn-spinner" />
+											</span>
+										) : null}
+									</button>
+									<p className="hint auth-trust-line" role="note">
+										OAuth runs on github.com. This extension never receives your GitHub password.
+									</p>
+								</div>
 							</div>
-						) : null}
-						<div className="row" style={{ marginTop: "1rem" }}>
-							<label htmlFor="pat-settings">Personal access token</label>
-							<input
-								id="pat-settings"
-								type="password"
-								autoComplete="off"
-								placeholder="github_pat_…"
-								value={patToken}
-								onChange={(e) => setPatToken(e.target.value)}
-								disabled={busy || webAuthInProgress}
-							/>
+
+							<div className="auth-method-card" role="listitem">
+								<div className="auth-method-head">
+									<h3 className="auth-method-title">Device code</h3>
+									<p className="auth-method-desc">
+										Use when browser OAuth is blocked. We open GitHub with your code when GitHub supports it.
+									</p>
+								</div>
+								<div className="auth-method-actions">
+									{deviceFlow ? (
+										<div className="device-flow">
+											<ol className="device-flow-steps">
+												<li>Complete the prompt in the GitHub tab (we opened one when you started).</li>
+												<li>Confirm the user code below matches GitHub if you are asked to enter it.</li>
+												<li>After you authorize CssHub, finish here.</li>
+											</ol>
+											<p className="device-flow-label">Your user code</p>
+											<div className="device-user-code-shell">
+												<div className="device-user-code-inner" translate="no" aria-label="GitHub device user code">
+													{deviceFlow.userCode.split("-").map((part, i) => (
+														<span key={i} className="device-user-code-group">
+															{i > 0 ? (
+																<span className="device-user-code-sep" aria-hidden="true">
+																	-
+																</span>
+															) : null}
+															<span className="device-user-code-chunk">{part}</span>
+														</span>
+													))}
+												</div>
+												<button
+													type="button"
+													className={`device-copy-icon-btn${deviceCopyOk ? " device-copy-icon-btn--ok" : ""}`}
+													onClick={() => void copyDeviceUserCode()}
+													disabled={busy}
+													aria-label="Copy user code to clipboard"
+													data-tooltip={deviceCopyOk ? "Copied" : "Copy text"}
+												>
+													<svg
+														className="device-copy-icon"
+														width="18"
+														height="18"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														strokeWidth="2"
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														aria-hidden="true"
+													>
+														<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+														<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+													</svg>
+												</button>
+											</div>
+											<div className="device-flow-link-row">
+												<button
+													type="button"
+													className="device-github-again-link"
+													onClick={openDeviceVerification}
+													disabled={busy}
+												>
+													Open GitHub again
+												</button>
+											</div>
+											<button type="button" className="btn btn-primary device-flow-finish" onClick={() => void pollDevice()} disabled={busy}>
+												I authorized CssHub — finish sign-in
+											</button>
+										</div>
+									) : (
+										<button type="button" className="btn" onClick={() => void beginDeviceFlow()} disabled={busy || webAuthInProgress}>
+											Start device sign-in
+										</button>
+									)}
+								</div>
+							</div>
+
+							<div className="auth-method-card" role="listitem">
+								<div className="auth-method-head">
+									<div className="auth-method-title-row">
+										<h3 className="auth-method-title">Personal access token</h3>
+										<button
+											type="button"
+											className="help-badge"
+											aria-expanded={patTutorialOpen}
+											aria-controls="pat-tutorial-panel"
+											onClick={() => setPatTutorialOpen((open) => !open)}
+											title="How to create a token"
+										>
+											?
+										</button>
+									</div>
+									<p className="auth-method-desc">Paste a classic or fine-grained token. It stays in this browser profile only.</p>
+								</div>
+								{patTutorialOpen ? (
+									<div className="pat-tutorial" id="pat-tutorial-panel" role="region" aria-label="Personal access token instructions">
+										<ol>
+											<li>
+												On GitHub, open{" "}
+												<strong>Settings → Developer settings → Personal access tokens</strong> (classic or fine-grained).
+											</li>
+											<li>
+												<strong>Classic token:</strong> enable scopes <code className="pat-tutorial-code">repo</code> and{" "}
+												<code className="pat-tutorial-code">read:user</code> (same access as browser sign-in).
+											</li>
+											<li>
+												<strong>Fine-grained token:</strong> pick repositories CssHub should sync to and grant{" "}
+												<strong>Contents</strong> read/write (and metadata as prompted).
+											</li>
+											<li>Generate the token, copy it once, paste below, then choose Sign in with token.</li>
+										</ol>
+									</div>
+								) : null}
+								<div className="auth-method-actions">
+									<div className="row row-tight">
+										<label htmlFor="pat-settings">Token</label>
+										<input
+											id="pat-settings"
+											type="password"
+											autoComplete="off"
+											placeholder="github_pat_… or ghp_…"
+											value={patToken}
+											onChange={(e) => setPatToken(e.target.value)}
+											disabled={busy || webAuthInProgress}
+										/>
+									</div>
+									<button type="button" className="btn" onClick={() => void loginPat()} disabled={busy || webAuthInProgress}>
+										Sign in with token
+									</button>
+								</div>
+							</div>
 						</div>
-						<button type="button" className="btn" onClick={loginPat} disabled={busy || webAuthInProgress}>
-							Sign in with token
-						</button>
 					</>
 				)}
 			</section>
@@ -705,86 +888,102 @@ const App = (): ReactElement => {
 					<p className="muted">Connect GitHub first.</p>
 				) : settings.selectedRepoFullName ? (
 					<>
-						<p className="mono" style={{ color: "#f8fafc", marginBottom: "0.35rem" }}>
-							{settings.selectedRepoFullName}
-						</p>
-						<p className="muted">
-							Branch:{" "}
-							<strong className="mono">
-								{settings.selectedBranch ?? selectedRepoMeta?.defaultBranch ?? "main"}
-							</strong>
-						</p>
-						<div className="btn-stack">
-							<button type="button" className="btn" onClick={openPickModal} disabled={busy}>
-								Change repository…
-							</button>
-							<button type="button" className="btn btn-ghost" onClick={() => void clearRepoSelection()} disabled={busy}>
-								Clear selection
-							</button>
-							<button type="button" className="btn btn-primary" onClick={() => setCreateOpen(true)} disabled={busy}>
-								Create new…
-							</button>
+						<div className="repo-panel">
+							<div className="repo-panel-meta">
+								<p className="repo-fullname">{settings.selectedRepoFullName}</p>
+								<p className="repo-branch-line">
+									Branch:{" "}
+									<strong className="repo-branch-name">
+										{settings.selectedBranch ?? selectedRepoMeta?.defaultBranch ?? "main"}
+									</strong>
+								</p>
+							</div>
+							<div className="repo-panel-toolbar" role="group" aria-label="Repository actions">
+								<div className="repo-toolbar-start">
+									<button type="button" className="btn btn-ghost repo-panel-btn" onClick={openPickModal} disabled={busy}>
+										Change repository…
+									</button>
+									<button type="button" className="btn btn-ghost repo-panel-btn" onClick={() => void clearRepoSelection()} disabled={busy}>
+										Clear selection
+									</button>
+								</div>
+								<button type="button" className="btn btn-primary repo-panel-btn repo-toolbar-primary" onClick={() => setCreateOpen(true)} disabled={busy}>
+									Create new…
+								</button>
+							</div>
 						</div>
-						{branchesLoading ? (
-							<p className="muted" style={{ marginTop: "0.75rem" }}>
-								Loading branches…
-							</p>
-						) : null}
-						<div className="row" style={{ marginTop: "1rem" }}>
-							<label htmlFor="branch-settings">Sync branch</label>
-							<select
-								id="branch-settings"
-								value={settings.selectedBranch ?? ""}
-								disabled={busy || branchesLoading || branches.length === 0}
-								onChange={(e) => {
-									const nextBranch = e.target.value || null;
-									void saveSettingsRemote({ ...settings, selectedBranch: nextBranch });
-								}}
-							>
-								{branches.length === 0 ? (
-									<option value="">No branches found</option>
-								) : (
-									branches.map((branch) => (
-										<option key={branch.name} value={branch.name}>
-											{branch.name}
-										</option>
-									))
-								)}
-							</select>
+						{branchesLoading ? <p className="repo-branches-hint muted">Loading branches…</p> : null}
+						<div className="branch-workspace">
+							<p className="branch-workspace-title">Branches</p>
+							<div className="branch-sync-panel">
+								<div className="row">
+									<label htmlFor="branch-settings">Sync branch</label>
+									<select
+										id="branch-settings"
+										value={settings.selectedBranch ?? ""}
+										disabled={busy || branchesLoading || branches.length === 0}
+										onChange={(e) => {
+											const nextBranch = e.target.value || null;
+											void saveSettingsRemote({ ...settings, selectedBranch: nextBranch });
+										}}
+									>
+										{branches.length === 0 ? (
+											<option value="">No branches found</option>
+										) : (
+											branches.map((branch) => (
+												<option key={branch.name} value={branch.name}>
+													{branch.name}
+												</option>
+											))
+										)}
+									</select>
+								</div>
+							</div>
+							<div className="branch-create-panel">
+								<div className="branch-create-grid">
+									<div className="row">
+										<label htmlFor="branch-create-name">Create new branch</label>
+										<input
+											id="branch-create-name"
+											type="text"
+											placeholder="feature/my-branch"
+											value={createBranchName}
+											onChange={(e) => setCreateBranchName(e.target.value)}
+											disabled={busy || branchesLoading}
+										/>
+									</div>
+									<div className="row">
+										<label htmlFor="branch-create-from">From branch</label>
+										<select
+											id="branch-create-from"
+											value={createBranchFrom}
+											onChange={(e) => setCreateBranchFrom(e.target.value)}
+											disabled={busy || branchesLoading || branches.length === 0}
+										>
+											{branches.length === 0 ? (
+												<option value="">No source branch</option>
+											) : (
+												branches.map((branch) => (
+													<option key={`from-${branch.name}`} value={branch.name}>
+														{branch.name}
+													</option>
+												))
+											)}
+										</select>
+									</div>
+								</div>
+							</div>
+							<div className="branch-workspace-foot">
+								<button
+									type="button"
+									className="btn btn-primary branch-create-submit"
+									onClick={() => void confirmCreateBranch()}
+									disabled={busy || branchesLoading || branches.length === 0}
+								>
+									Create branch
+								</button>
+							</div>
 						</div>
-						<div className="row">
-							<label htmlFor="branch-create-name">Create new branch</label>
-							<input
-								id="branch-create-name"
-								type="text"
-								placeholder="feature/my-branch"
-								value={createBranchName}
-								onChange={(e) => setCreateBranchName(e.target.value)}
-								disabled={busy || branchesLoading}
-							/>
-						</div>
-						<div className="row">
-							<label htmlFor="branch-create-from">From branch</label>
-							<select
-								id="branch-create-from"
-								value={createBranchFrom}
-								onChange={(e) => setCreateBranchFrom(e.target.value)}
-								disabled={busy || branchesLoading || branches.length === 0}
-							>
-								{branches.length === 0 ? (
-									<option value="">No source branch</option>
-								) : (
-									branches.map((branch) => (
-										<option key={`from-${branch.name}`} value={branch.name}>
-											{branch.name}
-										</option>
-									))
-								)}
-							</select>
-						</div>
-						<button type="button" className="btn" onClick={() => void confirmCreateBranch()} disabled={busy || branchesLoading || branches.length === 0}>
-							Create branch
-						</button>
 					</>
 				) : (
 					<>
@@ -941,6 +1140,7 @@ const App = (): ReactElement => {
 				</div>
 			) : null}
 		</div>
+		</>
 	);
 };
 

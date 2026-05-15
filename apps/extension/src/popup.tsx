@@ -1,7 +1,10 @@
 import type { ReactElement } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import "../public/popup.css";
+import { Toaster, toast } from "sonner";
+import "sonner/dist/styles.css";
 import {
 	extensionStateResponseSchema,
 	popupToBackgroundMessageSchema,
@@ -220,11 +223,6 @@ const relativeTime = (iso: string): string | null => {
 	return `${day}d ago`;
 };
 
-type PopupNotice = {
-	level: "success" | "warn" | "error";
-	message: string;
-};
-
 const clampThreshold = (value: number): number =>
 	Math.min(THRESHOLD_MAX, Math.max(THRESHOLD_MIN, Math.round(value)));
 
@@ -247,9 +245,7 @@ const App = (): ReactElement => {
 	const [data, setData] = useState<PopupState | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
-	const [error, setError] = useState<string | null>(null);
 	const [thresholdDraft, setThresholdDraft] = useState(95);
-	const [notice, setNotice] = useState<PopupNotice | null>(null);
 	const hasLoadedOnceRef = useRef(false);
 
 	const load = useCallback(async (): Promise<void> => {
@@ -257,13 +253,12 @@ const App = (): ReactElement => {
 		if (shouldShowLoading) {
 			setLoading(true);
 		}
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "getExtensionState",
 		});
 		const response = await chrome.runtime.sendMessage(message);
 		if (!response?.ok) {
-			setError(POPUP_ERRORS.loadState);
+			toast.error(POPUP_ERRORS.loadState);
 			if (shouldShowLoading) {
 				setLoading(false);
 			}
@@ -272,7 +267,7 @@ const App = (): ReactElement => {
 		}
 		const parsed = extensionStateResponseSchema.safeParse(response.data);
 		if (!parsed.success) {
-			setError(POPUP_ERRORS.loadState);
+			toast.error(POPUP_ERRORS.loadState);
 			if (shouldShowLoading) {
 				setLoading(false);
 			}
@@ -328,7 +323,6 @@ const App = (): ReactElement => {
 			return;
 		}
 		setStatus("saving");
-		setError(null);
 		const message = popupToBackgroundMessageSchema.parse({
 			action: "saveSettings",
 			settings: { ...data.settings, threshold },
@@ -336,10 +330,7 @@ const App = (): ReactElement => {
 		const response = await chrome.runtime.sendMessage(message);
 		if (!response?.ok) {
 			setStatus("error");
-			setNotice({
-				level: "error",
-				message: POPUP_ERRORS.saveThreshold,
-			});
+			toast.error(response?.error ?? POPUP_ERRORS.saveThreshold);
 			return;
 		}
 		setData({
@@ -351,12 +342,18 @@ const App = (): ReactElement => {
 
 	if (loading || !data) {
 		return (
-			<main className="popup popup-shell">
-				<h1 className="popup-title">CssHub</h1>
-				<p className="subtitle">
-					{loading ? "Loading…" : "Something went wrong."}
-				</p>
-			</main>
+			<>
+				{createPortal(
+					<Toaster theme="dark" richColors position="top-center" closeButton />,
+					document.body,
+				)}
+				<main className="popup popup-shell">
+					<h1 className="popup-title">CssHub</h1>
+					<p className="subtitle">
+						{loading ? "Loading…" : "Something went wrong."}
+					</p>
+				</main>
+			</>
 		);
 	}
 
@@ -372,7 +369,12 @@ const App = (): ReactElement => {
 					: "—";
 
 	return (
-		<main className="popup popup-shell">
+		<>
+			{createPortal(
+				<Toaster theme="dark" richColors position="top-center" closeButton />,
+				document.body,
+			)}
+			<main className="popup popup-shell">
 			<header className="popup-header">
 				<h1 className="popup-title">CssHub</h1>
 				<button type="button" className="btn-link" onClick={openSettingsPage}>
@@ -381,11 +383,6 @@ const App = (): ReactElement => {
 			</header>
 
 			{!auth.isAuthenticated ? <p className="subtitle">Not signed in</p> : null}
-
-			{error ? <p className="error">{error}</p> : null}
-			{notice ? (
-				<p className={`notice notice-${notice.level}`}>{notice.message}</p>
-			) : null}
 
 			{!auth.isAuthenticated ? (
 				<section className="card">
@@ -522,6 +519,7 @@ const App = (): ReactElement => {
 				</>
 			)}
 		</main>
+		</>
 	);
 };
 
