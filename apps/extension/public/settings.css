@@ -190,8 +190,14 @@ body {
 	border-color: rgba(249, 115, 22, 0.5);
 }
 
+/* Override .btn:hover slate background; keep same orange ramp, slightly lighter on hover. */
 .btn-primary:hover:not(:disabled) {
-	filter: brightness(1.08);
+	background: linear-gradient(
+		135deg,
+		color-mix(in srgb, #ea580c 88%, white),
+		color-mix(in srgb, #c2410c 85%, white)
+	);
+	border-color: rgba(251, 146, 60, 0.58);
 }
 
 .btn-ghost {
@@ -637,6 +643,11 @@ body {
 	flex-shrink: 0;
 	width: 44px;
 	height: 24px;
+	cursor: pointer;
+}
+
+.switch:has(input:disabled) {
+	cursor: not-allowed;
 }
 
 .switch input {

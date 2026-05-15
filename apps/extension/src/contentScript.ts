@@ -24,15 +24,7 @@ type SubmissionStats = {
 };
 
 type RuntimeMessage =
-	| { action: "getElementPositionAndDimensions"; selector: string }
-	| {
-			action: "cropImage";
-			dataUrl: string;
-			x: number;
-			y: number;
-			width: number;
-			height: number;
-		};
+	| { action: "getElementPositionAndDimensions"; selector: string };
 
 const isRuntimeMessage = (value: unknown): value is RuntimeMessage => {
 	if (!value || typeof value !== "object" || !("action" in value)) {
@@ -46,21 +38,7 @@ const isRuntimeMessage = (value: unknown): value is RuntimeMessage => {
 	) {
 		return message.selector.length > 0;
 	}
-
-	if (message.action !== "cropImage") {
-		return false;
-	}
-
-	return (
-		typeof message.dataUrl === "string" &&
-		message.dataUrl.startsWith("data:image/") &&
-		typeof message.x === "number" &&
-		typeof message.y === "number" &&
-		typeof message.width === "number" &&
-		message.width > 0 &&
-		typeof message.height === "number" &&
-		message.height > 0
-	);
+	return false;
 };
 
 const isExtensionContextInvalidated = (error: unknown): boolean =>
@@ -402,38 +380,6 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
 	if (data.action === "getElementPositionAndDimensions") {
 		sendResponse(getElementPositionAndDimensions(data.selector));
-		return;
-	}
-
-	if (data.action === "cropImage") {
-		const img = new Image();
-		img.src = data.dataUrl;
-		img.onload = () => {
-			const canvas = document.createElement("canvas");
-			canvas.width = data.width;
-			canvas.height = data.height;
-			const ctx = canvas.getContext("2d");
-			if (!ctx) {
-				return;
-			}
-
-			ctx.drawImage(
-				img,
-				data.x,
-				data.y,
-				data.width,
-				data.height,
-				0,
-				0,
-				data.width,
-				data.height
-			);
-
-			const croppedDataUrl = canvas.toDataURL("image/png");
-			console.debug("[CssHub] Cropped preview snapshot generated", {
-				length: croppedDataUrl.length,
-			});
-		};
 	}
 });
 

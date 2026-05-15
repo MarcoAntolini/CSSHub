@@ -1,25 +1,25 @@
-import { createRoot } from "react-dom/client";
-import { createPortal } from "react-dom";
-import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from "react";
+import type { ReactElement, KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { createRoot } from "react-dom/client";
+import { Toaster, toast } from "sonner";
+import "sonner/dist/styles.css";
+import "../public/settings.css";
 import {
+	branchSchema,
 	deviceFlowStartResponseSchema,
 	extensionStateResponseSchema,
 	popupToBackgroundMessageSchema,
-	branchSchema,
 	repoSchema,
+	type AuthStatus,
 	type Branch,
 	type ExtensionSettings,
 	type Repo,
-	type AuthStatus,
-	type SubmissionPayload,
 	type SubmissionIngestionResponse,
+	type SubmissionPayload,
 	type SyncEvent,
 } from "./shared/contracts";
 import { getSyncEventTone } from "./shared/eventTone";
-import "../public/settings.css";
-import { Toaster, toast } from "sonner";
-import "sonner/dist/styles.css";
 
 type LoadedState = {
 	auth: AuthStatus;
@@ -64,7 +64,10 @@ const MODAL_FOCUSABLE_SELECTOR =
 
 const getEventBadgeLabel = (event: SyncEvent): string => {
 	if (event.code) {
-		return EVENT_BADGE_LABELS[event.code] ?? event.code.toLowerCase().replace(/_/g, " ");
+		return (
+			EVENT_BADGE_LABELS[event.code] ??
+			event.code.toLowerCase().replace(/_/g, " ")
+		);
 	}
 	return event.level === "info" ? "info" : event.level;
 };
@@ -105,6 +108,11 @@ const validateBranchName = (
 		return "Branch already exists";
 	}
 	return null;
+};
+
+const sendBackgroundMessage = async (message: unknown): Promise<unknown> => {
+	const parsed = popupToBackgroundMessageSchema.parse(message);
+	return chrome.runtime.sendMessage(parsed);
 };
 
 const App = (): ReactElement => {
@@ -189,7 +197,10 @@ const App = (): ReactElement => {
 	}, []);
 
 	const trapModalFocus = useCallback(
-		(event: ReactKeyboardEvent<HTMLDivElement>, container: HTMLDivElement | null): void => {
+		(
+			event: ReactKeyboardEvent<HTMLDivElement>,
+			container: HTMLDivElement | null
+		): void => {
 			if (event.key !== "Tab" || !container) {
 				return;
 			}
@@ -268,6 +279,105 @@ const App = (): ReactElement => {
 		setLoading(false);
 	}, [pushToast]);
 
+	const saveSettingsRemote = useCallback(
+		async (next: ExtensionSettings): Promise<boolean> => {
+			setBusy(true);
+			const response = await sendBackgroundMessage({
+				action: "saveSettings",
+				settings: next,
+			});
+			setBusy(false);
+			if (
+				!response ||
+				typeof response !== "object" ||
+				!("ok" in response) ||
+				!response.ok
+			) {
+				const error =
+					response &&
+					typeof response === "object" &&
+					"error" in response &&
+					typeof response.error === "string"
+						? response.error
+						: "Could not save settings";
+				pushToast({
+					level: "error",
+					message: error,
+				});
+				return false;
+			}
+			setData((prev) => (prev ? { ...prev, settings: next } : prev));
+			pushToast({
+				level: "success",
+				message: "Settings updated",
+			});
+			return true;
+		},
+		[pushToast]
+	);
+
+	const refreshReposOnly = useCallback(async (): Promise<Repo[]> => {
+		const response = await sendBackgroundMessage({
+			action: "listRepos",
+		});
+		if (
+			!response ||
+			typeof response !== "object" ||
+			!("ok" in response) ||
+			!response.ok
+		) {
+			const error =
+				response &&
+				typeof response === "object" &&
+				"error" in response &&
+				typeof response.error === "string"
+					? response.error
+					: "Could not list repositories";
+			pushToast({
+				level: "error",
+				message: error,
+			});
+			return [];
+		}
+		const parsed = repoSchema
+			.array()
+			.safeParse("data" in response ? response.data : undefined);
+		return parsed.success ? parsed.data : [];
+	}, [pushToast]);
+
+	const refreshBranchesOnly = useCallback(
+		async (repoFullName: string): Promise<Branch[]> => {
+			const response = await sendBackgroundMessage({
+				action: "listBranches",
+				repoFullName,
+			});
+			if (
+				!response ||
+				typeof response !== "object" ||
+				!("ok" in response) ||
+				!response.ok
+			) {
+				const error =
+					response &&
+					typeof response === "object" &&
+					"error" in response &&
+					typeof response.error === "string"
+						? response.error
+						: "Could not list branches";
+				pushToast({
+					level: "error",
+					message: error,
+				});
+				return [];
+			}
+			const parsed = branchSchema
+				.array()
+				.safeParse("data" in response ? response.data : undefined);
+			return parsed.success ? parsed.data : [];
+		},
+		[pushToast]
+	);
+
 	useEffect(() => {
 		void loadState();
 	}, [loadState]);
@@ -343,8 +453,8 @@ const App = (): ReactElement => {
 		const repoFullName = data.settings.selectedRepoFullName;
 		const selectedBranch = data.settings.selectedBranch;
 		const defaultBranch =
-			data.repos.find((repo) => repo.fullName === repoFullName)?.defaultBranch ??
-			null;
+			data.repos.find((repo) => repo.fullName === repoFullName)
+				?.defaultBranch ?? null;
 
 		setBranchesLoading(true);
 		void refreshBranchesOnly(repoFullName)
@@ -355,7 +465,8 @@ const App = (): ReactElement => {
 				setBranches(fetched);
 				const fallbackBranch = defaultBranch ?? fetched[0]?.name ?? null;
 				const validSelection =
-					selectedBranch && fetched.some((branch) => branch.name === selectedBranch)
+					selectedBranch &&
+					fetched.some((branch) => branch.name === selectedBranch)
 						? selectedBranch
 						: fallbackBranch;
 				if (validSelection) {
@@ -368,7 +479,11 @@ const App = (): ReactElement => {
 					setCreateBranchFrom("");
 				}
 
-				if (selectedBranch && validSelection && selectedBranch !== validSelection) {
+				if (
+					selectedBranch &&
+					validSelection &&
+					selectedBranch !== validSelection
+				) {
 					void saveSettingsRemote({
 						...data.settings,
 						selectedBranch: validSelection,
@@ -384,65 +499,7 @@ const App = (): ReactElement => {
 		return () => {
 			cancelled = true;
 		};
-	}, [data]);
-
-	const saveSettingsRemote = async (
-		next: ExtensionSettings
-	): Promise<boolean> => {
-		setBusy(true);
-		const message = popupToBackgroundMessageSchema.parse({
-			action: "saveSettings",
-			settings: next,
-		});
-		const response = await chrome.runtime.sendMessage(message);
-		setBusy(false);
-		if (!response?.ok) {
-			pushToast({
-				level: "error",
-				message: response?.error ?? "Could not save settings",
-			});
-			return false;
-		}
-		setData((prev) => (prev ? { ...prev, settings: next } : prev));
-		pushToast({
-			level: "success",
-			message: "Settings updated",
-		});
-		return true;
-	};
-
-	const refreshReposOnly = async (): Promise<Repo[]> => {
-		const message = popupToBackgroundMessageSchema.parse({
-			action: "listRepos",
-		});
-		const response = await chrome.runtime.sendMessage(message);
-		if (!response?.ok) {
-			pushToast({
-				level: "error",
-				message: response?.error ?? "Could not list repositories",
-			});
-			return [];
-		}
-		const parsed = repoSchema.array().safeParse(response.data);
-		return parsed.success ? parsed.data : [];
-	};
-
-	const refreshBranchesOnly = async (repoFullName: string): Promise<Branch[]> => {
-		const message = popupToBackgroundMessageSchema.parse({
-			action: "listBranches",
-			repoFullName,
-		});
-		const response = await chrome.runtime.sendMessage(message);
-		if (!response?.ok) {
-			pushToast({
-				level: "error",
-				message: response?.error ?? "Could not list branches",
-			});
-			return [];
-		}
-		const parsed = branchSchema.array().safeParse(response.data);
-		return parsed.success ? parsed.data : [];
-	};
+	}, [data, refreshBranchesOnly, saveSettingsRemote]);
 
 	const beginWebFlow = async (): Promise<void> => {
 		setDeviceFlow(null);
@@ -761,7 +818,9 @@ const App = (): ReactElement => {
 		}
 
 		const repoMeta =
-			data.repos.find((r) => r.fullName === data.settings.selectedRepoFullName) ?? null;
+			data.repos.find(
+				(r) => r.fullName === data.settings.selectedRepoFullName
+			) ?? null;
 		const fromBranch =
 			createBranchFrom ||
 			data.settings.selectedBranch ||
@@ -804,7 +863,9 @@ const App = (): ReactElement => {
 			level: "success",
 			message: `Branch ${newBranchName} created`,
 		});
-		const fetched = await refreshBranchesOnly(data.settings.selectedRepoFullName);
+		const fetched = await refreshBranchesOnly(
+			data.settings.selectedRepoFullName
+		);
 		setBranches(fetched);
 	};
 
@@ -821,9 +882,13 @@ const App = (): ReactElement => {
 			<>
 				{createPortal(
 					<Toaster theme="dark" richColors position="top-center" closeButton />,
-					document.body,
+					document.body
 				)}
-				<main className="settings-root settings-loading-shell" aria-busy="true" aria-live="polite">
+				<main
+					className="settings-root settings-loading-shell"
+					aria-busy="true"
+					aria-live="polite"
+				>
 					<header className="settings-hero">
 						<img
 							className="settings-page-icon"
@@ -838,7 +903,11 @@ const App = (): ReactElement => {
 							<p className="settings-tagline">{SETTINGS_HERO_TAGLINE}</p>
 						</div>
 					</header>
-					<div className="settings-section loading-shell-card" role="status" aria-label="Loading settings">
+					<div
+						className="settings-section loading-shell-card"
+						role="status"
+						aria-label="Loading settings"
+					>
 						<div className="loading-shell-line loading-shell-line-lg" />
 						<div className="loading-shell-line" />
 						<div className="loading-shell-line loading-shell-line-sm" />
@@ -857,7 +926,7 @@ const App = (): ReactElement => {
 		<>
 			{createPortal(
 				<Toaster theme="dark" richColors position="top-center" closeButton />,
-				document.body,
+				document.body
 			)}
 			<main ref={appMainRef} className="settings-root">
 				<header className="settings-hero">
@@ -876,454 +945,631 @@ const App = (): ReactElement => {
 				</header>
 
 				<section className="settings-section">
-				<h2>GitHub account</h2>
-				{auth.isAuthenticated ? (
-					<>
-						<p className="muted">
-							Signed in as <strong className="mono">{auth.username}</strong>
-						</p>
-						<div className="btn-stack">
-							<button type="button" className="btn btn-ghost" onClick={logout} disabled={busy}>
-								Disconnect GitHub
-							</button>
-						</div>
-					</>
-				) : (
-					<>
-						<p className="muted auth-methods-intro">Pick any method — they all grant the same access CssHub needs.</p>
-						<div className="auth-methods" role="list">
-							<div className="auth-method-card" role="listitem">
-								<div className="auth-method-head">
-									<h3 className="auth-method-title">Browser sign-in</h3>
-								</div>
-								<div className="auth-method-actions">
-									<button
-										type="button"
-										className="btn btn-primary btn-auth-browser"
-										onClick={() => void beginWebFlow()}
-										disabled={busy || webAuthInProgress}
-										aria-busy={webAuthInProgress}
-										aria-label={webAuthInProgress ? "Connecting with GitHub" : undefined}
-									>
-										<span className={webAuthInProgress ? "btn-auth-browser-label is-busy" : "btn-auth-browser-label"}>
-											Continue with GitHub
-										</span>
-										{webAuthInProgress ? (
-											<span className="btn-auth-browser-busy" aria-hidden="true">
-												<span className="btn-spinner" />
-											</span>
-										) : null}
-									</button>
-									<p className="hint auth-trust-line" role="note">
-										OAuth runs on github.com. This extension never receives your GitHub password.
-									</p>
-								</div>
+					<h2>GitHub account</h2>
+					{auth.isAuthenticated ? (
+						<>
+							<p className="muted">
+								Signed in as <strong className="mono">{auth.username}</strong>
+							</p>
+							<div className="btn-stack">
+								<button
+									type="button"
+									className="btn btn-ghost"
+									onClick={logout}
+									disabled={busy}
+								>
+									Disconnect GitHub
+								</button>
 							</div>
-
-							<div className="auth-method-card" role="listitem">
-								<div className="auth-method-head">
-									<h3 className="auth-method-title">Device code</h3>
-									<p className="auth-method-desc">
-										Use when browser OAuth is blocked. We open GitHub with your code when GitHub supports it.
-									</p>
-								</div>
-								<div className="auth-method-actions">
-									{deviceFlow ? (
-										<div className="device-flow">
-											<ol className="device-flow-steps">
-												<li>Complete the prompt in the GitHub tab (we opened one when you started).</li>
-												<li>Confirm the user code below matches GitHub if you are asked to enter it.</li>
-												<li>After you authorize CssHub, finish here.</li>
-											</ol>
-											<p className="device-flow-label">Your user code</p>
-											<div className="device-user-code-shell">
-												<div className="device-user-code-inner" translate="no" aria-label="GitHub device user code">
-													{deviceFlow.userCode.split("-").map((part, i) => (
-														<span key={i} className="device-user-code-group">
-															{i > 0 ? (
-																<span className="device-user-code-sep" aria-hidden="true">
-																	-
-																</span>
-															) : null}
-															<span className="device-user-code-chunk">{part}</span>
-														</span>
-													))}
-												</div>
-												<button
-													type="button"
-													className={`device-copy-icon-btn${deviceCopyOk ? " device-copy-icon-btn--ok" : ""}`}
-													onClick={() => void copyDeviceUserCode()}
-													disabled={busy}
-													aria-label="Copy user code to clipboard"
-													data-tooltip={deviceCopyOk ? "Copied" : "Copy text"}
-												>
-													<svg
-														className="device-copy-icon"
-														width="18"
-														height="18"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														strokeWidth="2"
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														aria-hidden="true"
-													>
-														<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-														<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-													</svg>
-												</button>
-											</div>
-											<div className="device-flow-link-row">
-												<button
-													type="button"
-													className="device-github-again-link"
-													onClick={openDeviceVerification}
-													disabled={busy}
-												>
-													Open GitHub again
-												</button>
-											</div>
-											<button type="button" className="btn btn-primary device-flow-finish" onClick={() => void pollDevice()} disabled={busy}>
-												I authorized CssHub — finish sign-in
-											</button>
-										</div>
-									) : (
-										<button type="button" className="btn" onClick={() => void beginDeviceFlow()} disabled={busy || webAuthInProgress}>
-											Start device sign-in
-										</button>
-									)}
-								</div>
-							</div>
-
-							<div className="auth-method-card" role="listitem">
-								<div className="auth-method-head">
-									<div className="auth-method-title-row">
-										<h3 className="auth-method-title">Personal access token</h3>
+						</>
+					) : (
+						<>
+							<p className="muted auth-methods-intro">
+								Pick any method — they all grant the same access CssHub needs.
+							</p>
+							<div className="auth-methods" role="list">
+								<div className="auth-method-card" role="listitem">
+									<div className="auth-method-head">
+										<h3 className="auth-method-title">Browser sign-in</h3>
+									</div>
+									<div className="auth-method-actions">
 										<button
 											type="button"
-											className="help-badge"
-											aria-expanded={patTutorialOpen}
-											aria-controls="pat-tutorial-panel"
-											onClick={() => setPatTutorialOpen((open) => !open)}
-											title="How to create a token"
+											className="btn btn-primary btn-auth-browser"
+											onClick={() => void beginWebFlow()}
+											disabled={busy || webAuthInProgress}
+											aria-busy={webAuthInProgress}
+											aria-label={
+												webAuthInProgress ? "Connecting with GitHub" : undefined
+											}
 										>
-											?
+											<span
+												className={
+													webAuthInProgress
+														? "btn-auth-browser-label is-busy"
+														: "btn-auth-browser-label"
+												}
+											>
+												Continue with GitHub
+											</span>
+											{webAuthInProgress ? (
+												<span
+													className="btn-auth-browser-busy"
+													aria-hidden="true"
+												>
+													<span className="btn-spinner" />
+												</span>
+											) : null}
 										</button>
+										<p className="hint auth-trust-line" role="note">
+											OAuth runs on github.com. This extension never receives
+											your GitHub password.
+										</p>
 									</div>
-									<p className="auth-method-desc">Paste a classic or fine-grained token. It stays in this browser profile only.</p>
 								</div>
-								{patTutorialOpen ? (
-									<div className="pat-tutorial" id="pat-tutorial-panel" role="region" aria-label="Personal access token instructions">
-										<ol>
-											<li>
-												On GitHub, open{" "}
-												<strong>Settings → Developer settings → Personal access tokens</strong> (classic or fine-grained).
-											</li>
-											<li>
-												<strong>Classic token:</strong> enable scopes <code className="pat-tutorial-code">repo</code> and{" "}
-												<code className="pat-tutorial-code">read:user</code> (same access as browser sign-in).
-											</li>
-											<li>
-												<strong>Fine-grained token:</strong> pick repositories CssHub should sync to and grant{" "}
-												<strong>Contents</strong> read/write (and metadata as prompted).
-											</li>
-											<li>Generate the token, copy it once, paste below, then choose Sign in with token.</li>
-										</ol>
+
+								<div className="auth-method-card" role="listitem">
+									<div className="auth-method-head">
+										<h3 className="auth-method-title">Device code</h3>
+										<p className="auth-method-desc">
+											Use when browser OAuth is blocked. We open GitHub with
+											your code when GitHub supports it.
+										</p>
 									</div>
-								) : null}
-								<div className="auth-method-actions">
-									<div className="row row-tight">
-										<label htmlFor="pat-settings">Token</label>
-										<div className="pat-input-row">
-											<input
-												id="pat-settings"
-												type={patTokenVisible ? "text" : "password"}
-												autoComplete="off"
-												placeholder="github_pat_… or ghp_…"
-												value={patToken}
-												onChange={(e) => setPatToken(e.target.value)}
-												disabled={busy || webAuthInProgress}
-											/>
+									<div className="auth-method-actions">
+										{deviceFlow ? (
+											<div className="device-flow">
+												<ol className="device-flow-steps">
+													<li>
+														Complete the prompt in the GitHub tab (we opened one
+														when you started).
+													</li>
+													<li>
+														Confirm the user code below matches GitHub if you
+														are asked to enter it.
+													</li>
+													<li>After you authorize CssHub, finish here.</li>
+												</ol>
+												<p className="device-flow-label">Your user code</p>
+												<div className="device-user-code-shell">
+													<div
+														className="device-user-code-inner"
+														translate="no"
+														aria-label="GitHub device user code"
+													>
+														{deviceFlow.userCode.split("-").map((part, i) => (
+															<span key={i} className="device-user-code-group">
+																{i > 0 ? (
+																	<span
+																		className="device-user-code-sep"
+																		aria-hidden="true"
+																	>
+																		-
+																	</span>
+																) : null}
+																<span className="device-user-code-chunk">
+																	{part}
+																</span>
+															</span>
+														))}
+													</div>
+													<button
+														type="button"
+														className={`device-copy-icon-btn${deviceCopyOk ? " device-copy-icon-btn--ok" : ""}`}
+														onClick={() => void copyDeviceUserCode()}
+														disabled={busy}
+														aria-label="Copy user code to clipboard"
+														data-tooltip={deviceCopyOk ? "Copied" : "Copy text"}
+													>
+														<svg
+															className="device-copy-icon"
+															width="18"
+															height="18"
+															viewBox="0 0 24 24"
+															fill="none"
+															stroke="currentColor"
+															strokeWidth="2"
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															aria-hidden="true"
+														>
+															<rect
+																x="9"
+																y="9"
+																width="13"
+																height="13"
+																rx="2"
+																ry="2"
+															/>
+															<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+														</svg>
+													</button>
+												</div>
+												<div className="device-flow-link-row">
+													<button
+														type="button"
+														className="device-github-again-link"
+														onClick={openDeviceVerification}
+														disabled={busy}
+													>
+														Open GitHub again
+													</button>
+												</div>
+												<button
+													type="button"
+													className="btn btn-primary device-flow-finish"
+													onClick={() => void pollDevice()}
+													disabled={busy}
+												>
+													I authorized CssHub — finish sign-in
+												</button>
+											</div>
+										) : (
 											<button
 												type="button"
-												className="btn btn-ghost pat-visibility-toggle"
-												onClick={() => setPatTokenVisible((visible) => !visible)}
-												aria-label={patTokenVisible ? "Hide personal access token" : "Show personal access token"}
-												aria-pressed={patTokenVisible}
+												className="btn"
+												onClick={() => void beginDeviceFlow()}
 												disabled={busy || webAuthInProgress}
 											>
-												{patTokenVisible ? "Hide" : "Show"}
+												Start device sign-in
+											</button>
+										)}
+									</div>
+								</div>
+
+								<div className="auth-method-card" role="listitem">
+									<div className="auth-method-head">
+										<div className="auth-method-title-row">
+											<h3 className="auth-method-title">
+												Personal access token
+											</h3>
+											<button
+												type="button"
+												className="help-badge"
+												aria-expanded={patTutorialOpen}
+												aria-controls="pat-tutorial-panel"
+												onClick={() => setPatTutorialOpen((open) => !open)}
+												title="How to create a token"
+											>
+												?
+											</button>
+										</div>
+										<p className="auth-method-desc">
+											Paste a classic or fine-grained token. It stays in this
+											browser profile only.
+										</p>
+									</div>
+									{patTutorialOpen ? (
+										<div
+											className="pat-tutorial"
+											id="pat-tutorial-panel"
+											role="region"
+											aria-label="Personal access token instructions"
+										>
+											<ol>
+												<li>
+													On GitHub, open{" "}
+													<strong>
+														Settings → Developer settings → Personal access
+														tokens
+													</strong>{" "}
+													(classic or fine-grained).
+												</li>
+												<li>
+													<strong>Classic token:</strong> enable scopes{" "}
+													<code className="pat-tutorial-code">repo</code> and{" "}
+													<code className="pat-tutorial-code">read:user</code>{" "}
+													(same access as browser sign-in).
+												</li>
+												<li>
+													<strong>Fine-grained token:</strong> pick repositories
+													CssHub should sync to and grant{" "}
+													<strong>Contents</strong> read/write (and metadata as
+													prompted).
+												</li>
+												<li>
+													Generate the token, copy it once, paste below, then
+													choose Sign in with token.
+												</li>
+											</ol>
+										</div>
+									) : null}
+									<div className="auth-method-actions">
+										<div className="row row-tight">
+											<label htmlFor="pat-settings">Token</label>
+											<div className="pat-input-row">
+												<input
+													id="pat-settings"
+													type={patTokenVisible ? "text" : "password"}
+													autoComplete="off"
+													placeholder="github_pat_… or ghp_…"
+													value={patToken}
+													onChange={(e) => setPatToken(e.target.value)}
+													disabled={busy || webAuthInProgress}
+												/>
+												<button
+													type="button"
+													className="btn btn-ghost pat-visibility-toggle"
+													onClick={() =>
+														setPatTokenVisible((visible) => !visible)
+													}
+													aria-label={
+														patTokenVisible
+															? "Hide personal access token"
+															: "Show personal access token"
+													}
+													aria-pressed={patTokenVisible}
+													disabled={busy || webAuthInProgress}
+												>
+													{patTokenVisible ? "Hide" : "Show"}
+												</button>
+											</div>
+										</div>
+										<button
+											type="button"
+											className="btn"
+											onClick={() => void loginPat()}
+											disabled={busy || webAuthInProgress}
+										>
+											Sign in with token
+										</button>
+									</div>
+								</div>
+							</div>
+						</>
+					)}
+				</section>
+
+				{auth.isAuthenticated ? (
+					<>
+						<section className="settings-section">
+							<h2>Repository</h2>
+							{settings.selectedRepoFullName ? (
+								<>
+									<div className="repo-panel">
+										<div className="repo-panel-meta">
+											<p className="repo-fullname">
+												{settings.selectedRepoFullName}
+											</p>
+											<p className="repo-branch-line">
+												Branch:{" "}
+												<strong className="repo-branch-name">
+													{settings.selectedBranch ??
+														selectedRepoMeta?.defaultBranch ??
+														"main"}
+												</strong>
+											</p>
+										</div>
+										<div
+											className="repo-panel-toolbar"
+											role="group"
+											aria-label="Repository actions"
+										>
+											<div className="repo-toolbar-start">
+												<button
+													type="button"
+													className="btn btn-ghost repo-panel-btn"
+													onClick={openPickModal}
+													disabled={busy}
+												>
+													Change repository…
+												</button>
+												<button
+													type="button"
+													className="btn btn-ghost repo-panel-btn"
+													onClick={() => void clearRepoSelection()}
+													disabled={busy}
+												>
+													Clear selection
+												</button>
+											</div>
+											<button
+												type="button"
+												className="btn btn-primary repo-panel-btn repo-toolbar-primary"
+												onClick={openCreateModal}
+												disabled={busy}
+											>
+												Create new…
 											</button>
 										</div>
 									</div>
-									<button type="button" className="btn" onClick={() => void loginPat()} disabled={busy || webAuthInProgress}>
-										Sign in with token
-									</button>
-								</div>
-							</div>
-						</div>
-					</>
-				)}
-			</section>
-
-			{auth.isAuthenticated ? (
-				<>
-					<section className="settings-section">
-						<h2>Repository</h2>
-						{settings.selectedRepoFullName ? (
-					<>
-						<div className="repo-panel">
-							<div className="repo-panel-meta">
-								<p className="repo-fullname">{settings.selectedRepoFullName}</p>
-								<p className="repo-branch-line">
-									Branch:{" "}
-									<strong className="repo-branch-name">
-										{settings.selectedBranch ?? selectedRepoMeta?.defaultBranch ?? "main"}
-									</strong>
-								</p>
-							</div>
-							<div className="repo-panel-toolbar" role="group" aria-label="Repository actions">
-								<div className="repo-toolbar-start">
-									<button type="button" className="btn btn-ghost repo-panel-btn" onClick={openPickModal} disabled={busy}>
-										Change repository…
-									</button>
-									<button type="button" className="btn btn-ghost repo-panel-btn" onClick={() => void clearRepoSelection()} disabled={busy}>
-										Clear selection
-									</button>
-								</div>
-								<button type="button" className="btn btn-primary repo-panel-btn repo-toolbar-primary" onClick={openCreateModal} disabled={busy}>
-									Create new…
-								</button>
-							</div>
-						</div>
-						{branchesLoading ? <p className="repo-branches-hint muted">Loading branches…</p> : null}
-						<div className="branch-workspace">
-							<p className="branch-workspace-title">Branches</p>
-							<div className="branch-sync-panel">
-								<div className="row">
-									<label htmlFor="branch-settings">Sync branch</label>
-									<select
-										id="branch-settings"
-										value={settings.selectedBranch ?? ""}
-										disabled={busy || branchesLoading || branches.length === 0}
-										onChange={(e) => {
-											const nextBranch = e.target.value || null;
-											void saveSettingsRemote({ ...settings, selectedBranch: nextBranch });
-										}}
-									>
-										{branches.length === 0 ? (
-											<option value="">No branches found</option>
-										) : (
-											branches.map((branch) => (
-												<option key={branch.name} value={branch.name}>
-													{branch.name}
-												</option>
-											))
-										)}
-									</select>
-								</div>
-							</div>
-							<div className="branch-create-panel">
-								<div className="branch-create-grid">
-									<div className="row">
-										<label htmlFor="branch-create-name">Create new branch</label>
-										<input
-											id="branch-create-name"
-											type="text"
-											placeholder="feature/my-branch"
-											value={createBranchName}
-											onChange={(e) => setCreateBranchName(e.target.value)}
-											disabled={busy || branchesLoading}
-										/>
+									{branchesLoading ? (
+										<p className="repo-branches-hint muted">
+											Loading branches…
+										</p>
+									) : null}
+									<div className="branch-workspace">
+										<p className="branch-workspace-title">Branch</p>
+										<div className="branch-sync-panel">
+											<div className="row">
+												<label htmlFor="branch-settings">Sync branch</label>
+												<select
+													id="branch-settings"
+													value={settings.selectedBranch ?? ""}
+													disabled={
+														busy || branchesLoading || branches.length === 0
+													}
+													onChange={(e) => {
+														const nextBranch = e.target.value || null;
+														void saveSettingsRemote({
+															...settings,
+															selectedBranch: nextBranch,
+														});
+													}}
+												>
+													{branches.length === 0 ? (
+														<option value="">No branches found</option>
+													) : (
+														branches.map((branch) => (
+															<option key={branch.name} value={branch.name}>
+																{branch.name}
+															</option>
+														))
+													)}
+												</select>
+											</div>
+										</div>
+										<div className="branch-create-panel">
+											<div className="branch-create-grid">
+												<div className="row">
+													<label htmlFor="branch-create-name">
+														Create new branch
+													</label>
+													<input
+														id="branch-create-name"
+														type="text"
+														placeholder="feature/my-branch"
+														value={createBranchName}
+														onChange={(e) =>
+															setCreateBranchName(e.target.value)
+														}
+														disabled={busy || branchesLoading}
+													/>
+												</div>
+												<div className="row">
+													<label htmlFor="branch-create-from">
+														From branch
+													</label>
+													<select
+														id="branch-create-from"
+														value={createBranchFrom}
+														onChange={(e) =>
+															setCreateBranchFrom(e.target.value)
+														}
+														disabled={
+															busy || branchesLoading || branches.length === 0
+														}
+													>
+														{branches.length === 0 ? (
+															<option value="">No source branch</option>
+														) : (
+															branches.map((branch) => (
+																<option
+																	key={`from-${branch.name}`}
+																	value={branch.name}
+																>
+																	{branch.name}
+																</option>
+															))
+														)}
+													</select>
+												</div>
+											</div>
+										</div>
+										<div className="branch-workspace-foot">
+											<button
+												type="button"
+												className="btn btn-primary branch-create-submit"
+												onClick={() => void confirmCreateBranch()}
+												disabled={
+													busy || branchesLoading || branches.length === 0
+												}
+											>
+												Create branch
+											</button>
+										</div>
 									</div>
-									<div className="row">
-										<label htmlFor="branch-create-from">From branch</label>
-										<select
-											id="branch-create-from"
-											value={createBranchFrom}
-											onChange={(e) => setCreateBranchFrom(e.target.value)}
-											disabled={busy || branchesLoading || branches.length === 0}
-										>
-											{branches.length === 0 ? (
-												<option value="">No source branch</option>
-											) : (
-												branches.map((branch) => (
-													<option key={`from-${branch.name}`} value={branch.name}>
-														{branch.name}
-													</option>
-												))
-											)}
-										</select>
-									</div>
-								</div>
-							</div>
-							<div className="branch-workspace-foot">
-								<button
-									type="button"
-									className="btn btn-primary branch-create-submit"
-									onClick={() => void confirmCreateBranch()}
-									disabled={busy || branchesLoading || branches.length === 0}
-								>
-									Create branch
-								</button>
-							</div>
-						</div>
-						<div className="repo-readme-card">
-							<div className="repo-readme-card-head">
-								<h3 className="repo-readme-card-title">Root README</h3>
-								<button
-									type="button"
-									className="help-badge"
-									aria-expanded={readmeInfoOpen}
-									aria-controls="readme-mode-info-panel"
-									onClick={() => setReadmeInfoOpen((open) => !open)}
-									title="How README modes work"
-								>
-									?
-								</button>
-							</div>
-							{readmeInfoOpen ? (
-								<div
-									className="readme-info-panel"
-									id="readme-mode-info-panel"
-									role="region"
-									aria-label="Root README mode details"
-								>
-									<p>
-										<strong>Managed section</strong> (default) updates only the region between these
-										markers in the repository root <code className="readme-info-code">README.md</code>:
-									</p>
-									<pre className="readme-info-markers">{`<!-- CSSHUB:README-START -->
+									<div className="repo-readme-card">
+										<div className="repo-readme-card-head">
+											<h3 className="repo-readme-card-title">Root README</h3>
+											<button
+												type="button"
+												className="help-badge"
+												aria-expanded={readmeInfoOpen}
+												aria-controls="readme-mode-info-panel"
+												onClick={() => setReadmeInfoOpen((open) => !open)}
+												title="How README modes work"
+											>
+												?
+											</button>
+										</div>
+										{readmeInfoOpen ? (
+											<div
+												className="readme-info-panel"
+												id="readme-mode-info-panel"
+												role="region"
+												aria-label="Root README mode details"
+											>
+												<p>
+													<strong>Managed section</strong> (default) updates
+													only the region between these markers in the
+													repository root{" "}
+													<code className="readme-info-code">README.md</code>:
+												</p>
+												<pre className="readme-info-markers">{`<!-- CSSHUB:README-START -->
 (list of challenge links)
 <!-- CSSHUB:README-END -->`}</pre>
-									<p>Text above or below that block is never touched. Each sync refreshes the index in the same commit as your solution.</p>
-									<p>
-										<strong>Full</strong> replaces the entire root README on every sync.
-									</p>
-									<p>
-										<strong>Off</strong> leaves root README.md unchanged (challenge folders still get their own READMEs).
+												<p>
+													Text above or below that block is never touched. Each
+													sync refreshes the index in the same commit as your
+													solution.
+												</p>
+												<p>
+													<strong>Full</strong> replaces the entire root README
+													on every sync.
+												</p>
+												<p>
+													<strong>Off</strong> leaves root README.md unchanged
+													(challenge folders still get their own READMEs).
+												</p>
+											</div>
+										) : null}
+										<div className="row row-tight">
+											<label htmlFor="readme-mode-settings">Mode</label>
+											<select
+												id="readme-mode-settings"
+												value={
+													settings.repositoryReadmeMode ?? "managed-section"
+												}
+												disabled={busy || branchesLoading}
+												onChange={(e) => {
+													const v = e.target.value;
+													if (
+														v === "off" ||
+														v === "managed-section" ||
+														v === "full"
+													) {
+														void saveSettingsRemote({
+															...settings,
+															repositoryReadmeMode: v,
+														});
+													}
+												}}
+											>
+												<option value="off">
+													Off — never change root README.md
+												</option>
+												<option value="managed-section">
+													Managed section (recommended)
+												</option>
+												<option value="full">
+													Full — replace entire README.md
+												</option>
+											</select>
+										</div>
+									</div>
+								</>
+							) : (
+								<>
+									<p className="muted">No repository selected for sync.</p>
+									<div className="btn-stack">
+										<button
+											type="button"
+											className="btn btn-primary"
+											onClick={openCreateModal}
+											disabled={busy}
+										>
+											Create repository…
+										</button>
+										<button
+											type="button"
+											className="btn"
+											onClick={openPickModal}
+											disabled={busy}
+										>
+											Choose existing…
+										</button>
+									</div>
+								</>
+							)}
+						</section>
+
+						<section className="settings-section">
+							<h2>Notifications</h2>
+							<div className="toggle-row">
+								<div>
+									<p className="toggle-title">Browser/system notifications</p>
+									<p className="muted">
+										Show desktop notifications from the extension. In-app badges
+										and activity log remain active.
 									</p>
 								</div>
-							) : null}
-							<div className="row row-tight">
-								<label htmlFor="readme-mode-settings">Mode</label>
-								<select
-									id="readme-mode-settings"
-									value={settings.repositoryReadmeMode ?? "managed-section"}
-									disabled={busy || branchesLoading}
-									onChange={(e) => {
-										const v = e.target.value;
-										if (v === "off" || v === "managed-section" || v === "full") {
-											void saveSettingsRemote({ ...settings, repositoryReadmeMode: v });
-										}
-									}}
+								<label className="switch" htmlFor="system-notifications-toggle">
+									<input
+										id="system-notifications-toggle"
+										type="checkbox"
+										checked={settings.systemNotificationsEnabled}
+										disabled={busy}
+										onChange={(e) => {
+											void toggleSystemNotifications(e.target.checked);
+										}}
+									/>
+									<span className="switch-slider" />
+								</label>
+							</div>
+						</section>
+
+						<section className="settings-section">
+							<div className="section-headline">
+								<h2>Activity log</h2>
+								<button
+									type="button"
+									className="btn btn-ghost btn-small"
+									onClick={() => void clearActivityLog()}
+									disabled={busy || recentEvents.length === 0}
 								>
-									<option value="off">Off — never change root README.md</option>
-									<option value="managed-section">Managed section (recommended)</option>
-									<option value="full">Full — replace entire README.md</option>
-								</select>
+									Clear log
+								</button>
 							</div>
-						</div>
-					</>
-				) : (
-					<>
-						<p className="muted">No repository selected for sync.</p>
-						<div className="btn-stack">
-							<button type="button" className="btn btn-primary" onClick={openCreateModal} disabled={busy}>
-								Create repository…
-							</button>
-							<button type="button" className="btn" onClick={openPickModal} disabled={busy}>
-								Choose existing…
-							</button>
-						</div>
-					</>
-				)}
-					</section>
-
-					<section className="settings-section">
-						<h2>Notifications</h2>
-						<div className="toggle-row">
-							<div>
-								<p className="toggle-title">Browser/system notifications</p>
-								<p className="muted">
-									Show desktop notifications from the extension. In-app badges and activity log remain active.
+							<p className="muted">
+								Recent sync outcomes. For warnings and errors, the short code
+								under the message matches what CssHub uses internally (not a
+								stack trace).
+							</p>
+							{recentEvents.length === 0 ? (
+								<p className="empty-state empty-state-activity">
+									No events yet.
 								</p>
-							</div>
-							<label className="switch" htmlFor="system-notifications-toggle">
-								<input
-									id="system-notifications-toggle"
-									type="checkbox"
-									checked={settings.systemNotificationsEnabled}
-									disabled={busy}
-									onChange={(e) => {
-										void toggleSystemNotifications(e.target.checked);
-									}}
-								/>
-								<span className="switch-slider" />
-							</label>
-						</div>
-					</section>
-
-					<section className="settings-section">
-						<div className="section-headline">
-							<h2>Activity log</h2>
-							<button type="button" className="btn btn-ghost btn-small" onClick={() => void clearActivityLog()} disabled={busy || recentEvents.length === 0}>
-								Clear log
-							</button>
-						</div>
-						<p className="muted">
-							Recent sync outcomes. For warnings and errors, the short code under the message matches what
-							CssHub uses internally (not a stack trace).
-						</p>
-						{recentEvents.length === 0 ? (
-							<p className="empty-state empty-state-activity">No events yet.</p>
-						) : (
-							<ul className="event-list" aria-label="Activity log">
-								{recentEvents.map((ev) => {
-									const tone = getSyncEventTone(ev);
-									const showCode =
-										Boolean(ev.code) && (tone === "error" || tone === "warn");
-									return (
-										<li key={ev.id} className={`event event-tone-${tone}`}>
-											<div className="event-head">
-												<span className={`event-pill event-pill-${tone}`}>
-													{getEventBadgeLabel(ev)}
-												</span>
-												<time className="event-time" dateTime={ev.timestamp}>
-													{formatActivityTimestamp(ev.timestamp)}
-												</time>
-											</div>
-											<p className="event-message">{ev.message}</p>
-											{showCode ? (
-												<p className="event-code" aria-label="Event code">
-													{ev.code}
-												</p>
-											) : null}
-											{ev.commitUrl ? (
-												<div className="event-foot">
-													<a
-														href={ev.commitUrl}
-														target="_blank"
-														rel="noreferrer"
-														className={`event-link event-link-${tone}`}
-													>
-														View commit
-													</a>
+							) : (
+								<ul className="event-list" aria-label="Activity log">
+									{recentEvents.map((ev) => {
+										const tone = getSyncEventTone(ev);
+										const showCode =
+											Boolean(ev.code) && (tone === "error" || tone === "warn");
+										return (
+											<li key={ev.id} className={`event event-tone-${tone}`}>
+												<div className="event-head">
+													<span className={`event-pill event-pill-${tone}`}>
+														{getEventBadgeLabel(ev)}
+													</span>
+													<time className="event-time" dateTime={ev.timestamp}>
+														{formatActivityTimestamp(ev.timestamp)}
+													</time>
 												</div>
-											) : null}
-										</li>
-									);
-								})}
-							</ul>
-						)}
-					</section>
-				</>
-			) : null}
+												<p className="event-message">{ev.message}</p>
+												{showCode ? (
+													<p className="event-code" aria-label="Event code">
+														{ev.code}
+													</p>
+												) : null}
+												{ev.commitUrl ? (
+													<div className="event-foot">
+														<a
+															href={ev.commitUrl}
+															target="_blank"
+															rel="noreferrer"
+															className={`event-link event-link-${tone}`}
+														>
+															View commit
+														</a>
+													</div>
+												) : null}
+											</li>
+										);
+									})}
+								</ul>
+							)}
+						</section>
+					</>
+				) : null}
 			</main>
 
 			{createOpen ? (
-				<div className="modal-backdrop" role="presentation" onClick={closeCreateModal}>
+				<div
+					className="modal-backdrop"
+					role="presentation"
+					onClick={closeCreateModal}
+				>
 					<div
 						ref={createModalRef}
 						className="modal-panel"
@@ -1332,7 +1578,9 @@ const App = (): ReactElement => {
 						aria-labelledby="create-repository-title"
 						tabIndex={-1}
 						onClick={(e) => e.stopPropagation()}
-						onKeyDown={(event) => onModalKeyDown(event, createModalRef.current, closeCreateModal)}
+						onKeyDown={(event) =>
+							onModalKeyDown(event, createModalRef.current, closeCreateModal)
+						}
 					>
 						<h2 className="modal-head" id="create-repository-title">
 							Create repository
@@ -1360,10 +1608,19 @@ const App = (): ReactElement => {
 							</div>
 						</div>
 						<div className="modal-foot">
-							<button type="button" className="btn btn-ghost" onClick={closeCreateModal}>
+							<button
+								type="button"
+								className="btn btn-ghost"
+								onClick={closeCreateModal}
+							>
 								Cancel
 							</button>
-							<button type="button" className="btn btn-primary" onClick={() => void confirmCreateRepo()} disabled={busy}>
+							<button
+								type="button"
+								className="btn btn-primary"
+								onClick={() => void confirmCreateRepo()}
+								disabled={busy}
+							>
 								Create
 							</button>
 						</div>
@@ -1372,7 +1629,11 @@ const App = (): ReactElement => {
 			) : null}
 
 			{pickOpen ? (
-				<div className="modal-backdrop" role="presentation" onClick={closePickModal}>
+				<div
+					className="modal-backdrop"
+					role="presentation"
+					onClick={closePickModal}
+				>
 					<div
 						ref={pickModalRef}
 						className="modal-panel"
@@ -1381,7 +1642,9 @@ const App = (): ReactElement => {
 						aria-labelledby="choose-repository-title"
 						tabIndex={-1}
 						onClick={(e) => e.stopPropagation()}
-						onKeyDown={(event) => onModalKeyDown(event, pickModalRef.current, closePickModal)}
+						onKeyDown={(event) =>
+							onModalKeyDown(event, pickModalRef.current, closePickModal)
+						}
 					>
 						<h2 className="modal-head" id="choose-repository-title">
 							Choose repository
@@ -1398,7 +1661,11 @@ const App = (): ReactElement => {
 									placeholder="owner/repo…"
 								/>
 							</div>
-							<div className="repo-picker-list" role="listbox" aria-label="Available repositories">
+							<div
+								className="repo-picker-list"
+								role="listbox"
+								aria-label="Available repositories"
+							>
 								{filteredPickList.map((r) => (
 									<button
 										key={r.id}
@@ -1419,10 +1686,19 @@ const App = (): ReactElement => {
 							) : null}
 						</div>
 						<div className="modal-foot">
-							<button type="button" className="btn btn-ghost" onClick={closePickModal}>
+							<button
+								type="button"
+								className="btn btn-ghost"
+								onClick={closePickModal}
+							>
 								Cancel
 							</button>
-							<button type="button" className="btn btn-primary" onClick={() => void confirmPickRepo()} disabled={busy || !pickSelected}>
+							<button
+								type="button"
+								className="btn btn-primary"
+								onClick={() => void confirmPickRepo()}
+								disabled={busy || !pickSelected}
+							>
 								Use repository
 							</button>
 						</div>

@@ -284,6 +284,11 @@ a.sync-target:hover {
 .field-slider {
 	width: 100%;
 	accent-color: var(--accent);
+	cursor: pointer;
+}
+
+.field-slider:disabled {
+	cursor: not-allowed;
 }
 
 .threshold-status {

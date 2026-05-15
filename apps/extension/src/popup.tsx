@@ -290,6 +290,35 @@ const App = (): ReactElement => {
 		setStatus("idle");
 	}, []);
 
+	const saveThreshold = useCallback(
+		async (threshold: number): Promise<void> => {
+			if (!data) {
+				return;
+			}
+			const next = clampThreshold(threshold);
+			setStatus("saving");
+			const message = popupToBackgroundMessageSchema.parse({
+				action: "saveSettings",
+				settings: {
+					...data.settings,
+					threshold: next,
+				},
+			});
+			const response = await chrome.runtime.sendMessage(message);
+			if (!response?.ok) {
+				setStatus("error");
+				toast.error(response?.error ?? POPUP_ERRORS.saveThreshold);
+				return;
+			}
+			setData({
+				...data,
+				settings: { ...data.settings, threshold: next },
+			});
+			setStatus("idle");
+		},
+		[data]
+	);
+
 	useEffect(() => {
 		if (!data) {
 			return;
@@ -306,7 +335,7 @@ const App = (): ReactElement => {
 		return () => {
 			window.clearTimeout(timeoutId);
 		};
-	}, [thresholdDraft, data]);
+	}, [thresholdDraft, data, saveThreshold]);
 
 	useEffect(() => {
 		void load();
@@ -318,28 +347,6 @@ const App = (): ReactElement => {
 			chrome.storage.onChanged.removeListener(onStorageChanged);
 		};
 	}, [load]);
-
-	const saveThreshold = async (threshold: number): Promise<void> => {
-		if (!data) {
-			return;
-		}
-		setStatus("saving");
-		const message = popupToBackgroundMessageSchema.parse({
-			action: "saveSettings",
-			settings: { ...data.settings, threshold },
-		});
-		const response = await chrome.runtime.sendMessage(message);
-		if (!response?.ok) {
-			setStatus("error");
-			toast.error(response?.error ?? POPUP_ERRORS.saveThreshold);
-			return;
-		}
-		setData({
-			...data,
-			settings: { ...data.settings, threshold: clampThreshold(threshold) },
-		});
-		setStatus("idle");
-	};
 
 	if (loading || !data) {
 		return (

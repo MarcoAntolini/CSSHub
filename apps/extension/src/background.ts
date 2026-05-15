@@ -459,19 +459,28 @@ const showBrowserNotification = (
 	if (!enabled || !chrome.notifications) {
 		return;
 	}
-	const iconUrl =
-		level === "success"
-			? "icons/icon_48.png"
-			: level === "warn"
-			? "icons/icon_48.png"
-			: "icons/icon_48.png";
 	void chrome.notifications.create({
 		type: "basic",
 		title,
 		message,
-		iconUrl,
+		iconUrl: "icons/icon_48.png",
 		priority: level === "error" ? 2 : 1,
 	});
+};
+
+const getAuthenticatedState = async (
+	sendResponse: SendResponse
+): Promise<
+	(Awaited<ReturnType<typeof getStoredState>> & { githubToken: string }) | null
+> => {
+	const state = await getStoredState();
+	if (!state.githubToken) {
+		sendResponse({ ok: false, error: "Not authenticated with GitHub" });
+		return null;
+	}
+	return state as Awaited<ReturnType<typeof getStoredState>> & {
+		githubToken: string;
+	};
 };
 
 const parseGithubStatus = (message: string): number | null => {
@@ -897,9 +906,8 @@ const handleClearRecentEvents: Handler<"clearRecentEvents"> = async (
 };
 
 const handleListRepos: Handler<"listRepos"> = async (_data, sendResponse) => {
-	const state = await getStoredState();
-	if (!state.githubToken) {
-		sendResponse({ ok: false, error: "Not authenticated with GitHub" });
+	const state = await getAuthenticatedState(sendResponse);
+	if (!state) {
 		return;
 	}
 
@@ -908,9 +916,8 @@ const handleListRepos: Handler<"listRepos"> = async (_data, sendResponse) => {
 };
 
 const handleListBranches: Handler<"listBranches"> = async (data, sendResponse) => {
-	const state = await getStoredState();
-	if (!state.githubToken) {
-		sendResponse({ ok: false, error: "Not authenticated with GitHub" });
+	const state = await getAuthenticatedState(sendResponse);
+	if (!state) {
 		return;
 	}
 	const branches = await listBranches(state.githubToken, data.repoFullName);
@@ -918,9 +925,8 @@ const handleListBranches: Handler<"listBranches"> = async (data, sendResponse) =
 };
 
 const handleCreateRepo: Handler<"createRepo"> = async (data, sendResponse) => {
-	const state = await getStoredState();
-	if (!state.githubToken) {
-		sendResponse({ ok: false, error: "Not authenticated with GitHub" });
+	const state = await getAuthenticatedState(sendResponse);
+	if (!state) {
 		return;
 	}
 
@@ -937,9 +943,8 @@ const handleCreateRepo: Handler<"createRepo"> = async (data, sendResponse) => {
 };
 
 const handleCreateBranch: Handler<"createBranch"> = async (data, sendResponse) => {
-	const state = await getStoredState();
-	if (!state.githubToken) {
-		sendResponse({ ok: false, error: "Not authenticated with GitHub" });
+	const state = await getAuthenticatedState(sendResponse);
+	if (!state) {
 		return;
 	}
 
