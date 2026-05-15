@@ -26,7 +26,7 @@ Use this checklist before publishing to Chrome Web Store.
 
 See [`performance.md`](./performance.md) for SLOs and manual matrix.
 
-- [ ] `npm run build:extension:prod` + `npm run check:bundle-budgets` pass
+- [x] `npm run build:extension:prod` + `npm run check:bundle-budgets` pass (see [`bundle-baseline.md`](./bundle-baseline.md))
 - [ ] Unit perf tests pass (`syncSubmission`, `contentScriptStats`)
 - [ ] E2E `submission-perf.spec.ts` passes (mocked GitHub, &lt; 8 s SLO)
 - [ ] Manual Chrome Web Store perf matrix completed on production `dist/`

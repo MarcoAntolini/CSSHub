@@ -120,6 +120,7 @@ export default defineConfig(({ mode }) => {
 						if (!id.includes("node_modules")) {
 							return undefined;
 						}
+						// Settings-only: keep sonner off the popup cold path.
 						if (id.includes("sonner")) {
 							return "vendor-sonner";
 						}
@@ -130,6 +131,7 @@ export default defineConfig(({ mode }) => {
 						) {
 							return "vendor-react";
 						}
+						// zod and other node_modules (see perf-budgets.json "vendor").
 						return "vendor";
 					},
 				},

@@ -69,5 +69,6 @@ Not on the hot sync path. Before release:
 
 ## Related
 
+- [`bundle-baseline.md`](./bundle-baseline.md) — before/after chunk split (Phase 4)
 - [`release-readiness-checklist.md`](./release-readiness-checklist.md)
-- [`architecture-review.md`](./architecture-review.md) — bundle baseline table
+- [`architecture-review.md`](./architecture-review.md) — module map and current prod sizes
