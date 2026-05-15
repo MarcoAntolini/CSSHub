@@ -36,6 +36,7 @@ const defaultState: StoredState = {
 		selectedRepoFullName: null,
 		selectedBranch: null,
 		systemNotificationsEnabled: true,
+		repositoryReadmeMode: "managed-section",
 	},
 	lastSubmission: null,
 	lastSubmissionAccepted: null,
@@ -64,6 +65,14 @@ const normalizeSettings = (value: unknown): ExtensionSettings => {
 			? thresholdCandidate
 			: defaultState.settings.threshold;
 
+	const readmeModeCandidate = candidate.repositoryReadmeMode;
+	const repositoryReadmeMode =
+		readmeModeCandidate === "off" ||
+		readmeModeCandidate === "managed-section" ||
+		readmeModeCandidate === "full"
+			? readmeModeCandidate
+			: defaultState.settings.repositoryReadmeMode;
+
 	return {
 		threshold,
 		selectedRepoFullName:
@@ -80,6 +89,7 @@ const normalizeSettings = (value: unknown): ExtensionSettings => {
 			typeof candidate.systemNotificationsEnabled === "boolean"
 				? candidate.systemNotificationsEnabled
 				: defaultState.settings.systemNotificationsEnabled,
+		repositoryReadmeMode,
 	};
 };
 

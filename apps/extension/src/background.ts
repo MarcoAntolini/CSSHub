@@ -23,7 +23,9 @@ import {
 	createBranch,
 	commitFilesToRepo,
 	fetchAuthenticatedUser,
+	fetchRepoUtf8File,
 	getSavedSubmissionMetrics,
+	listBranchBlobPaths,
 	listBranches,
 	listUserRepos,
 	type CommitFile,
@@ -35,6 +37,7 @@ import {
 	getStoredState,
 	saveStoredState,
 } from "./storage";
+import { buildRootReadmeContent } from "./rootReadme";
 
 const toBase64 = (bytes: Uint8Array): string => {
 	let output = "";
@@ -969,6 +972,38 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 					recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
 				} else {
 					const files = await buildSubmissionFiles(data.payload);
+					const readmeMode = state.settings.repositoryReadmeMode ?? "managed-section";
+					if (readmeMode !== "off") {
+						try {
+							const existingPaths = await listBranchBlobPaths(
+								state.githubToken,
+								state.settings.selectedRepoFullName,
+								branch
+							);
+							const existingReadme = await fetchRepoUtf8File(
+								state.githubToken,
+								state.settings.selectedRepoFullName,
+								branch,
+								"README.md"
+							);
+							const rootReadme = buildRootReadmeContent({
+								mode: readmeMode,
+								existingReadme,
+								existingBlobPaths: existingPaths,
+								challengeFolder: challengeFolderPath(data.payload),
+								challengeTitle: formatChallengeTitle(data.payload),
+							});
+							if (rootReadme !== null) {
+								files.push({
+									path: "README.md",
+									content: rootReadme,
+									encoding: "utf-8",
+								});
+							}
+						} catch (readmeError) {
+							console.warn("CssHub: root README update skipped", readmeError);
+						}
+					}
 					const commitMessage = formatCommitMessage(
 						data.payload.score,
 						data.payload.matchPct

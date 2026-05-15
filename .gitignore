@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+apps/extension/node_modules
 
 # production
 /build

@@ -262,6 +262,66 @@ export const getSavedSubmissionMetrics = async (
 	}
 };
 
+export const fetchRepoUtf8File = async (
+	token: string,
+	repoFullName: string,
+	branch: string,
+	filePath: string
+): Promise<string | null> => {
+	const { owner, repo } = parseRepoFullName(repoFullName);
+	const response = await fetch(
+		`https://api.github.com/repos/${owner}/${repo}/contents/${encodeRepoPath(filePath)}?ref=${encodeURIComponent(branch)}`,
+		{
+			headers: {
+				Accept: "application/vnd.github+json",
+				Authorization: `Bearer ${token}`,
+				"X-GitHub-Api-Version": "2022-11-28",
+			},
+		}
+	);
+
+	if (response.status === 404) {
+		return null;
+	}
+	if (response.status === 409 || response.status === 422) {
+		return null;
+	}
+	if (!response.ok) {
+		const payload = await response.text();
+		throw new Error(`GitHub request failed (${response.status}): ${payload}`);
+	}
+
+	const data = (await response.json()) as {
+		content?: unknown;
+		encoding?: unknown;
+	};
+	if (data.encoding !== "base64" || typeof data.content !== "string") {
+		return null;
+	}
+
+	try {
+		const binary = atob(data.content.replace(/\n/g, ""));
+		const bytes = new Uint8Array(binary.length);
+		for (let i = 0; i < binary.length; i++) {
+			bytes[i] = binary.charCodeAt(i);
+		}
+		return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+	} catch (_error) {
+		return null;
+	}
+};
+
+export const listBranchBlobPaths = async (
+	token: string,
+	repoFullName: string,
+	branch: string
+): Promise<Set<string>> => {
+	const { owner, repo } = parseRepoFullName(repoFullName);
+	const headSha = await getBranchHeadSha(token, owner, repo, branch);
+	const headCommit = await getCommit(token, owner, repo, headSha);
+	return getTreePaths(token, owner, repo, headCommit.tree.sha);
+};
+
 const getBranchHeadSha = async (
 	token: string,
 	owner: string,

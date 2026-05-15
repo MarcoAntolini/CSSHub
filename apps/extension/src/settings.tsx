@@ -97,6 +97,7 @@ const App = (): ReactElement => {
 
 	const [patToken, setPatToken] = useState("");
 	const [patTutorialOpen, setPatTutorialOpen] = useState(false);
+	const [readmeInfoOpen, setReadmeInfoOpen] = useState(false);
 	const [deviceFlow, setDeviceFlow] = useState<{
 		deviceCode: string;
 		userCode: string;
@@ -982,6 +983,62 @@ const App = (): ReactElement => {
 								>
 									Create branch
 								</button>
+							</div>
+						</div>
+						<div className="repo-readme-card">
+							<div className="repo-readme-card-head">
+								<h3 className="repo-readme-card-title">Root README</h3>
+								<button
+									type="button"
+									className="help-badge"
+									aria-expanded={readmeInfoOpen}
+									aria-controls="readme-mode-info-panel"
+									onClick={() => setReadmeInfoOpen((open) => !open)}
+									title="How README modes work"
+								>
+									?
+								</button>
+							</div>
+							{readmeInfoOpen ? (
+								<div
+									className="readme-info-panel"
+									id="readme-mode-info-panel"
+									role="region"
+									aria-label="Root README mode details"
+								>
+									<p>
+										<strong>Managed section</strong> (default) updates only the region between these
+										markers in the repository root <code className="readme-info-code">README.md</code>:
+									</p>
+									<pre className="readme-info-markers">{`<!-- CSSHUB:README-START -->
+(list of challenge links)
+<!-- CSSHUB:README-END -->`}</pre>
+									<p>Text above or below that block is never touched. Each sync refreshes the index in the same commit as your solution.</p>
+									<p>
+										<strong>Full</strong> replaces the entire root README on every sync.
+									</p>
+									<p>
+										<strong>Off</strong> leaves root README.md unchanged (challenge folders still get their own READMEs).
+									</p>
+								</div>
+							) : null}
+							<div className="row row-tight">
+								<label htmlFor="readme-mode-settings">Mode</label>
+								<select
+									id="readme-mode-settings"
+									value={settings.repositoryReadmeMode ?? "managed-section"}
+									disabled={busy || branchesLoading}
+									onChange={(e) => {
+										const v = e.target.value;
+										if (v === "off" || v === "managed-section" || v === "full") {
+											void saveSettingsRemote({ ...settings, repositoryReadmeMode: v });
+										}
+									}}
+								>
+									<option value="off">Off — never change root README.md</option>
+									<option value="managed-section">Managed section (recommended)</option>
+									<option value="full">Full — replace entire README.md</option>
+								</select>
 							</div>
 						</div>
 					</>

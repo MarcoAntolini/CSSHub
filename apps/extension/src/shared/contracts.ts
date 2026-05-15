@@ -47,11 +47,16 @@ export const branchSchema = z.object({
 
 export type Branch = z.infer<typeof branchSchema>;
 
+export const repositoryReadmeModeSchema = z.enum(["off", "managed-section", "full"]);
+
+export type RepositoryReadmeMode = z.infer<typeof repositoryReadmeModeSchema>;
+
 export const extensionSettingsSchema = z.object({
 	threshold: z.number().min(0).max(100),
 	selectedRepoFullName: z.string().nullable(),
 	selectedBranch: z.string().nullable(),
 	systemNotificationsEnabled: z.boolean().default(true),
+	repositoryReadmeMode: repositoryReadmeModeSchema.default("managed-section"),
 });
 
 export type ExtensionSettings = z.infer<typeof extensionSettingsSchema>;
