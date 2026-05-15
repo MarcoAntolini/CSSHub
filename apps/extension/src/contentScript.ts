@@ -105,13 +105,31 @@ const getChallengeName = (): string => {
 	return `Target-${getChallengeId()}`;
 };
 
-const extractCode = (): string => {
+const extractCodeFromVisibleDomLines = (): string => {
 	const lines = Array.from(document.querySelectorAll(".cm-line")).map((line) =>
 		Array.from(line.childNodes)
 			.map((node) => node.textContent ?? "")
 			.join("")
 	);
 	return lines.join("\n").trim();
+};
+
+const extractCode = async (): Promise<string> => {
+	try {
+		const response = (await chrome.runtime.sendMessage({
+			action: "extractCssbattleEditorCode",
+		})) as { ok?: boolean; data?: { code?: string | null }; error?: string };
+		if (response?.ok && response.data && "code" in response.data) {
+			const fromEditor = response.data.code;
+			if (typeof fromEditor === "string") {
+				return fromEditor.trim();
+			}
+		}
+	} catch (_error) {
+		// e.g. extension context invalidated — fall back to visible lines only
+	}
+
+	return extractCodeFromVisibleDomLines();
 };
 
 const toNumber = (value: string): number | null => {
@@ -308,7 +326,7 @@ const processSubmission = async (): Promise<void> => {
 			submittedAt: new Date().toISOString(),
 			score: postSubmitStats.score,
 			matchPct: postSubmitStats.matchPct,
-			code: extractCode(),
+			code: await extractCode(),
 			targetImage: getTargetImage(),
 			resultImageDataUrl,
 		};

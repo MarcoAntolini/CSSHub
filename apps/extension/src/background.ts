@@ -642,6 +642,48 @@ type Handler<TAction extends PopupToBackgroundMessage["action"]> = (
 	sender: chrome.runtime.MessageSender
 ) => Promise<void>;
 
+/** Serialized into the page MAIN world; must stay self-contained for `executeScript`. */
+function readCodeMirror6DocumentFromPage(): string | null {
+	const root = document.querySelector(".cm-editor .cm-content, .cm-content");
+	if (!(root instanceof HTMLElement)) {
+		return null;
+	}
+	const tile = (root as HTMLElement & { cmTile?: { view?: { state?: { doc?: { toString(): string } } } } })
+		.cmTile;
+	const doc = tile?.view?.state?.doc;
+	if (doc && typeof doc.toString === "function") {
+		return doc.toString();
+	}
+	return null;
+}
+
+const handleExtractCssbattleEditorCode: Handler<"extractCssbattleEditorCode"> = async (
+	_data,
+	sendResponse,
+	sender
+) => {
+	const tab = sender.tab;
+	const tabId = tab?.id;
+	if (!tabId || !isCssBattlePlayUrl(tab.url)) {
+		sendResponse({ ok: false, error: "No CSSBattle play tab" });
+		return;
+	}
+
+	try {
+		const [injectionResult] = await chrome.scripting.executeScript({
+			target: { tabId },
+			world: "MAIN",
+			func: readCodeMirror6DocumentFromPage,
+		});
+		const raw = injectionResult?.result;
+		const code = typeof raw === "string" ? raw : null;
+		sendResponse({ ok: true, data: { code } });
+	} catch (error) {
+		const message = error instanceof Error ? error.message : "Editor read failed";
+		sendResponse({ ok: false, error: message });
+	}
+};
+
 const handleCaptureElement: Handler<"captureElement"> = async (
 	data,
 	sendResponse,
@@ -1143,6 +1185,7 @@ const actionHandlers: {
 	listBranches: handleListBranches,
 	createRepo: handleCreateRepo,
 	createBranch: handleCreateBranch,
+	extractCssbattleEditorCode: handleExtractCssbattleEditorCode,
 	cssbattleSubmission: handleCssbattleSubmission,
 };
 
