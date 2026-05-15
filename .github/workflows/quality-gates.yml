@@ -3,6 +3,9 @@ name: Quality Gates
 on:
   pull_request:
     branches: ["*"]
+  push:
+    branches:
+      - staging
   workflow_dispatch:
 
 jobs:
