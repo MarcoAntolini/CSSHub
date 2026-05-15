@@ -448,11 +448,12 @@ const setActionBadge = (level: FeedbackLevel, text: string): void => {
 };
 
 const showBrowserNotification = (
+	enabled: boolean,
 	level: FeedbackLevel,
 	title: string,
 	message: string
 ): void => {
-	if (!chrome.notifications) {
+	if (!enabled || !chrome.notifications) {
 		return;
 	}
 	const iconUrl =
@@ -1033,26 +1034,56 @@ const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 
 	if (errorOccurred) {
 		setActionBadge("error", "ERR");
-		showBrowserNotification("error", "CssHub error", reason);
+		showBrowserNotification(
+			state.settings.systemNotificationsEnabled,
+			"error",
+			"CssHub error",
+			reason
+		);
 		sendResponse({ ok: false, error: reason });
 		return;
 	}
 
 	if (committed) {
 		setActionBadge("success", "OK");
-		showBrowserNotification("success", "CssHub synced", reason);
+		showBrowserNotification(
+			state.settings.systemNotificationsEnabled,
+			"success",
+			"CssHub synced",
+			reason
+		);
 	} else if (skippedNotImproved) {
 		setActionBadge("warn", "BEST");
-		showBrowserNotification("warn", "CssHub kept best result", reason);
+		showBrowserNotification(
+			state.settings.systemNotificationsEnabled,
+			"warn",
+			"CssHub kept best result",
+			reason
+		);
 	} else if (accepted) {
 		setActionBadge("warn", "WAIT");
-		showBrowserNotification("warn", "CssHub action needed", reason);
+		showBrowserNotification(
+			state.settings.systemNotificationsEnabled,
+			"warn",
+			"CssHub action needed",
+			reason
+		);
 	} else if (duplicate) {
 		setActionBadge("warn", "DUP");
-		showBrowserNotification("warn", "CssHub skipped duplicate", reason);
+		showBrowserNotification(
+			state.settings.systemNotificationsEnabled,
+			"warn",
+			"CssHub skipped duplicate",
+			reason
+		);
 	} else {
 		setActionBadge("warn", "SKIP");
-		showBrowserNotification("warn", "CssHub skipped submission", reason);
+		showBrowserNotification(
+			state.settings.systemNotificationsEnabled,
+			"warn",
+			"CssHub skipped submission",
+			reason
+		);
 	}
 
 	sendResponse({
@@ -1100,10 +1131,15 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 	void handler(data, sendResponse, _sender).catch((error: unknown) => {
 		const safeError = toUserSafeError(error);
 		setActionBadge("error", "ERR");
-		showBrowserNotification("error", "CssHub error", safeError.message);
 		void getStoredState()
-			.then((state) =>
-				saveStoredState({
+			.then((state) => {
+				showBrowserNotification(
+					state.settings.systemNotificationsEnabled,
+					"error",
+					"CssHub error",
+					safeError.message
+				);
+				return saveStoredState({
 					...state,
 					recentEvents: pushEvent(
 						state.recentEvents,
@@ -1112,8 +1148,8 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 						null,
 						safeError.code
 					),
-				})
-			)
+				});
+			})
 			.catch(() => undefined);
 		sendResponse({
 			ok: false,

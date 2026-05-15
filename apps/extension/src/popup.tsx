@@ -10,36 +10,16 @@ import {
 	type SubmissionIngestionResponse,
 	type SubmissionPayload,
 } from "./shared/contracts";
+import { getIngestionTone, type StatusTone } from "./shared/eventTone";
 
 const THRESHOLD_MIN = 0;
 const THRESHOLD_MAX = 100;
 const THRESHOLD_SAVE_DEBOUNCE_MS = 400;
 const SHOW_STATUS_DEMO = false;
-const SKIP_WARN_CODES = new Set([
-	"SYNC_SKIPPED_NOT_IMPROVED",
-	"SYNC_SKIPPED_THRESHOLD",
-	"SYNC_SKIPPED_INVALID_SCORE",
-	"SYNC_SKIPPED_DUPLICATE",
-]);
-const ERROR_LIKE_CODES = new Set([
-	"SYNC_AUTH_REQUIRED",
-	"SYNC_REPO_REQUIRED",
-	"GITHUB_NOT_FOUND",
-	"GITHUB_CONFLICT",
-	"GITHUB_RATE_LIMIT",
-	"GITHUB_UNAVAILABLE",
-	"NETWORK_ERROR",
-	"UNEXPECTED_ERROR",
-	"AUTH_GITHUB_UNAUTHORIZED",
-	"AUTH_STATE_MISMATCH",
-	"AUTH_OAUTH_CODE_MISSING",
-]);
 const POPUP_ERRORS = {
 	loadState: "Could not load popup state",
 	saveThreshold: "Could not update threshold",
 } as const;
-
-type StatusTone = "success" | "warn" | "error" | "neutral";
 
 type SubmissionCardView = {
 	title: string;
@@ -381,13 +361,7 @@ const App = (): ReactElement => {
 	}
 
 	const { auth, settings, lastSubmission, lastIngestion } = data;
-	const statusTone: StatusTone = lastIngestion?.committed
-		? "success"
-		: lastIngestion?.code && ERROR_LIKE_CODES.has(lastIngestion.code)
-			? "error"
-			: lastIngestion?.code && SKIP_WARN_CODES.has(lastIngestion.code)
-				? "warn"
-				: "neutral";
+	const statusTone: StatusTone = getIngestionTone(lastIngestion);
 	const statusText =
 		statusTone === "success"
 			? "committed"

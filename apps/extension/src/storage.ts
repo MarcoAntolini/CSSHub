@@ -35,12 +35,52 @@ const defaultState: StoredState = {
 		threshold: 95,
 		selectedRepoFullName: null,
 		selectedBranch: null,
+		systemNotificationsEnabled: true,
 	},
 	lastSubmission: null,
 	lastSubmissionAccepted: null,
 	lastIngestion: null,
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
+};
+
+const normalizeSettings = (value: unknown): ExtensionSettings => {
+	const parsed = extensionSettingsSchema.safeParse(value);
+	if (parsed.success) {
+		return parsed.data;
+	}
+
+	const candidate =
+		typeof value === "object" && value !== null
+			? (value as Partial<ExtensionSettings>)
+			: {};
+
+	const thresholdCandidate = candidate.threshold;
+	const threshold =
+		typeof thresholdCandidate === "number" &&
+		Number.isFinite(thresholdCandidate) &&
+		thresholdCandidate >= 0 &&
+		thresholdCandidate <= 100
+			? thresholdCandidate
+			: defaultState.settings.threshold;
+
+	return {
+		threshold,
+		selectedRepoFullName:
+			typeof candidate.selectedRepoFullName === "string" ||
+			candidate.selectedRepoFullName === null
+				? candidate.selectedRepoFullName
+				: defaultState.settings.selectedRepoFullName,
+		selectedBranch:
+			typeof candidate.selectedBranch === "string" ||
+			candidate.selectedBranch === null
+				? candidate.selectedBranch
+				: defaultState.settings.selectedBranch,
+		systemNotificationsEnabled:
+			typeof candidate.systemNotificationsEnabled === "boolean"
+				? candidate.systemNotificationsEnabled
+				: defaultState.settings.systemNotificationsEnabled,
+	};
 };
 
 export const getStoredState = async (): Promise<StoredState> => {
@@ -59,7 +99,7 @@ export const getStoredState = async (): Promise<StoredState> => {
 		};
 	}
 
-	const settings = extensionSettingsSchema.safeParse(state.settings);
+	const settings = normalizeSettings(state.settings);
 	const lastSubmission = submissionPayloadSchema.safeParse(state.lastSubmission);
 	const lastIngestion = submissionIngestionResponseSchema.safeParse(state.lastIngestion);
 	const recentEvents = syncEventSchema.array().safeParse(state.recentEvents);
@@ -78,7 +118,7 @@ export const getStoredState = async (): Promise<StoredState> => {
 					? state.auth.method
 					: null,
 		},
-		settings: settings.success ? settings.data : defaultState.settings,
+		settings,
 		lastSubmission: lastSubmission.success ? lastSubmission.data : null,
 		lastSubmissionAccepted:
 			typeof state.lastSubmissionAccepted === "boolean"

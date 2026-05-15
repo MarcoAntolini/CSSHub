@@ -15,6 +15,7 @@ import {
 	type SubmissionIngestionResponse,
 	type SyncEvent,
 } from "./shared/contracts";
+import { getSyncEventTone } from "./shared/eventTone";
 import "../public/settings.css";
 
 type LoadedState = {
@@ -27,12 +28,37 @@ type LoadedState = {
 	recentEvents: SyncEvent[];
 };
 
-const oauthRedirectHint = (): string => chrome.identity.getRedirectURL("github");
 type UiNotice = {
 	level: "success" | "warn" | "error";
 	message: string;
 };
+type UiToast = UiNotice & { id: number };
 const BRANCH_NAME_PATTERN = /^[A-Za-z0-9._/-]+$/;
+const EVENT_BADGE_LABELS: Partial<Record<string, string>> = {
+	SYNC_COMMITTED: "committed",
+	SYNC_SKIPPED_DUPLICATE: "duplicate",
+	SYNC_SKIPPED_THRESHOLD: "below threshold",
+	SYNC_SKIPPED_NOT_IMPROVED: "best kept",
+	SYNC_SKIPPED_INVALID_SCORE: "invalid score",
+	SYNC_AUTH_REQUIRED: "auth required",
+	SYNC_REPO_REQUIRED: "repo required",
+	AUTH_STATE_MISMATCH: "oauth mismatch",
+	AUTH_OAUTH_CODE_MISSING: "oauth code missing",
+	AUTH_GITHUB_UNAUTHORIZED: "github auth failed",
+	GITHUB_NOT_FOUND: "not found",
+	GITHUB_CONFLICT: "github conflict",
+	GITHUB_RATE_LIMIT: "rate limit",
+	GITHUB_UNAVAILABLE: "github unavailable",
+	NETWORK_ERROR: "network error",
+	UNEXPECTED_ERROR: "unexpected error",
+};
+
+const getEventBadgeLabel = (event: SyncEvent): string => {
+	if (event.code) {
+		return EVENT_BADGE_LABELS[event.code] ?? event.code.toLowerCase().replace(/_/g, " ");
+	}
+	return event.level === "info" ? "info" : event.level;
+};
 
 const validateBranchName = (
 	value: string,
@@ -65,8 +91,9 @@ const App = (): ReactElement => {
 	const [data, setData] = useState<LoadedState | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [busy, setBusy] = useState(false);
+	const [webAuthInProgress, setWebAuthInProgress] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [notice, setNotice] = useState<UiNotice | null>(null);
+	const [toast, setToast] = useState<UiToast | null>(null);
 
 	const [patToken, setPatToken] = useState("");
 	const [deviceFlow, setDeviceFlow] = useState<{
@@ -89,6 +116,25 @@ const App = (): ReactElement => {
 	const [branchesLoading, setBranchesLoading] = useState(false);
 	const [createBranchName, setCreateBranchName] = useState("");
 	const [createBranchFrom, setCreateBranchFrom] = useState("");
+
+	const pushToast = useCallback((payload: UiNotice): void => {
+		setToast({
+			...payload,
+			id: Date.now(),
+		});
+	}, []);
+
+	useEffect(() => {
+		if (!toast) {
+			return;
+		}
+		const timeout = window.setTimeout(() => {
+			setToast((current) => (current?.id === toast.id ? null : current));
+		}, 3200);
+		return () => {
+			window.clearTimeout(timeout);
+		};
+	}, [toast]);
 
 	const loadState = useCallback(async (): Promise<void> => {
 		setLoading(true);
@@ -191,14 +237,14 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Could not save settings");
-			setNotice({
+			pushToast({
 				level: "error",
 				message: "Could not save settings",
 			});
 			return false;
 		}
 		setData((prev) => (prev ? { ...prev, settings: next } : prev));
-		setNotice({
+		pushToast({
 			level: "success",
 			message: "Settings updated",
 		});
@@ -234,25 +280,30 @@ const App = (): ReactElement => {
 
 	const beginWebFlow = async (): Promise<void> => {
 		setBusy(true);
+		setWebAuthInProgress(true);
 		setError(null);
-		const message = popupToBackgroundMessageSchema.parse({
-			action: "startGithubWebFlow",
-		});
-		const response = await chrome.runtime.sendMessage(message);
-		setBusy(false);
-		if (!response?.ok) {
-			setError(response?.error ?? "Web OAuth failed");
-			setNotice({
-				level: "error",
-				message: "Web OAuth failed",
+		try {
+			const message = popupToBackgroundMessageSchema.parse({
+				action: "startGithubWebFlow",
 			});
-			return;
+			const response = await chrome.runtime.sendMessage(message);
+			if (!response?.ok) {
+				setError(response?.error ?? "Web OAuth failed");
+				pushToast({
+					level: "error",
+					message: "Web OAuth failed",
+				});
+				return;
+			}
+			pushToast({
+				level: "success",
+				message: "GitHub account connected",
+			});
+			await loadState();
+		} finally {
+			setBusy(false);
+			setWebAuthInProgress(false);
 		}
-		setNotice({
-			level: "success",
-			message: "GitHub account connected",
-		});
-		await loadState();
 	};
 
 	const beginDeviceFlow = async (): Promise<void> => {
@@ -265,7 +316,7 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Device flow failed");
-			setNotice({
+			pushToast({
 				level: "error",
 				message: "Device flow failed",
 			});
@@ -302,7 +353,7 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Polling failed");
-			setNotice({
+			pushToast({
 				level: "error",
 				message: "Polling failed",
 			});
@@ -310,7 +361,7 @@ const App = (): ReactElement => {
 		}
 		if (response.data?.status === "pending") {
 			setError("Still waiting — approve on GitHub first.");
-			setNotice({
+			pushToast({
 				level: "warn",
 				message: "Waiting for GitHub approval",
 			});
@@ -318,7 +369,7 @@ const App = (): ReactElement => {
 		}
 		if (response.data?.status === "authenticated") {
 			setDeviceFlow(null);
-			setNotice({
+			pushToast({
 				level: "success",
 				message: "GitHub account connected",
 			});
@@ -341,14 +392,14 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "PAT login failed");
-			setNotice({
+			pushToast({
 				level: "error",
 				message: "PAT login failed",
 			});
 			return;
 		}
 		setPatToken("");
-		setNotice({
+		pushToast({
 			level: "success",
 			message: "GitHub account connected",
 		});
@@ -365,14 +416,14 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Logout failed");
-			setNotice({
+			pushToast({
 				level: "error",
 				message: "Logout failed",
 			});
 			return;
 		}
 		setDeviceFlow(null);
-		setNotice({
+		pushToast({
 			level: "warn",
 			message: "GitHub account disconnected",
 		});
@@ -389,16 +440,26 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Could not clear activity log");
-			setNotice({
+			pushToast({
 				level: "error",
 				message: "Could not clear activity log",
 			});
 			return;
 		}
 		setData((prev) => (prev ? { ...prev, recentEvents: [] } : prev));
-		setNotice({
+		pushToast({
 			level: "success",
 			message: "Activity log cleared",
+		});
+	};
+
+	const toggleSystemNotifications = async (enabled: boolean): Promise<void> => {
+		if (!data) {
+			return;
+		}
+		await saveSettingsRemote({
+			...data.settings,
+			systemNotificationsEnabled: enabled,
 		});
 	};
 
@@ -460,7 +521,7 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Create failed");
-			setNotice({
+			pushToast({
 				level: "error",
 				message: "Repository creation failed",
 			});
@@ -468,7 +529,7 @@ const App = (): ReactElement => {
 		}
 		setCreateOpen(false);
 		setCreateName("");
-		setNotice({
+		pushToast({
 			level: "success",
 			message: "Repository created and selected",
 		});
@@ -486,7 +547,7 @@ const App = (): ReactElement => {
 		const validationError = validateBranchName(newBranchName, existing);
 		if (validationError) {
 			setError(validationError);
-			setNotice({
+			pushToast({
 				level: "warn",
 				message: validationError,
 			});
@@ -501,7 +562,7 @@ const App = (): ReactElement => {
 			"";
 		if (!fromBranch) {
 			setError("No source branch available");
-			setNotice({
+			pushToast({
 				level: "warn",
 				message: "No source branch available",
 			});
@@ -520,7 +581,7 @@ const App = (): ReactElement => {
 		setBusy(false);
 		if (!response?.ok) {
 			setError(response?.error ?? "Could not create branch");
-			setNotice({
+			pushToast({
 				level: "error",
 				message: "Branch creation failed",
 			});
@@ -534,7 +595,7 @@ const App = (): ReactElement => {
 		setCreateBranchName("");
 		setCreateBranchFrom(newBranchName);
 		setData((prev) => (prev ? { ...prev, settings: nextSelection } : prev));
-		setNotice({
+		pushToast({
 			level: "success",
 			message: `Branch ${newBranchName} created`,
 		});
@@ -571,8 +632,10 @@ const App = (): ReactElement => {
 			</p>
 
 			{error ? <p className="error-text">{error}</p> : null}
-			{notice ? (
-				<p className={`notice notice-${notice.level}`}>{notice.message}</p>
+			{toast ? (
+				<div className={`settings-toast settings-toast-${toast.level}`} role="status" aria-live="polite">
+					{toast.message}
+				</div>
 			) : null}
 
 			<section className="settings-section">
@@ -588,22 +651,25 @@ const App = (): ReactElement => {
 							<button type="button" className="btn btn-ghost" onClick={logout} disabled={busy}>
 								Disconnect GitHub
 							</button>
-							<button type="button" className="btn btn-ghost" onClick={() => void loadState()} disabled={busy}>
-								Refresh
-							</button>
 						</div>
 					</>
 				) : (
 					<>
 						<p className="muted">Choose how to connect:</p>
 						<div className="btn-stack">
-							<button type="button" className="btn btn-primary" onClick={beginWebFlow} disabled={busy}>
-								Web OAuth
+							<button type="button" className="btn btn-primary" onClick={beginWebFlow} disabled={busy || webAuthInProgress}>
+								{webAuthInProgress ? "Connecting GitHub…" : "Web OAuth"}
 							</button>
-							<button type="button" className="btn" onClick={beginDeviceFlow} disabled={busy}>
+							<button type="button" className="btn" onClick={beginDeviceFlow} disabled={busy || webAuthInProgress}>
 								Device code
 							</button>
 						</div>
+						{webAuthInProgress ? (
+							<p className="auth-progress">
+								<span className="spinner" aria-hidden="true" />
+								Connecting GitHub…
+							</p>
+						) : null}
 						{deviceFlow ? (
 							<div className="device-flow">
 								<p>
@@ -623,15 +689,12 @@ const App = (): ReactElement => {
 								placeholder="github_pat_…"
 								value={patToken}
 								onChange={(e) => setPatToken(e.target.value)}
+								disabled={busy || webAuthInProgress}
 							/>
 						</div>
-						<button type="button" className="btn" onClick={loginPat} disabled={busy}>
+						<button type="button" className="btn" onClick={loginPat} disabled={busy || webAuthInProgress}>
 							Sign in with token
 						</button>
-						<p className="hint">
-							Web OAuth callback URL (add this exact URL to your GitHub OAuth app):{" "}
-							<code className="mono">{oauthRedirectHint()}</code>
-						</p>
 					</>
 				)}
 			</section>
@@ -739,33 +802,60 @@ const App = (): ReactElement => {
 			</section>
 
 			<section className="settings-section">
-				<h2>Activity log</h2>
-				<p className="muted">
-					Operational timeline only. Technical debug details are intentionally hidden.
-				</p>
-				<div className="btn-stack">
-					<button type="button" className="btn btn-ghost" onClick={() => void clearActivityLog()} disabled={busy || recentEvents.length === 0}>
+				<h2>Notifications</h2>
+				<div className="toggle-row">
+					<div>
+						<p className="toggle-title">Browser/system notifications</p>
+						<p className="muted">
+							Show desktop notifications from the extension. In-app badges and activity log remain active.
+						</p>
+					</div>
+					<label className="switch" htmlFor="system-notifications-toggle">
+						<input
+							id="system-notifications-toggle"
+							type="checkbox"
+							checked={settings.systemNotificationsEnabled}
+							disabled={busy}
+							onChange={(e) => {
+								void toggleSystemNotifications(e.target.checked);
+							}}
+						/>
+						<span className="switch-slider" />
+					</label>
+				</div>
+			</section>
+
+			<section className="settings-section">
+				<div className="section-headline">
+					<h2>Activity log</h2>
+					<button type="button" className="btn btn-ghost btn-small" onClick={() => void clearActivityLog()} disabled={busy || recentEvents.length === 0}>
 						Clear log
 					</button>
 				</div>
+				<p className="muted">
+					Operational timeline only. Technical debug details are intentionally hidden.
+				</p>
 				{recentEvents.length === 0 ? (
-					<p className="empty-state">No events yet.</p>
+					<p className="empty-state empty-state-activity">No events yet.</p>
 				) : (
 					<ul className="event-list">
-						{recentEvents.map((ev) => (
-							<li key={ev.id} className={`event event-${ev.level} ${ev.code === "SYNC_SKIPPED_NOT_IMPROVED" ? "event-best-kept" : ""}`}>
-								<span>{new Date(ev.timestamp).toLocaleString()}</span>
-								{ev.code === "SYNC_SKIPPED_NOT_IMPROVED" ? (
-									<span className="event-pill">best result kept</span>
-								) : null}
-								<span>{ev.message}</span>
-								{ev.commitUrl ? (
-									<a href={ev.commitUrl} target="_blank" rel="noreferrer" style={{ color: "#38bdf8" }}>
-										View commit
-									</a>
-								) : null}
-							</li>
-						))}
+						{recentEvents.map((ev) => {
+							const tone = getSyncEventTone(ev);
+							return (
+								<li key={ev.id} className={`event event-tone-${tone}`}>
+									<span>{new Date(ev.timestamp).toLocaleString()}</span>
+									<span className={`event-pill event-pill-${tone}`}>
+										{getEventBadgeLabel(ev)}
+									</span>
+									<span>{ev.message}</span>
+									{ev.commitUrl ? (
+										<a href={ev.commitUrl} target="_blank" rel="noreferrer" className={`event-link event-link-${tone}`}>
+											View commit
+										</a>
+									) : null}
+								</li>
+							);
+						})}
 					</ul>
 				)}
 			</section>

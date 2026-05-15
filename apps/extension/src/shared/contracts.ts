@@ -51,6 +51,7 @@ export const extensionSettingsSchema = z.object({
 	threshold: z.number().min(0).max(100),
 	selectedRepoFullName: z.string().nullable(),
 	selectedBranch: z.string().nullable(),
+	systemNotificationsEnabled: z.boolean().default(true),
 });
 
 export type ExtensionSettings = z.infer<typeof extensionSettingsSchema>;
