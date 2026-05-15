@@ -388,12 +388,12 @@ const App = (): ReactElement => {
 			<main className="popup popup-shell">
 			<header className="popup-header">
 				<h1 className="popup-title">CssHub</h1>
-				<button type="button" className="btn-link" onClick={openSettingsPage}>
-					Settings
-				</button>
+				{auth.isAuthenticated ? (
+					<button type="button" className="btn-link" onClick={openSettingsPage}>
+						Settings
+					</button>
+				) : null}
 			</header>
-
-			{!auth.isAuthenticated ? <p className="subtitle">Not signed in</p> : null}
 
 			{!auth.isAuthenticated ? (
 				<section className="card">

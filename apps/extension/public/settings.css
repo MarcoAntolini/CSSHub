@@ -31,6 +31,31 @@ body {
 	padding: 48px 24px 80px;
 }
 
+.settings-hero {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 2.5rem;
+}
+
+.settings-page-icon {
+	width: 3.5rem;
+	height: 3.5rem;
+	flex-shrink: 0;
+	border-radius: 0.65rem;
+	object-fit: contain;
+	border: 1px solid rgba(148, 163, 184, 0.2);
+	background: rgba(15, 23, 42, 0.55);
+	box-shadow:
+		0 1px 0 rgba(255, 255, 255, 0.06) inset,
+		0 8px 24px rgba(2, 6, 23, 0.45);
+}
+
+.settings-hero-copy {
+	flex: 1;
+	min-width: 0;
+}
+
 .settings-brand {
 	font-size: 2rem;
 	font-weight: 800;
@@ -45,7 +70,7 @@ body {
 .settings-tagline {
 	font-size: 0.85rem;
 	color: #94a3b8;
-	margin-bottom: 2.5rem;
+	margin-bottom: 0;
 }
 
 .settings-section {

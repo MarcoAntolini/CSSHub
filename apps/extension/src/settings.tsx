@@ -35,6 +35,10 @@ type UiNotice = {
 	level: "success" | "warn" | "error";
 	message: string;
 };
+const SETTINGS_PAGE_ICON_SRC = chrome.runtime.getURL("icons/icon_128.png");
+const SETTINGS_HERO_TAGLINE =
+	"Sync CSSBattle submissions to GitHub — configure account and repository here.";
+
 const BRANCH_NAME_PATTERN = /^[A-Za-z0-9._/-]+$/;
 const EVENT_BADGE_LABELS: Partial<Record<string, string>> = {
 	SYNC_COMMITTED: "committed",
@@ -809,10 +813,20 @@ const App = (): ReactElement => {
 					document.body,
 				)}
 				<main className="settings-root settings-loading-shell" aria-busy="true" aria-live="polite">
-					<h1 className="settings-brand">CssHub</h1>
-					<p className="settings-tagline">
-						Sync CSSBattle submissions to GitHub — configure account and repository here.
-					</p>
+					<header className="settings-hero">
+						<img
+							className="settings-page-icon"
+							src={SETTINGS_PAGE_ICON_SRC}
+							width={112}
+							height={112}
+							alt=""
+							decoding="async"
+						/>
+						<div className="settings-hero-copy">
+							<h1 className="settings-brand">CssHub</h1>
+							<p className="settings-tagline">{SETTINGS_HERO_TAGLINE}</p>
+						</div>
+					</header>
 					<div className="settings-section loading-shell-card" role="status" aria-label="Loading settings">
 						<div className="loading-shell-line loading-shell-line-lg" />
 						<div className="loading-shell-line" />
@@ -835,10 +849,20 @@ const App = (): ReactElement => {
 				document.body,
 			)}
 			<main ref={appMainRef} className="settings-root">
-				<h1 className="settings-brand">CssHub</h1>
-				<p className="settings-tagline">
-					Sync CSSBattle submissions to GitHub — configure account and repository here.
-				</p>
+				<header className="settings-hero">
+					<img
+						className="settings-page-icon"
+						src={SETTINGS_PAGE_ICON_SRC}
+						width={112}
+						height={112}
+						alt=""
+						decoding="async"
+					/>
+					<div className="settings-hero-copy">
+						<h1 className="settings-brand">CssHub</h1>
+						<p className="settings-tagline">{SETTINGS_HERO_TAGLINE}</p>
+					</div>
+				</header>
 
 				<section className="settings-section">
 				<h2>GitHub account</h2>
@@ -1032,11 +1056,11 @@ const App = (): ReactElement => {
 				)}
 			</section>
 
-			<section className="settings-section">
-				<h2>Repository</h2>
-				{!auth.isAuthenticated ? (
-					<p className="muted">Connect GitHub first.</p>
-				) : settings.selectedRepoFullName ? (
+			{auth.isAuthenticated ? (
+				<>
+					<section className="settings-section">
+						<h2>Repository</h2>
+						{settings.selectedRepoFullName ? (
 					<>
 						<div className="repo-panel">
 							<div className="repo-panel-meta">
@@ -1204,66 +1228,68 @@ const App = (): ReactElement => {
 						</div>
 					</>
 				)}
-			</section>
+					</section>
 
-			<section className="settings-section">
-				<h2>Notifications</h2>
-				<div className="toggle-row">
-					<div>
-						<p className="toggle-title">Browser/system notifications</p>
+					<section className="settings-section">
+						<h2>Notifications</h2>
+						<div className="toggle-row">
+							<div>
+								<p className="toggle-title">Browser/system notifications</p>
+								<p className="muted">
+									Show desktop notifications from the extension. In-app badges and activity log remain active.
+								</p>
+							</div>
+							<label className="switch" htmlFor="system-notifications-toggle">
+								<input
+									id="system-notifications-toggle"
+									type="checkbox"
+									checked={settings.systemNotificationsEnabled}
+									disabled={busy}
+									onChange={(e) => {
+										void toggleSystemNotifications(e.target.checked);
+									}}
+								/>
+								<span className="switch-slider" />
+							</label>
+						</div>
+					</section>
+
+					<section className="settings-section">
+						<div className="section-headline">
+							<h2>Activity log</h2>
+							<button type="button" className="btn btn-ghost btn-small" onClick={() => void clearActivityLog()} disabled={busy || recentEvents.length === 0}>
+								Clear log
+							</button>
+						</div>
 						<p className="muted">
-							Show desktop notifications from the extension. In-app badges and activity log remain active.
+							Operational timeline only. Technical debug details are intentionally hidden.
 						</p>
-					</div>
-					<label className="switch" htmlFor="system-notifications-toggle">
-						<input
-							id="system-notifications-toggle"
-							type="checkbox"
-							checked={settings.systemNotificationsEnabled}
-							disabled={busy}
-							onChange={(e) => {
-								void toggleSystemNotifications(e.target.checked);
-							}}
-						/>
-						<span className="switch-slider" />
-					</label>
-				</div>
-			</section>
-
-			<section className="settings-section">
-				<div className="section-headline">
-					<h2>Activity log</h2>
-					<button type="button" className="btn btn-ghost btn-small" onClick={() => void clearActivityLog()} disabled={busy || recentEvents.length === 0}>
-						Clear log
-					</button>
-				</div>
-				<p className="muted">
-					Operational timeline only. Technical debug details are intentionally hidden.
-				</p>
-				{recentEvents.length === 0 ? (
-					<p className="empty-state empty-state-activity">No events yet.</p>
-				) : (
-					<ul className="event-list">
-						{recentEvents.map((ev) => {
-							const tone = getSyncEventTone(ev);
-							return (
-								<li key={ev.id} className={`event event-tone-${tone}`}>
-									<span>{new Date(ev.timestamp).toLocaleString()}</span>
-									<span className={`event-pill event-pill-${tone}`}>
-										{getEventBadgeLabel(ev)}
-									</span>
-									<span>{ev.message}</span>
-									{ev.commitUrl ? (
-										<a href={ev.commitUrl} target="_blank" rel="noreferrer" className={`event-link event-link-${tone}`}>
-											View commit
-										</a>
-									) : null}
-								</li>
-							);
-						})}
-					</ul>
-				)}
-			</section>
+						{recentEvents.length === 0 ? (
+							<p className="empty-state empty-state-activity">No events yet.</p>
+						) : (
+							<ul className="event-list">
+								{recentEvents.map((ev) => {
+									const tone = getSyncEventTone(ev);
+									return (
+										<li key={ev.id} className={`event event-tone-${tone}`}>
+											<span>{new Date(ev.timestamp).toLocaleString()}</span>
+											<span className={`event-pill event-pill-${tone}`}>
+												{getEventBadgeLabel(ev)}
+											</span>
+											<span>{ev.message}</span>
+											{ev.commitUrl ? (
+												<a href={ev.commitUrl} target="_blank" rel="noreferrer" className={`event-link event-link-${tone}`}>
+													View commit
+												</a>
+											) : null}
+										</li>
+									);
+								})}
+							</ul>
+						)}
+					</section>
+				</>
+			) : null}
 			</main>
 
 			{createOpen ? (
