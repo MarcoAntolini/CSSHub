@@ -5,10 +5,7 @@
 	"installCommand": "cd ../.. && npm ci && npm run build --workspace @csshub/shared && node scripts/vendor-workspace-shared.mjs",
 	"functions": {
 		"api/**/*.ts": {
-			"includeFiles": [
-				"lib/**",
-				"../../node_modules/@csshub/shared/**"
-			]
+			"includeFiles": "{lib/**,../../node_modules/@csshub/shared/**}"
 		}
 	}
 }
