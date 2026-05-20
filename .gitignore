@@ -26,6 +26,7 @@ apps/extension/.env.local
 apps/extension/.env.*.local
 apps/backend/.env.local
 .cursor
+docs/internal
 .vercel
 apps/backend/.vercel
 

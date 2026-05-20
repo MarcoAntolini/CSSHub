@@ -78,7 +78,7 @@ body:
     attributes:
       label: Extension version
       description: From `chrome://extensions` (CssHub details) or your local `package.json` if built from source
-      placeholder: e.g. 1.0.0
+      placeholder: e.g. 1.0.1
 
   - type: input
     id: chrome_version

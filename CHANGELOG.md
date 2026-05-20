@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-20
+
+Documentation and maintainer ops polish after the v1.0.0 prepare commit.
+
+### Added
+
+- Maintainer ops runbook ([`docs/ops-runbook.md`](docs/ops-runbook.md)): OAuth login troubleshooting, Redis/rate limits, rollback
+
+### Changed
+
+- Pre-release maintainer docs moved to gitignored `docs/internal/` (store listing draft, release checklist, architecture review, bundle baseline, perf matrix)
+- README: Support and Contributing sections; privacy copy notes 15-event activity log cap
+- Privacy data map: retention table with code references; activity log sanitization via `toUserSafeError`
+- Extension README: `chrome.storage.session` vs `local` clarified; links to internal store listing path
+
+### Removed
+
+- Tracked copies of maintainer-only docs from `docs/` (kept locally under `docs/internal/`)
+
 ## [1.0.0] - 2026-05-20
 
 First public release: Chrome extension that syncs [CSSBattle](https://cssbattle.dev) submissions to a user-selected GitHub repository, with a Vercel OAuth backend for secure web sign-in.

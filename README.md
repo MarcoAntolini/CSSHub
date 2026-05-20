@@ -7,7 +7,7 @@
 **Automatically sync your [CSSBattle](https://cssbattle.dev) submissions to GitHub.**
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)
-[![release](https://img.shields.io/badge/release-v1.0.0-blue)](https://github.com/MarcoAntolini/CSSHub/releases)
+[![release](https://img.shields.io/badge/release-v1.0.1-blue)](https://github.com/MarcoAntolini/CSSHub/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 </div>
@@ -71,16 +71,19 @@ If something fails, check the in-extension activity log in settings for a short,
 ## Privacy in plain English
 
 - CssHub needs **GitHub access** only to write to **your** chosen repo (and related metadata like branches).
-- Your **GitHub token is kept in session-only extension storage** on your device (cleared on sign-out); other settings and the activity log stay in local extension storage—not on a CssHub account in the cloud.
+- Your **GitHub token is kept in session-only extension storage** on your device (cleared on sign-out); settings and an activity log (up to **15** events) stay in local extension storage—not on a CssHub account in the cloud.
 - CssHub only runs on **CSSBattle** play pages, plus **GitHub** and the **OAuth backend** for sign-in and sync.
 - **No CssHub analytics** — no first-party tracking or advertising SDK.
-- **Privacy policy:** https://marcoantolini.github.io/CSSHub/privacy-policy.html (source in [`docs/privacy-policy.md`](docs/privacy-policy.md); enable GitHub Pages from `/docs` if the URL is not live yet).
+- **Privacy policy:** https://marcoantolini.github.io/CSSHub/privacy-policy.html (source in [`docs/privacy-policy.md`](docs/privacy-policy.md).
 - Technical inventory: [`docs/privacy-data-map.md`](docs/privacy-data-map.md). Extension and backend details: [`apps/extension/README.md`](apps/extension/README.md), [`apps/backend/README.md`](apps/backend/README.md).
-- Chrome Web Store permission copy: [`docs/chrome-web-store-listing.md`](docs/chrome-web-store-listing.md).
+- Chrome Web Store listing draft (maintainer, local): `docs/internal/chrome-web-store-listing.md` (gitignored).
+
+## Support
+
+Using CssHub? Install or update from the [Chrome Web Store](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp). If something breaks or you want a feature, open a [GitHub issue](https://github.com/MarcoAntolini/CSSHub/issues)—the [bug report](https://github.com/MarcoAntolini/CSSHub/issues/new?template=bug_report.yml) and [feature request](https://github.com/MarcoAntolini/CSSHub/issues/new?template=feature_request.yml) templates include the fields we need (CSSBattle URL, extension version, steps to reproduce).
 
 ## Contributing
 
-Ideas, issues, and pull requests are welcome. For issues, use the [bug report](https://github.com/MarcoAntolini/CSSHub/issues/new?template=bug_report.yml) or [feature request](https://github.com/MarcoAntolini/CSSHub/issues/new?template=feature_request.yml) template. For pull requests, follow the [PR template](https://github.com/MarcoAntolini/CSSHub/blob/main/.github/pull_request_template.md) (GitHub applies it when you open a PR).
+Pull requests are welcome. GitHub applies the [PR template](https://github.com/MarcoAntolini/CSSHub/blob/main/.github/pull_request_template.md) automatically; for larger changes, start with an issue so we can align on scope. Maintainer ops (OAuth, rollback): [`docs/ops-runbook.md`](docs/ops-runbook.md).
 
-If CssHub saves you time, consider **starring** this repository—it helps others discover it.  
-Want a feature? Open a [feature request](https://github.com/MarcoAntolini/CSSHub/issues/new?template=feature_request.yml) and describe the workflow you have in mind.
+If CssHub saves you time, **star** this repo—it helps other CSSBattle players find it.

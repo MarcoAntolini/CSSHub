@@ -23,7 +23,7 @@ This document maps data handled by CssHub and where it is stored or transmitted.
 - **Last ingestion result and recent events**
   - Source: background ingestion pipeline
   - Storage: `chrome.storage.local`
-  - Retention: persisted locally; events clearable via `Clear log`
+  - Retention: persisted locally; **capped at 15 events** (`MAX_EVENTS` in `apps/extension/src/background/feedback.ts`); clearable via **Clear log** or logout/reset
 
 ## External Data Flows
 
@@ -39,16 +39,29 @@ This document maps data handled by CssHub and where it is stored or transmitted.
 
 - Access token is not persisted in local storage; session storage only.
 - Logout clears token and resets auth status.
-- Activity log is user-facing and sanitized; no raw secret payloads intended.
+- Activity log is user-facing and sanitized: error paths use `toUserSafeError` (`apps/extension/src/background/errors.ts`) so GitHub status codes and internal exception text are not stored verbatim—only short, mapped messages and `SyncEventCode` values.
 - No user secret literals should appear in source, docs, or build artifacts (`npm run test:security`).
 
 ## Related documents
 
 - Public privacy policy: [`privacy-policy.md`](./privacy-policy.md) / https://marcoantolini.github.io/CSSHub/privacy-policy.html
-- Chrome Web Store listing and permission justifications: [`chrome-web-store-listing.md`](./chrome-web-store-listing.md)
+- Chrome Web Store listing draft (maintainer, local): `docs/internal/chrome-web-store-listing.md`
+
+## Retention (verified in code)
+
+| Policy | Implementation |
+| --- | --- |
+| GitHub token session-only | `TOKEN_KEY` in `chrome.storage.session`; `clearAuthState()` removes it (`apps/extension/src/storage.ts`) |
+| Local state until logout | Settings, auth flags, submission preview, and events in `chrome.storage.local` under `csshub_state_v1` |
+| Activity log max 15 | `pushEvent` slices to `MAX_EVENTS` (15) in `feedback.ts` and `syncSubmission.ts` |
+| Clear log | `clearRecentEvents()` sets `recentEvents: []` |
+| Logout | `clearAuthState()` clears token and auth flags; local settings/repo choice remain until user changes them |
+
+Sync skip/commit messages in the log are **authored strings** in `syncSubmission.ts`, not raw API response bodies.
 
 ## Pre-release Verification
 
 - Run `npm run test:security` and confirm no secret-like matches.
 - Manually verify logout removes authenticated state in settings/popup.
-- Verify privacy statements in README, privacy policy, and Chrome Store listing match this map.
+- Verify privacy statements in README, privacy policy, extension README, and Chrome Store listing match this map.
+- Maintainer troubleshooting: [`ops-runbook.md`](./ops-runbook.md).

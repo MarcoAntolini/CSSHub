@@ -34,7 +34,8 @@ After `npm run dev` or a production build, load the unpacked extension from **`d
 
 ## Security & data handling
 
-- **GitHub access token** — After sign-in (web OAuth, device flow, or PAT), the token is kept in **extension `chrome.storage` only**. It is sent to **api.github.com** / **github.com** to list repos, branches, and create commits. It is **not** sent to CssHub servers except during **web OAuth**: the extension posts the short-lived `code` + `state` + `redirectUri` to your configured **`VITE_OAUTH_BACKEND_BASE_URL`** so the **client secret** never ships inside the extension.
+- **GitHub access token** — After sign-in (web OAuth, device flow, or PAT), the token is kept in **`chrome.storage.session` only** (cleared on logout or browser session end). Settings, last submission preview, and an activity log (max **15** events) use **`chrome.storage.local`**. The token is sent to **api.github.com** / **github.com** to list repos, branches, and create commits. It is **not** sent to CssHub servers except during **web OAuth**: the extension posts the short-lived `code` + `state` + `redirectUri` to your configured **`VITE_OAUTH_BACKEND_BASE_URL`** so the **client secret** never ships inside the extension.
+- **Activity log** — User-facing messages only; GitHub/API failures are mapped through `toUserSafeError` (no raw response bodies stored). See [`docs/privacy-data-map.md`](../../docs/privacy-data-map.md).
 - **CSSBattle** — A content script runs on `cssbattle.dev` / `www.cssbattle.dev` play URLs to read submission data the user is viewing. That data is forwarded to the background worker for optional deduplication and GitHub sync.
 - **Host permissions** — Declared for GitHub, CSSBattle, and (at build time) the OAuth backend origin; see `public/manifest.json` and `vite.config.ts` (backend origin is merged into `dist/manifest.json` on build).
 - **Telemetry** — CssHub does not operate a separate analytics backend; routine errors and status may appear in the in-extension activity log (user-controlled settings).
@@ -93,4 +94,4 @@ Deploy `apps/backend` to Vercel (project root = `apps/backend`), configure env v
 3. Set `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ALLOWED_EXTENSION_IDS`, and (recommended) Upstash Redis on **Preview** and **Production**.
 4. After the first staging deploy, copy the stable preview URL into the repo variable `EXTENSION_STAGING_BACKEND_URL`; set `EXTENSION_PRODUCTION_BACKEND_URL` to production.
 5. Use the workflow artifact you need (`extension-dist-production` for store releases when applicable).
-6. Zip for Chrome Web Store: unzip artifact into `dist/`, then from repo root `npm run package:extension:store` → `release/csshub-<version>.zip`. See [`docs/chrome-web-store-listing.md`](../../docs/chrome-web-store-listing.md) § Store package.
+6. Zip for Chrome Web Store: unzip artifact into `dist/`, then from repo root `npm run package:extension:store` → `release/csshub-<version>.zip`. Store listing copy: `docs/internal/chrome-web-store-listing.md` (gitignored).

@@ -63,6 +63,8 @@ Relative imports in this package use **`.js` extensions** (required for Node ESM
 
 For the full monorepo dev loop, CI variables, and OAuth callback notes, see the [extension README](../extension/README.md) (maintainer sections at the bottom).
 
+**Production ops:** [`docs/ops-runbook.md`](../../docs/ops-runbook.md) — login failures, Redis/rate limits, rollback.
+
 ## Security & data handling
 
 - **Client secret** — Only this service reads `GITHUB_CLIENT_SECRET`; the browser extension never contains it.
