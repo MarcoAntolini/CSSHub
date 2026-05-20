@@ -1,2 +1,2 @@
-export * from "./extension/contracts";
-export * from "./oauth/schemas";
+export * from "./extension/contracts.js";
+export * from "./oauth/schemas.js";

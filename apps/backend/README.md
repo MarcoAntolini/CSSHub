@@ -52,7 +52,7 @@ Use **one** of these layouts (both are supported via `vercel.json` in the repo):
 
 1. Vercel project **Root Directory** → **`apps/backend`**
 2. Enable **Include source files outside of the Root Directory** (for `@csshub/shared`)
-3. [`apps/backend/vercel.json`](vercel.json) runs `npm ci` from the monorepo root, sets `framework: null` (API-only, no static `public` output), and includes `lib/**` in each function bundle
+3. [`apps/backend/vercel.json`](vercel.json) runs `npm ci` from the monorepo root, **builds `@csshub/shared` to `dist/`** (runtime imports compiled JS, not `src/*.ts`), sets `framework: null` (API-only, no static `public` output), and includes `lib/**` in each function bundle
 4. Add env vars; set extension `VITE_OAUTH_BACKEND_BASE_URL` to this deployment URL
 
 ### Option B: Root Directory = repository root

@@ -6,10 +6,12 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"default": "./src/index.ts"
+			"development": "./src/index.ts",
+			"default": "./dist/index.js"
 		}
 	},
 	"scripts": {
+		"build": "tsc --build",
 		"typecheck": "tsc --build",
 		"test": "vitest run"
 	},
