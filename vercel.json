@@ -1,7 +1,8 @@
 {
 	"$schema": "https://openapi.vercel.sh/vercel.json",
+	"framework": null,
+	"buildCommand": null,
 	"installCommand": "npm ci",
-	"buildCommand": "npm --workspace @csshub/backend run typecheck",
 	"functions": {
 		"apps/backend/api/**/*.ts": {
 			"includeFiles": "apps/backend/lib/**"
