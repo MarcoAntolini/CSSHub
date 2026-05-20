@@ -8,6 +8,7 @@ node_modules
 /dist
 /apps/extension/dist
 packages/shared/dist
+apps/backend/lib/shared-dist
 
 # misc
 .DS_Store

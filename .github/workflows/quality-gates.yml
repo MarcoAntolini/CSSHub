@@ -35,6 +35,12 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Backend Vercel boundary (shared sync + import guard)
+        run: |
+          npm run build --workspace @csshub/shared
+          npm run vercel:prepare --workspace @csshub/backend
+          npm run check:backend-vercel
+
       - name: Typecheck
         run: npm run typecheck
 

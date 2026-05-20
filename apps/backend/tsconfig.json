@@ -12,6 +12,5 @@
 		"forceConsistentCasingInFileNames": true,
 		"types": ["node", "@vercel/node"]
 	},
-	"include": ["api/**/*.ts", "lib/**/*.ts"],
-	"references": [{ "path": "../../packages/shared" }]
+	"include": ["api/**/*.ts", "lib/**/*.ts"]
 }
