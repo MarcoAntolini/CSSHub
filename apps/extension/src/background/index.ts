@@ -1,7 +1,12 @@
 import { popupToBackgroundMessageSchema, type PopupToBackgroundMessage } from "../shared/contracts";
 import { getStoredState, saveStoredState } from "../storage";
 import { toUserSafeError } from "./errors";
-import { pushEvent, setActionBadge, showBrowserNotification } from "./feedback";
+import {
+	pushEvent,
+	registerNotificationHandlers,
+	setActionBadge,
+	showBrowserNotification,
+} from "./feedback";
 import {
 	handleLoginWithPat,
 	handleLogoutGithub,
@@ -26,6 +31,8 @@ import {
 	handleSaveSettings,
 } from "./handlers/settings";
 import type { Handler, SendResponse } from "./handlers/types";
+
+registerNotificationHandlers();
 
 const actionHandlers: {
 	[K in PopupToBackgroundMessage["action"]]: Handler<K>;

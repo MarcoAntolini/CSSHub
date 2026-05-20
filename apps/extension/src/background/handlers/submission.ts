@@ -122,7 +122,8 @@ export const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 			state.settings.systemNotificationsEnabled,
 			"success",
 			"CssHub synced",
-			reason
+			reason,
+			{ commitUrl }
 		);
 	} else if (skippedNotImproved) {
 		setActionBadge("warn", "BEST");

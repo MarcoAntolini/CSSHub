@@ -24,6 +24,7 @@ import {
 	parseBackgroundOkVoid,
 	sendBackgroundMessage,
 } from "./shared/messaging";
+import { openSettingsPage } from "./openSettingsPage";
 
 applyPopupTheme(DEFAULT_POPUP_THEME);
 void loadPopupTheme().then(applyPopupTheme);
@@ -238,13 +239,6 @@ const relativeTime = (iso: string): string | null => {
 
 const clampThreshold = (value: number): number =>
 	Math.min(THRESHOLD_MAX, Math.max(THRESHOLD_MIN, Math.round(value)));
-
-const openSettingsPage = (): void => {
-	// openOptionsPage() from the toolbar popup is flaky (popup closes and navigation may never run).
-	// Same HTML as options_ui.page; tabs permission is declared in the manifest.
-	const url = chrome.runtime.getURL("settings.html");
-	void chrome.tabs.create({ url });
-};
 
 const SunIcon = (props: SVGProps<SVGSVGElement>): ReactElement => (
 	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" {...props}>
@@ -536,56 +530,60 @@ const App = (): ReactElement => {
 								</button>
 							</p>
 						)}
-						<div className="threshold-head">
-							<label className="field-label" htmlFor="thr">
-								Match threshold
-							</label>
-							<span className="threshold-value">{thresholdDraft}%</span>
-						</div>
-						<div className="threshold-controls">
-							<button
-								type="button"
-								className="threshold-step"
-								aria-label="Decrease threshold by 1"
-								disabled={status === "saving" || thresholdDraft <= THRESHOLD_MIN}
-								onClick={() =>
-									setThresholdDraft(clampThreshold(thresholdDraft - 1))
-								}
-							>
-								−
-							</button>
-							<input
-								id="thr"
-								className="field-slider"
-								type="range"
-								min={THRESHOLD_MIN}
-								max={THRESHOLD_MAX}
-								value={thresholdDraft}
-								disabled={status === "saving"}
-								onChange={(e) => {
-									const t = Number(e.target.value);
-									if (Number.isFinite(t)) {
-										setThresholdDraft(clampThreshold(t));
-									}
-								}}
-							/>
-							<button
-								type="button"
-								className="threshold-step"
-								aria-label="Increase threshold by 1"
-								disabled={status === "saving" || thresholdDraft >= THRESHOLD_MAX}
-								onClick={() =>
-									setThresholdDraft(clampThreshold(thresholdDraft + 1))
-								}
-							>
-								+
-							</button>
-						</div>
-						<p className="threshold-status">
-							{thresholdDraft !== settings.threshold || status === "saving"
-								? "Saving…"
-								: "Saved"}
-						</p>
+						{settings.selectedRepoFullName ? (
+							<>
+								<div className="threshold-head">
+									<label className="field-label" htmlFor="thr">
+										Match threshold
+									</label>
+									<span className="threshold-value">{thresholdDraft}%</span>
+								</div>
+								<div className="threshold-controls">
+									<button
+										type="button"
+										className="threshold-step"
+										aria-label="Decrease threshold by 1"
+										disabled={status === "saving" || thresholdDraft <= THRESHOLD_MIN}
+										onClick={() =>
+											setThresholdDraft(clampThreshold(thresholdDraft - 1))
+										}
+									>
+										−
+									</button>
+									<input
+										id="thr"
+										className="field-slider"
+										type="range"
+										min={THRESHOLD_MIN}
+										max={THRESHOLD_MAX}
+										value={thresholdDraft}
+										disabled={status === "saving"}
+										onChange={(e) => {
+											const t = Number(e.target.value);
+											if (Number.isFinite(t)) {
+												setThresholdDraft(clampThreshold(t));
+											}
+										}}
+									/>
+									<button
+										type="button"
+										className="threshold-step"
+										aria-label="Increase threshold by 1"
+										disabled={status === "saving" || thresholdDraft >= THRESHOLD_MAX}
+										onClick={() =>
+											setThresholdDraft(clampThreshold(thresholdDraft + 1))
+										}
+									>
+										+
+									</button>
+								</div>
+								<p className="threshold-status">
+									{thresholdDraft !== settings.threshold || status === "saving"
+										? "Saving…"
+										: "Saved"}
+								</p>
+							</>
+						) : null}
 					</section>
 
 					<section className="card card-compact">

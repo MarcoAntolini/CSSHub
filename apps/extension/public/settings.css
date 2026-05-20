@@ -625,16 +625,31 @@ body {
 
 .toggle-row {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: space-between;
 	gap: 1rem;
+}
+
+.preferences-lead {
+	margin-bottom: 1rem;
+	line-height: 1.5;
+}
+
+.toggle-copy {
+	min-width: 0;
 }
 
 .toggle-title {
 	font-size: 0.84rem;
 	font-weight: 600;
 	color: #e2e8f0;
-	margin-bottom: 0.2rem;
+	margin-bottom: 0.35rem;
+}
+
+.toggle-caption {
+	font-size: 0.76rem;
+	line-height: 1.45;
+	color: #64748b;
 }
 
 .switch {

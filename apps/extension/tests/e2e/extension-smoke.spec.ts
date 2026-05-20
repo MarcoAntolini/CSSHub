@@ -304,6 +304,7 @@ test("popup shows setup prompt when authenticated without repository", async () 
 		await expect(
 			page.getByRole("button", { name: "Set up in Settings" })
 		).toBeVisible();
+		await expect(page.getByText("Match threshold")).toHaveCount(0);
 	} finally {
 		await closeExtension(launched);
 	}

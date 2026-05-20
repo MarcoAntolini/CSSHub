@@ -14,12 +14,16 @@ export const PreferencesSection = ({
 }: PreferencesSectionProps): ReactElement => (
 	<section className="settings-section">
 		<h2>Notifications</h2>
+		<p className="muted preferences-lead">
+			Toolbar badges and the activity log always reflect sync outcomes. Desktop
+			alerts are optional.
+		</p>
 		<div className="toggle-row">
-			<div>
-				<p className="toggle-title">Browser/system notifications</p>
-				<p className="muted">
-					Show desktop notifications from the extension. In-app badges and activity
-					log remain active.
+			<div className="toggle-copy">
+				<p className="toggle-title">Desktop notifications</p>
+				<p className="toggle-caption">
+					Show system alerts when CssHub syncs, skips, or errors. Click to open
+					the commit or these settings.
 				</p>
 			</div>
 			<label className="switch" htmlFor="system-notifications-toggle">
