@@ -42,8 +42,13 @@ This document maps data handled by CssHub and where it is stored or transmitted.
 - Activity log is user-facing and sanitized; no raw secret payloads intended.
 - No user secret literals should appear in source, docs, or build artifacts (`npm run test:security`).
 
+## Related documents
+
+- Public privacy policy: [`privacy-policy.md`](./privacy-policy.md) / https://marcoantolini.github.io/CSSHub/privacy-policy.html
+- Chrome Web Store listing and permission justifications: [`chrome-web-store-listing.md`](./chrome-web-store-listing.md)
+
 ## Pre-release Verification
 
 - Run `npm run test:security` and confirm no secret-like matches.
 - Manually verify logout removes authenticated state in settings/popup.
-- Verify privacy statements in README and Chrome Store listing match this map.
+- Verify privacy statements in README, privacy policy, and Chrome Store listing match this map.

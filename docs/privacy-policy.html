@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CssHub Privacy Policy</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 42rem;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+      color: #1a1a1a;
+      background: #fafafa;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { color: #e8e8e8; background: #121212; }
+      a { color: #7eb8ff; }
+      th, td { border-color: #333; }
+    }
+    h1 { font-size: 1.75rem; line-height: 1.25; }
+    h2 { font-size: 1.15rem; margin-top: 2rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem 0.65rem; text-align: left; vertical-align: top; }
+    th { background: rgba(0,0,0,0.04); }
+    footer { margin-top: 3rem; font-size: 0.9rem; opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CssHub Privacy Policy</h1>
+    <p><strong>Effective date:</strong> 20 May 2026</p>
+    <p>CssHub is a Chrome extension that syncs your <a href="https://cssbattle.dev">CSSBattle</a> submissions to a GitHub repository you choose. This page describes what data the extension handles and where it goes.</p>
+  </header>
+
+  <section>
+    <h2>Summary</h2>
+    <ul>
+      <li><strong>Single purpose:</strong> Back up CSSBattle solutions to <em>your</em> GitHub repo.</li>
+      <li><strong>GitHub access token:</strong> Stored in <strong>session-only</strong> extension storage; cleared on logout or browser session reset.</li>
+      <li><strong>Other data:</strong> Settings, last submission, and activity log stay in <strong>local extension storage on your device</strong>.</li>
+      <li><strong>GitHub API:</strong> Used only to sign you in and read/write the repository you select.</li>
+      <li><strong>OAuth backend:</strong> Used only during web sign-in to exchange a short-lived code for a token (client secret stays on the server).</li>
+      <li><strong>CSSBattle:</strong> Reads submission data from play pages you open; does not run on other websites.</li>
+      <li><strong>No CssHub analytics:</strong> No first-party analytics, ads, or CssHub-hosted user accounts.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Who operates CssHub</h2>
+    <p>CssHub is an open-source project (<a href="https://github.com/MarcoAntolini/CSSHub">GitHub</a>). It is not affiliated with CSSBattle or GitHub.</p>
+  </section>
+
+  <section>
+    <h2>Data stored on your device</h2>
+    <table>
+      <thead>
+        <tr><th>Data</th><th>Storage</th><th>Purpose</th><th>Retention</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>GitHub access token</td>
+          <td>Session storage</td>
+          <td>Authenticate GitHub API requests</td>
+          <td>Until logout or session ends</td>
+        </tr>
+        <tr>
+          <td>Auth status (username, method)</td>
+          <td>Local storage</td>
+          <td>Popup and settings UI</td>
+          <td>Until logout or reset</td>
+        </tr>
+        <tr>
+          <td>Settings (repo, branch, notifications, etc.)</td>
+          <td>Local storage</td>
+          <td>Remember your choices</td>
+          <td>Until you change or reset</td>
+        </tr>
+        <tr>
+          <td>Last submission (CSS, challenge metadata, optional images)</td>
+          <td>Local storage</td>
+          <td>Recent activity and sync</td>
+          <td>Overwritten by newer submissions</td>
+        </tr>
+        <tr>
+          <td>Activity log (up to 15 events)</td>
+          <td>Local storage</td>
+          <td>Status and troubleshooting in settings</td>
+          <td>Until you clear the log</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>CssHub does <strong>not</strong> keep your GitHub token in long-term local storage.</p>
+  </section>
+
+  <section>
+    <h2>Data sent to third parties</h2>
+    <h3>GitHub</h3>
+    <p>When you sign in and sync, your credentials or token are sent to GitHub (<code>api.github.com</code>, <code>github.com</code>) to verify your account and create commits in the repository you selected. CssHub does not sell your data.</p>
+    <h3>CssHub OAuth backend</h3>
+    <p>For <strong>web</strong> GitHub sign-in, the extension sends a short-lived OAuth <code>code</code>, <code>state</code>, and <code>redirectUri</code> to the CssHub backend (hosted on Vercel in production). The backend exchanges the code with GitHub and returns an access token. It is not used to store your CSSBattle submissions.</p>
+    <h3>CSSBattle</h3>
+    <p>On <code>cssbattle.dev</code> / <code>www.cssbattle.dev</code> play pages only, the extension reads submission data shown on the page so you can sync it to GitHub.</p>
+  </section>
+
+  <section>
+    <h2>What CssHub does not do</h2>
+    <ul>
+      <li>No CssHub product analytics or advertising trackers.</li>
+      <li>No separate CssHub cloud account or battle library.</li>
+      <li>No access to websites other than GitHub, CSSBattle, and the OAuth backend origin in your build.</li>
+    </ul>
+    <p>Optional desktop notifications (if enabled) are shown by Chrome on your device only.</p>
+  </section>
+
+  <section>
+    <h2>Your choices</h2>
+    <ul>
+      <li><strong>Sign out</strong> clears the session token and auth state.</li>
+      <li><strong>Clear activity log</strong> in settings removes stored events.</li>
+      <li><strong>Uninstall</strong> removes extension data from your browser.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Children</h2>
+    <p>CssHub is not directed at children under 13.</p>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <p>Questions: <a href="https://github.com/MarcoAntolini/CSSHub/issues">GitHub Issues</a>.</p>
+  </section>
+
+  <footer>
+    <p>Technical inventory: <a href="https://github.com/MarcoAntolini/CSSHub/blob/main/docs/privacy-data-map.md">privacy-data-map.md</a> in the repository.</p>
+  </footer>
+</body>
+</html>

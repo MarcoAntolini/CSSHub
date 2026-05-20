@@ -45,13 +45,15 @@ See [`performance.md`](./performance.md) for SLOs and manual matrix. Automated g
 - [x] Data map reviewed: token, GitHub username, selected repo/branch, submission payload, images/data URLs, activity events
 - [ ] Retention behavior verified (local storage/session storage only as intended)
 - [x] Clear log and logout behavior validated
-- [ ] README privacy sections match actual data flow
-- [ ] Chrome Store data disclosure draft aligns with implementation
+- [x] README privacy sections match actual data flow (see root README + [`privacy-policy.md`](./privacy-policy.md))
+- [x] Chrome Store data disclosure draft aligns with implementation ([`chrome-web-store-listing.md`](./chrome-web-store-listing.md) § Data safety)
+- [x] Privacy policy drafted ([`privacy-policy.md`](./privacy-policy.md), [`privacy-policy.html`](./privacy-policy.html))
+- [ ] Privacy policy URL live on GitHub Pages (Settings → Pages → `/docs`)
 
 ## Store Package Readiness
 
 - [ ] Extension build artifact is clean (no debug leftovers)
-- [ ] Listing copy updated (features, permission rationale, privacy note)
+- [x] Listing copy drafted (features, permission rationale, privacy note — [`chrome-web-store-listing.md`](./chrome-web-store-listing.md))
 - [ ] Screenshots and promotional assets updated
 - [ ] Final smoke test run performed on unpacked extension
 - [ ] Release candidate tagged and archived

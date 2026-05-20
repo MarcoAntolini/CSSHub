@@ -67,9 +67,12 @@ If something fails, check the in-extension activity log in settings for a short,
 ## Privacy in plain English
 
 - CssHub needs **GitHub access** only to write to **your** chosen repo (and related metadata like branches).
-- Your **GitHub token is stored in the extension on your device**, not on a CssHub “account” in the cloud.
-- CssHub only runs on **CSSBattle** pages it is designed for, plus **GitHub** for sign-in and sync.
-- For a technical breakdown (OAuth backend, data flows), see **[`apps/extension/README.md`](apps/extension/README.md)** and **[`apps/backend/README.md`](apps/backend/README.md)**.
+- Your **GitHub token is kept in session-only extension storage** on your device (cleared on sign-out); other settings and the activity log stay in local extension storage—not on a CssHub account in the cloud.
+- CssHub only runs on **CSSBattle** play pages, plus **GitHub** and the **OAuth backend** for sign-in and sync.
+- **No CssHub analytics** — no first-party tracking or advertising SDK.
+- **Privacy policy:** https://marcoantolini.github.io/CSSHub/privacy-policy.html (source in [`docs/privacy-policy.md`](docs/privacy-policy.md); enable GitHub Pages from `/docs` if the URL is not live yet).
+- Technical inventory: [`docs/privacy-data-map.md`](docs/privacy-data-map.md). Extension and backend details: [`apps/extension/README.md`](apps/extension/README.md), [`apps/backend/README.md`](apps/backend/README.md).
+- Chrome Web Store permission copy: [`docs/chrome-web-store-listing.md`](docs/chrome-web-store-listing.md).
 
 ## Contributing
 
