@@ -3,12 +3,12 @@ import {
 	githubOAuthTokenRawSchema,
 	oauthExchangeRequestSchema,
 } from "@csshub/shared";
-import { handleCorsPreflight, setCorsHeaders } from "../../../lib/cors";
-import { backendEnv } from "../../../lib/env";
-import { rejectMethod, getClientIp } from "../../../lib/http";
-import { checkRateLimit } from "../../../lib/rateLimit";
-import { consumeOAuthState } from "../../../lib/oauthState";
-import { isAllowedRedirectUri } from "../../../lib/oauth";
+import { handleCorsPreflight, setCorsHeaders } from "../../../lib/cors.js";
+import { backendEnv } from "../../../lib/env.js";
+import { rejectMethod, getClientIp } from "../../../lib/http.js";
+import { checkRateLimit } from "../../../lib/rateLimit.js";
+import { consumeOAuthState } from "../../../lib/oauthState.js";
+import { isAllowedRedirectUri } from "../../../lib/oauth.js";
 
 const EXCHANGE_RATE_LIMIT = {
 	limit: 12,

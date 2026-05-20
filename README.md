@@ -2,6 +2,8 @@
 
 <img src="apps/extension/public/banner.png" alt="CssHub banner" width="800" />
 
+<br />
+
 **Automatically sync your [CSSBattle](https://cssbattle.dev) submissions to GitHub.**
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)

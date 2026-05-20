@@ -1,5 +1,5 @@
 import { Redis } from "@upstash/redis";
-import { backendEnv } from "./env";
+import { backendEnv } from "./env.js";
 
 const hasRedisConfig =
 	typeof backendEnv.upstashRedisRestUrl === "string" &&

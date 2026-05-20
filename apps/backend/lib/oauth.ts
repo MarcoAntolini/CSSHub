@@ -1,4 +1,4 @@
-import { backendEnv } from "./env";
+import { backendEnv } from "./env.js";
 
 const REDIRECT_HOST_SUFFIX = ".chromiumapp.org";
 

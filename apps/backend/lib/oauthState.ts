@@ -1,4 +1,4 @@
-import { redisClient } from "./redis";
+import { redisClient } from "./redis.js";
 
 const OAUTH_STATE_TTL_SEC = 10 * 60;
 const memoryStateStore = new Map<string, number>();

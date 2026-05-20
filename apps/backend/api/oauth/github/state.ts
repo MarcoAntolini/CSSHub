@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleCorsPreflight, setCorsHeaders } from "../../../lib/cors";
-import { rejectMethod, getClientIp } from "../../../lib/http";
-import { checkRateLimit } from "../../../lib/rateLimit";
-import { issueOAuthState } from "../../../lib/oauthState";
-import { backendEnv } from "../../../lib/env";
+import { handleCorsPreflight, setCorsHeaders } from "../../../lib/cors.js";
+import { rejectMethod, getClientIp } from "../../../lib/http.js";
+import { checkRateLimit } from "../../../lib/rateLimit.js";
+import { issueOAuthState } from "../../../lib/oauthState.js";
+import { backendEnv } from "../../../lib/env.js";
 
 const STATE_RATE_LIMIT = {
 	limit: 20,

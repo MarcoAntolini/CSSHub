@@ -1,4 +1,4 @@
-import { ensureBackendEnvLoaded } from "./loadEnv";
+import { ensureBackendEnvLoaded } from "./loadEnv.js";
 
 ensureBackendEnvLoaded();
 

@@ -46,7 +46,22 @@ curl http://localhost:3000/api/oauth/github/health
 
 ## Deploying on Vercel
 
-Set the project root to **`apps/backend`**, add the same env vars for Preview and Production, and wire the deployment URL into the extension as `VITE_OAUTH_BACKEND_BASE_URL`. For the full monorepo dev loop, CI variables, and OAuth callback notes, see the [extension README](../extension/README.md) (maintainer sections at the bottom).
+Use **one** of these layouts (both are supported via `vercel.json` in the repo):
+
+### Option A (recommended): Root Directory = `apps/backend`
+
+1. Vercel project **Root Directory** → **`apps/backend`**
+2. Enable **Include source files outside of the Root Directory** (for `@csshub/shared`)
+3. [`apps/backend/vercel.json`](vercel.json) runs `npm ci` from the monorepo root and includes `lib/**` in each function bundle
+4. Add env vars; set extension `VITE_OAUTH_BACKEND_BASE_URL` to this deployment URL
+
+### Option B: Root Directory = repository root
+
+If the project root is the monorepo (function paths like `/var/task/apps/backend/...`), use the repo-root [`vercel.json`](../../vercel.json) instead. Same env vars apply.
+
+Relative imports in this package use **`.js` extensions** (required for Node ESM in production). `vercel dev` may work without them locally; production does not.
+
+For the full monorepo dev loop, CI variables, and OAuth callback notes, see the [extension README](../extension/README.md) (maintainer sections at the bottom).
 
 ## Security & data handling
 

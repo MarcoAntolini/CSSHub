@@ -1,0 +1,10 @@
+{
+	"$schema": "https://openapi.vercel.sh/vercel.json",
+	"installCommand": "npm ci",
+	"buildCommand": "npm --workspace @csshub/backend run typecheck",
+	"functions": {
+		"apps/backend/api/**/*.ts": {
+			"includeFiles": "apps/backend/lib/**"
+		}
+	}
+}
