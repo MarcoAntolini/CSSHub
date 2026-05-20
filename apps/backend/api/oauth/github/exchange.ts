@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
 	githubOAuthTokenRawSchema,
 	oauthExchangeRequestSchema,
-} from "@csshub/shared";
+} from "../../../../../packages/shared/dist/oauth/schemas.js";
 import { handleCorsPreflight, setCorsHeaders } from "../../../lib/cors.js";
 import { backendEnv } from "../../../lib/env.js";
 import { rejectMethod, getClientIp } from "../../../lib/http.js";
