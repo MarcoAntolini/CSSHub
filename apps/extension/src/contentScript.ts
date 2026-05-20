@@ -14,7 +14,25 @@ import {
 	extractStatsFromDocument,
 	type SubmissionStats,
 } from "./contentScriptStats";
-import { contentScriptTabMessageSchema } from "./shared/contracts";
+
+const parseContentScriptTabMessage = (
+	request: unknown
+): { action: "getElementPositionAndDimensions"; selector: string } | null => {
+	if (typeof request !== "object" || request === null) {
+		return null;
+	}
+	const candidate = request as { action?: unknown; selector?: unknown };
+	if (candidate.action !== "getElementPositionAndDimensions") {
+		return null;
+	}
+	if (typeof candidate.selector !== "string" || candidate.selector.length === 0) {
+		return null;
+	}
+	return {
+		action: candidate.action,
+		selector: candidate.selector,
+	};
+};
 
 const POST_SUBMIT_SETTLE_DELAY_MS = 750;
 const POST_SUBMIT_WAIT_TIMEOUT_MS = 20_000;
@@ -189,13 +207,13 @@ const installSubmitListeners = (): void => {
 };
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-	const parsed = contentScriptTabMessageSchema.safeParse(request);
-	if (!parsed.success) {
+	const parsed = parseContentScriptTabMessage(request);
+	if (!parsed) {
 		return;
 	}
 
-	if (parsed.data.action === "getElementPositionAndDimensions") {
-		sendResponse(getElementPositionAndDimensions(parsed.data.selector));
+	if (parsed.action === "getElementPositionAndDimensions") {
+		sendResponse(getElementPositionAndDimensions(parsed.selector));
 	}
 });
 

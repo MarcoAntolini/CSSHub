@@ -24,6 +24,20 @@ export const compareChallengeKeys = (a: string, b: string): number => {
 	return a.localeCompare(b);
 };
 
+const README_CHALLENGE_LINK =
+	/\[([^\]]+)\]\(\.\/challenges\/([^/)]+)\/\)/;
+
+export const parseExistingReadmeLabels = (readme: string): Map<string, string> => {
+	const labels = new Map<string, string>();
+	for (const line of readme.split("\n")) {
+		const match = line.match(README_CHALLENGE_LINK);
+		if (match) {
+			labels.set(match[2], match[1]);
+		}
+	}
+	return labels;
+};
+
 export const deriveLabelFromSlug = (key: string): string => {
 	if (/^\d+$/.test(key)) {
 		return `Target ${key}`;
@@ -58,11 +72,15 @@ export const collectChallengeKeys = (
 export const formatReadmeIndexLines = (
 	keys: string[],
 	currentKey: string,
-	currentTitle: string
+	currentTitle: string,
+	existingLabels?: Map<string, string>
 ): string =>
 	keys
 		.map((key) => {
-			const label = key === currentKey ? currentTitle : deriveLabelFromSlug(key);
+			const label =
+				key === currentKey
+					? currentTitle
+					: (existingLabels?.get(key) ?? deriveLabelFromSlug(key));
 			return `- [${label}](./challenges/${key}/)`;
 		})
 		.join("\n");
@@ -70,11 +88,14 @@ export const formatReadmeIndexLines = (
 const buildManagedIndexBlock = (
 	keys: string[],
 	currentKey: string,
-	currentTitle: string
+	currentTitle: string,
+	existingLabels?: Map<string, string>
 ): string =>
-	["## CssHub challenge index", "", formatReadmeIndexLines(keys, currentKey, currentTitle)].join(
-		"\n"
-	);
+	[
+		"## CssHub challenge index",
+		"",
+		formatReadmeIndexLines(keys, currentKey, currentTitle, existingLabels),
+	].join("\n");
 
 export const injectManagedReadmeSection = (existing: string, indexBlock: string): string => {
 	const trimmed = existing.trimEnd();
@@ -107,9 +128,17 @@ export const buildRootReadmeContent = (options: {
 
 	const currentKey = options.challengeFolder.replace(/^challenges\//, "");
 	const keys = collectChallengeKeys(options.existingBlobPaths, options.challengeFolder);
+	const existingLabels = options.existingReadme
+		? parseExistingReadmeLabels(options.existingReadme)
+		: undefined;
 
 	if (options.mode === "full") {
-		const lines = formatReadmeIndexLines(keys, currentKey, options.challengeTitle);
+		const lines = formatReadmeIndexLines(
+			keys,
+			currentKey,
+			options.challengeTitle,
+			existingLabels
+		);
 		return [
 			"# CssHub — CSSBattle solutions",
 			"",
@@ -122,6 +151,11 @@ export const buildRootReadmeContent = (options: {
 		].join("\n");
 	}
 
-	const indexBlock = buildManagedIndexBlock(keys, currentKey, options.challengeTitle);
+	const indexBlock = buildManagedIndexBlock(
+		keys,
+		currentKey,
+		options.challengeTitle,
+		existingLabels
+	);
 	return injectManagedReadmeSection(options.existingReadme ?? "", indexBlock);
 };

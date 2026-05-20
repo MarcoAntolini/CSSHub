@@ -5,12 +5,29 @@ import {
 	buildRootReadmeContent,
 	collectChallengeKeys,
 	injectManagedReadmeSection,
+	parseExistingReadmeLabels,
 } from "../../src/rootReadme";
 
 describe("collectChallengeKeys", () => {
 	it("merges tree paths with the current challenge folder", () => {
 		const paths = new Set(["challenges/1/submission.json", "challenges/2/submission.json"]);
 		expect(collectChallengeKeys(paths, "challenges/3")).toEqual(["1", "2", "3"]);
+	});
+});
+
+describe("parseExistingReadmeLabels", () => {
+	it("extracts labels from challenge index links", () => {
+		const readme = [
+			"- [Target 8: Forking Crazy](./challenges/8/)",
+			"- - [Target 10: Ten](./challenges/10/)",
+			"not a link",
+		].join("\n");
+		expect(parseExistingReadmeLabels(readme)).toEqual(
+			new Map([
+				["8", "Target 8: Forking Crazy"],
+				["10", "Target 10: Ten"],
+			])
+		);
 	});
 });
 
@@ -64,6 +81,26 @@ Footer stays.`;
 		expect(out).not.toContain("\nold\n");
 		expect(out).toContain("Target 10: Ten");
 		expect(out).toContain("## CssHub challenge index");
+	});
+
+	it("managed: preserves titles from existing index when adding a challenge", () => {
+		const existing = `# My repo
+
+${CSSHUB_README_START}
+## CssHub challenge index
+
+- [Target 8: Forking Crazy](./challenges/8/)
+${CSSHUB_README_END}`;
+		const out = buildRootReadmeContent({
+			mode: "managed-section",
+			existingReadme: existing,
+			existingBlobPaths: new Set(["challenges/8/submission.json"]),
+			challengeFolder: "challenges/11",
+			challengeTitle: "Target 11: Eye of Sauron",
+		});
+		expect(out).toContain("Target 8: Forking Crazy");
+		expect(out).toContain("Target 11: Eye of Sauron");
+		expect(out).not.toMatch(/^-\s+-\s+\[/m);
 	});
 
 	it("full: replaces entire README", () => {

@@ -22,12 +22,12 @@
 	--empty-sync-text: #fcd34d;
 	--empty-sync-bg: rgba(146, 64, 14, 0.35);
 	--empty-sync-border: rgba(251, 191, 36, 0.35);
-	--commit-link-text: #fdba74;
-	--commit-link-bg: rgba(249, 115, 22, 0.14);
-	--commit-link-border: rgba(251, 146, 60, 0.35);
-	--commit-link-hover-bg: rgba(249, 115, 22, 0.24);
-	--commit-link-hover-border: rgba(251, 146, 60, 0.5);
-	--commit-link-hover-text: #ffedd5;
+	--commit-link-text: var(--status-success-text);
+	--commit-link-bg: var(--status-success-bg);
+	--commit-link-border: var(--status-success-border);
+	--commit-link-hover-bg: rgba(22, 101, 52, 0.55);
+	--commit-link-hover-border: rgba(74, 222, 128, 0.5);
+	--commit-link-hover-text: #bbf7d0;
 	--btn-primary-text: #fff7ed;
 	--btn-primary-bg: linear-gradient(135deg, #ea580c, #c2410c);
 	--btn-primary-border: rgba(249, 115, 22, 0.5);
