@@ -53,7 +53,11 @@ See [`performance.md`](./performance.md) for SLOs and manual matrix. Automated g
 ## Store Package Readiness
 
 - [ ] Extension build artifact is clean (no debug leftovers)
-- [x] Listing copy drafted (features, permission rationale, privacy note — [`chrome-web-store-listing.md`](./chrome-web-store-listing.md))
-- [ ] Screenshots and promotional assets updated
-- [ ] Final smoke test run performed on unpacked extension
+- [x] Listing copy ready to paste — short + detailed descriptions ([`chrome-web-store-listing.md`](./chrome-web-store-listing.md) § Short/Detailed description)
+- [x] Data safety form answers drafted ([`chrome-web-store-listing.md`](./chrome-web-store-listing.md) § Data safety form)
+- [x] Version alignment documented (`1.0.0` — bump if already used in a prior CWS upload; see listing doc § Version)
+- [x] Store zip script: `npm run package:extension:store` after prod `dist/` or CI artifact (see listing doc § Store package)
+- [x] Screenshots added in [`docs/screenshots/`](../docs/screenshots/) (`popup`, `settings`, `activity-log`, `github`; resize to 1280×800 for Chrome Web Store upload)
+- [ ] Production `workflow_dispatch` build downloaded; `release/csshub-*.zip` created and archived
+- [ ] Final smoke test run performed on unpacked extension (same tree as zip)
 - [ ] Release candidate tagged and archived

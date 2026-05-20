@@ -2,7 +2,7 @@
 
 Targets and checks for extension load time, sync latency, and bundle size before Chrome Web Store release.
 
-## SLOs (v0.1)
+## SLOs (v1.0)
 
 | Metric | Target | Verification |
 |--------|--------|--------------|

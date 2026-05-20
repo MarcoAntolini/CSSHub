@@ -1,0 +1,62 @@
+name: Feature request
+description: Suggest an improvement or new capability
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the **workflow** you want, not only the implementation. That helps us judge fit with CssHub’s scope (CSSBattle → GitHub sync).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What pain are you solving? Who benefits?
+      placeholder: |
+        When I …, I have to … today. It would help if CssHub could …
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed behavior
+      description: What should happen from a user’s perspective?
+      placeholder: |
+        After I pass a level, CssHub should …
+        In settings, I should be able to …
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Likely area
+      options:
+        - Extension UI (popup / settings)
+        - CSSBattle sync / content script
+        - GitHub commit / repo layout
+        - Auth (OAuth, device flow, PAT)
+        - OAuth backend
+        - Docs / onboarding
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other tools, manual workflows, or lighter-weight options you thought about
+      placeholder: I could use … instead, but …
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: This fits CssHub’s goal (sync CSSBattle work to GitHub), not a unrelated product
+          required: false
+        - label: I searched existing issues for similar requests
+          required: true

@@ -1,0 +1,95 @@
+name: Bug report
+description: Something is broken or not working as expected
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Include enough detail that we can reproduce the issue on [CSSBattle](https://cssbattle.dev) with CssHub.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of CssHub is affected?
+      options:
+        - Extension popup / toolbar
+        - Settings / activity log
+        - Sync on CSSBattle play page
+        - GitHub sign-in (OAuth / device flow / PAT)
+        - Repository or branch selection
+        - OAuth backend (deployed Vercel app)
+        - Build / development setup
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What you expected vs what actually happened
+      placeholder: |
+        Expected: submission syncs to my repo after I pass a level.
+        Actual: activity log shows "…" and no commit appears.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps, starting from a fresh state if possible
+      placeholder: |
+        1. Install CssHub from … / load unpacked from dist
+        2. Sign in with GitHub and select repo …
+        3. Open https://cssbattle.dev/play/…
+        4. …
+    validations:
+      required: true
+
+  - type: input
+    id: cssbattle_url
+    attributes:
+      label: CSSBattle URL (if applicable)
+      placeholder: https://cssbattle.dev/play/...
+
+  - type: textarea
+    id: activity_log
+    attributes:
+      label: Activity log message (if any)
+      description: Copy the relevant line from CssHub settings → activity log
+      render: text
+
+  - type: dropdown
+    id: install_source
+    attributes:
+      label: How are you running CssHub?
+      options:
+        - Chrome Web Store
+        - Unpacked / built from source
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: extension_version
+    attributes:
+      label: Extension version
+      description: From `chrome://extensions` (CssHub details) or your local `package.json` if built from source
+      placeholder: e.g. 1.0.0
+
+  - type: input
+    id: chrome_version
+    attributes:
+      label: Browser
+      placeholder: e.g. Chrome 131 on macOS 15.2
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for duplicates
+          required: true

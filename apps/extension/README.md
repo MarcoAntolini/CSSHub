@@ -93,3 +93,4 @@ Deploy `apps/backend` to Vercel (project root = `apps/backend`), configure env v
 3. Set `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `ALLOWED_EXTENSION_IDS`, and (recommended) Upstash Redis on **Preview** and **Production**.
 4. After the first staging deploy, copy the stable preview URL into the repo variable `EXTENSION_STAGING_BACKEND_URL`; set `EXTENSION_PRODUCTION_BACKEND_URL` to production.
 5. Use the workflow artifact you need (`extension-dist-production` for store releases when applicable).
+6. Zip for Chrome Web Store: unzip artifact into `dist/`, then from repo root `npm run package:extension:store` → `release/csshub-<version>.zip`. See [`docs/chrome-web-store-listing.md`](../../docs/chrome-web-store-listing.md) § Store package.

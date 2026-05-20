@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Chrome Web Store listing
+    url: https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp
+    about: Install or update the published extension
+  - name: Privacy policy
+    url: https://marcoantolini.github.io/CSSHub/privacy-policy.html
+    about: How CssHub handles data on your device and with GitHub

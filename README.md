@@ -7,7 +7,7 @@
 **Automatically sync your [CSSBattle](https://cssbattle.dev) submissions to GitHub.**
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)
-[![release](https://img.shields.io/badge/release-v0.1.0-blue)](https://github.com/MarcoAntolini/CSSHub/releases)
+[![release](https://img.shields.io/badge/release-v1.0.0-blue)](https://github.com/MarcoAntolini/CSSHub/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 </div>
@@ -27,16 +27,20 @@ No copy-paste, no drag-and-drop zip files: you play on CSSBattle, CssHub keeps y
 - **Backup & portfolio** — Your work stays on GitHub even if you clear browser data (once synced).
 - **Built for CSSBattle** — Works on the official play experience you already use.
 
-## Screenshot
+## Screenshots
 
-_Screenshots coming soon._  
-When they are ready, add images here (for example under `docs/screenshots/`) so newcomers immediately see the popup and settings flow.
-
-<!-- Example (uncomment when files exist):
 <p align="center">
-  <img src="docs/screenshots/popup.png" alt="CssHub popup" width="420" />
+  <img src="docs/screenshots/popup.png" alt="CssHub popup on CSSBattle with a committed submission" width="720" />
 </p>
--->
+
+<p align="center">
+  <img src="docs/screenshots/settings.png" alt="CssHub settings: GitHub account and repository" width="720" />
+  <img src="docs/screenshots/activity-log.png" alt="CssHub activity log with sync outcomes" width="720" />
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/github.png" alt="GitHub commit created by CssHub" width="720" />
+</p>
 
 ## Supported platform
 
@@ -76,7 +80,7 @@ If something fails, check the in-extension activity log in settings for a short,
 
 ## Contributing
 
-Ideas, issues, and pull requests are welcome.
+Ideas, issues, and pull requests are welcome. For issues, use the [bug report](https://github.com/MarcoAntolini/CSSHub/issues/new?template=bug_report.yml) or [feature request](https://github.com/MarcoAntolini/CSSHub/issues/new?template=feature_request.yml) template. For pull requests, follow the [PR template](https://github.com/MarcoAntolini/CSSHub/blob/main/.github/pull_request_template.md) (GitHub applies it when you open a PR).
 
 If CssHub saves you time, consider **starring** this repository—it helps others discover it.  
-Want a feature? Open an issue and describe the workflow you have in mind.
+Want a feature? Open a [feature request](https://github.com/MarcoAntolini/CSSHub/issues/new?template=feature_request.yml) and describe the workflow you have in mind.

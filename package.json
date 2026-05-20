@@ -1,6 +1,6 @@
 {
 	"name": "csshub",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"description": "CssHub monorepo",
 	"author": "CssHub",
 	"license": "MIT",
@@ -41,7 +41,8 @@
 		"check:bundle-budgets": "node scripts/check-bundle-budgets.mjs",
 		"doctor:oauth": "node scripts/doctor-oauth.mjs",
 		"check:backend-vercel": "node scripts/check-backend-vercel-boundary.mjs",
-		"derive:manifest-key": "node scripts/derive-manifest-key.mjs"
+		"derive:manifest-key": "node scripts/derive-manifest-key.mjs",
+		"package:extension:store": "node scripts/package-extension-store.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.0",

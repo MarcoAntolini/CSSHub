@@ -1,9 +1,22 @@
 # Chrome Web Store listing copy
 
-Draft text for CssHub v0.1 submission. Paste into the Developer Dashboard fields. Aligns with [`privacy-data-map.md`](./privacy-data-map.md) and [`privacy-policy.md`](./privacy-policy.md).
+Draft text for CssHub v1.0 submission. Paste into the Developer Dashboard fields. Aligns with [`privacy-data-map.md`](./privacy-data-map.md) and [`privacy-policy.md`](./privacy-policy.md).
 
 **Privacy policy URL:** https://marcoantolini.github.io/CSSHub/privacy-policy.html  
 (Enable GitHub Pages from `/docs` — see privacy policy § Publishing.)
+
+---
+
+## Screenshots (1280×800 or 640×400)
+
+Source assets in [`docs/screenshots/`](../screenshots/). Resize/crop to store dimensions before upload.
+
+| Order | File | Shows |
+| --- | --- | --- |
+| 1 | `popup.png` | CSSBattle play page + popup (`committed`, sync target) |
+| 2 | `settings.png` | Signed in, repo/branch, README mode |
+| 3 | `activity-log.png` | Activity log (committed, skipped outcomes) |
+| 4 | `github.png` | Resulting GitHub commit and challenge folder |
 
 ---
 
@@ -73,21 +86,44 @@ Production builds include your deployed OAuth backend origin (for example `https
 
 ## Data safety form (Chrome Web Store)
 
-Use answers consistent with the privacy policy. Adjust if your build or backend URL differs.
+Complete **Store listing → Privacy** in the Developer Dashboard. Answers must match [`privacy-data-map.md`](./privacy-data-map.md) and [`privacy-policy.md`](./privacy-policy.md).
 
-| Question area | Suggested declaration |
+### Top-level questions
+
+| Dashboard question | Answer | Notes |
+| --- | --- | --- |
+| Does your product collect or share any of the required user data types? | **Yes** | Required for sync and GitHub sign-in |
+| Is all of the user data collected by your product encrypted in transit? | **Yes** | HTTPS to GitHub, CSSBattle, and the OAuth backend |
+| Do you provide a way for users to request that their data is deleted? | **Yes** | Sign out, clear activity log, uninstall; synced content lives in the user’s own GitHub repo |
+| Has a privacy policy URL been provided? | **Yes** | https://marcoantolini.github.io/CSSHub/privacy-policy.html |
+
+### Data types to declare (check only what applies)
+
+| Data type (Chrome category) | Collected? | Shared? | Purpose | Notes |
+| --- | --- | --- | --- | --- |
+| **Personal info → User IDs** | Yes | Yes (GitHub) | App functionality, Account management | GitHub username after sign-in |
+| **Personal info → Other** (if offered) | No | — | — | No email, name, or address collected by CssHub |
+| **User activity → App interactions** | Yes | Yes (GitHub) | App functionality | Submission metadata, CSS, optional preview images sent to the user’s repo |
+| **App activity → Other user-generated content** | Yes | Yes (GitHub) | App functionality | Commits/files created in the user-selected repository |
+| **App activity → App interactions** (local log) | Yes | No | App functionality | Up to 15 sync events in local extension storage only |
+| **Financial, health, location, web browsing history** | No | — | — | Not collected |
+| **Device or other IDs** | No | — | — | No advertising ID or CssHub device fingerprint |
+
+For each **collected** type above, set **ephemeral** / **required** as appropriate: GitHub token is **not** persisted in `local` storage (session only); settings and log are **optional** to the product but stored locally until the user clears them.
+
+### Third-party sharing
+
+| Party | What is shared | Why |
+| --- | --- | --- |
+| **GitHub** | Token (API auth), username, repo/branch choice, submission payloads for commits | Core sync and authentication |
+| **CssHub OAuth backend (Vercel)** | OAuth `code`, `state`, `redirectUri` during web sign-in only | Exchange code for token; client secret stays on server |
+
+| Question | Answer |
 | --- | --- |
-| **Does your product collect user data?** | Yes — data required for core functionality |
-| **Data types** | Account info (GitHub username after sign-in); user activity (submission metadata, CSS, optional images for sync); app activity (sync log events, settings) |
-| **Purpose** | App functionality (sync to user’s GitHub repo; authentication) |
-| **Shared with third parties** | Yes — GitHub (sync and auth); OAuth backend (web sign-in exchange only) |
-| **Sold to third parties** | No |
-| **Used for tracking** | No (no CssHub analytics) |
-| **Encryption in transit** | Yes (HTTPS to GitHub, CSSBattle, OAuth backend) |
-| **Users can request deletion** | Yes — sign out, clear log, uninstall extension (all local); GitHub data is in the user’s own repo |
-| **Certified compliance** | Follow your jurisdiction; extension alone does not imply COPPA/GDPR certification |
+| Is this data sold to third parties? | **No** |
+| Is this data used for tracking purposes? | **No** (no CssHub analytics or ads) |
 
-**Storage disclosure:** Data is stored **on the user’s device** in Chrome extension storage (local + session). The GitHub token is **session-only**. Submission payloads and settings are local until logout, clear log, or uninstall.
+**Storage disclosure (free-text / policy):** Data is stored **on the user’s device** in Chrome extension storage (`local` + `session`). The GitHub token is **session-only**. Submission previews and settings stay local until logout, clear log, or uninstall. CssHub does not host a user database of battles.
 
 **Privacy policy URL:** https://marcoantolini.github.io/CSSHub/privacy-policy.html
 
@@ -95,21 +131,83 @@ Use answers consistent with the privacy policy. Adjust if your build or backend 
 
 ## Short description (store, ≤ 132 chars)
 
-Sync your CSSBattle submissions to your GitHub repo automatically—version history, backup, and portfolio in one flow.
+**Copy-paste (131 chars):**
+
+```text
+Sync CSSBattle solutions to your GitHub repo—play on cssbattle.dev, commit automatically, no copy-paste.
+```
+
+Mentions only **CSSBattle** and **GitHub** (no other platforms or backends in the short blurb).
 
 ---
 
 ## Detailed description (store)
 
-CssHub connects CSSBattle to GitHub:
+**Copy-paste:**
 
-- Play challenges on cssbattle.dev as usual
-- Sign in with GitHub (web OAuth, device flow, or PAT)
-- Pick a repository and branch
-- Sync submissions as commits with optional preview images
+```text
+CssHub syncs your CSSBattle submissions to a GitHub repository you choose.
 
-Your GitHub token stays in session storage on your device. Settings and a short activity log stay in local extension storage. CssHub does not run analytics or store your battles on CssHub servers.
+How it works:
+• Play challenges on cssbattle.dev (or www.cssbattle.dev)
+• Sign in with GitHub and pick a repo and branch
+• Sync passes as commits with optional preview images
+
+Built for CSSBattle and GitHub only—the extension runs on CSSBattle play pages and talks to GitHub (plus a small OAuth helper for secure web sign-in). Your GitHub token stays in session storage on your device. Settings and a short activity log stay in local extension storage. CssHub does not run analytics or store your battles on CssHub servers.
 
 Open source: https://github.com/MarcoAntolini/CSSHub
-
 Privacy policy: https://marcoantolini.github.io/CSSHub/privacy-policy.html
+```
+
+---
+
+## Version (store + repo)
+
+First public Chrome Web Store release: **1.0.0** (unless you already uploaded 1.0.0 to the dashboard—in that case bump patch and rebuild).
+
+| Location | Field | Current |
+| --- | --- | --- |
+| Store upload | Package version | Must match `manifest.json` |
+| [`apps/extension/public/manifest.json`](../apps/extension/public/manifest.json) | `version` | `1.0.0` |
+| [`apps/extension/package.json`](../apps/extension/package.json) | `version` | `1.0.0` |
+| Root [`package.json`](../package.json) | `version` | `1.0.0` |
+
+After a version bump: rebuild production, run `npm run package:extension:store`, and upload the new zip.
+
+---
+
+## Store package (zip)
+
+Chrome Web Store expects **the contents of `dist/`** at the zip root (`manifest.json` next to `background.js`, not inside a `dist/` folder).
+
+### Option A — CI artifact (recommended for release)
+
+1. GitHub → **Actions** → **Extension Build** → **Run workflow**
+2. **target:** `production` (requires repo variable `EXTENSION_PRODUCTION_BACKEND_URL`)
+3. When the run finishes, download artifact **`extension-dist-production`**
+4. Unzip into `apps/extension/dist/` (or any folder that contains `manifest.json` at its root)
+5. From repo root:
+
+```bash
+npm run package:extension:store
+# or: node scripts/package-extension-store.mjs /path/to/unzipped/dist
+```
+
+6. Upload `release/csshub-<version>.zip` in the Developer Dashboard
+
+### Option B — Local production build
+
+```bash
+# apps/extension/.env.production.local must set VITE_OAUTH_BACKEND_BASE_URL (and other prod vars)
+npm run build:extension:prod
+npm run package:extension:store
+```
+
+Output: `release/csshub-1.0.0.zip` (gitignored under `/release`).
+
+### Sanity check before upload
+
+- [ ] `manifest.json` `version` matches the version you enter in the dashboard
+- [ ] No `localhost` in `host_permissions` (production build)
+- [ ] OAuth backend origin present in `host_permissions` (from `VITE_OAUTH_BACKEND_BASE_URL`)
+- [ ] Smoke test: load unpacked from the same `dist/` you zipped, sign in, sync on a CSSBattle play URL
