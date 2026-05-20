@@ -99,7 +99,8 @@ const manifestHostPlugin = (
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, __dirname, "");
 	const backendBaseUrl = getBackendBaseUrl(mode, env);
-	const manifestKey = getManifestKey(env);
+	// Chrome Web Store rejects manifest.key; use EXTENSION_MANIFEST_KEY only for dev/staging/preview unpacked builds.
+	const manifestKey = mode === "production" ? null : getManifestKey(env);
 	return {
 		plugins: [react(), manifestHostPlugin(mode, backendBaseUrl, manifestKey)],
 		build: {

@@ -28,7 +28,7 @@ Important variables:
 
 - `VITE_GITHUB_CLIENT_ID` — public OAuth App client id (device flow and authorize URL).
 - `VITE_OAUTH_BACKEND_BASE_URL` — CssHub Vercel backend used for **web** OAuth code exchange only (required for production builds; see [backend README](../backend/README.md)).
-- `EXTENSION_MANIFEST_KEY` — optional; stabilizes extension id for a fixed GitHub OAuth callback URL.
+- `EXTENSION_MANIFEST_KEY` — optional for **dev/staging/preview** builds only; stabilizes unpacked extension id for OAuth. **Omit for production** (Chrome Web Store rejects `manifest.key`; the store assigns your public extension id).
 
 After `npm run dev` or a production build, load the unpacked extension from **`dist/`** (not `public/`).
 
@@ -64,14 +64,13 @@ Clone the repo, then:
 
 Aliases: `npm run build:extension`, `npm run build:staging`, `npm run build:preview`, `npm run build:dev`.
 
-## Web OAuth callback URL (stable extension id)
+## Web OAuth callback URL (extension id)
 
-GitHub OAuth Apps allow **one** authorization callback URL per app, so the extension id should stay stable for browser sign-in.
+GitHub OAuth Apps allow **one** authorization callback URL per app.
 
-1. Set `EXTENSION_MANIFEST_KEY` in the appropriate `apps/extension/.env.*.local` file.
-2. Build so the key is written into `dist/manifest.json`.
-3. In CssHub settings, confirm the redirect URL from `chrome.identity.getRedirectURL("github")`.
-4. Register that exact URL on your GitHub OAuth App as the **Authorization callback URL**.
+**Local / staging unpacked builds:** set `EXTENSION_MANIFEST_KEY` in `.env.development.local` (or staging/preview), build, load unpacked, then register `chrome.identity.getRedirectURL("github")` on your GitHub OAuth App.
+
+**Chrome Web Store:** do **not** set `EXTENSION_MANIFEST_KEY` in `.env.production.local`. Production builds omit `manifest.key`. After the store publishes the extension, copy its id from `chrome://extensions` and add it to backend `ALLOWED_EXTENSION_IDS`, then register that build’s OAuth redirect URL on GitHub.
 
 ## CI and release builds
 

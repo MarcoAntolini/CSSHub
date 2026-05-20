@@ -4,7 +4,7 @@
  * manifest.json must be at the zip root (zip contents of dist/, not the dist folder itself).
  */
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -25,6 +25,12 @@ const version = manifest.version;
 if (!version) {
 	console.error("package-extension-store: manifest.json has no version field");
 	process.exit(1);
+}
+
+if (manifest.key) {
+	delete manifest.key;
+	writeFileSync(manifestPath, `${JSON.stringify(manifest, null, "\t")}\n`);
+	console.warn("package-extension-store: removed manifest.key (not allowed on Chrome Web Store).");
 }
 
 const outDir = join(repoRoot, "release");

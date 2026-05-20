@@ -13,7 +13,7 @@ Work through in order:
 ### 1. Extension build and identity
 
 - Confirm **production** build (`npm run build:extension:prod` or CI `extension-dist-production`) with correct `VITE_OAUTH_BACKEND_BASE_URL` (no `localhost` in `dist/manifest.json` host permissions).
-- **Stable extension id:** `EXTENSION_MANIFEST_KEY` set → production build → note id in `chrome://extensions` → must appear in backend `ALLOWED_EXTENSION_IDS`.
+- **Extension id:** Production store builds must **not** include `manifest.key`. After publish, use the **Chrome Web Store** extension id in `ALLOWED_EXTENSION_IDS` (not a dev `EXTENSION_MANIFEST_KEY` id). For local unpacked testing only, use `EXTENSION_MANIFEST_KEY` in dev/staging env files.
 - **GitHub OAuth App:** Authorization callback URL must match `chrome.identity.getRedirectURL("github")` from that build (single callback per OAuth app).
 
 ### 2. OAuth backend health
