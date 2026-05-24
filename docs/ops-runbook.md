@@ -29,10 +29,13 @@ Expect `200` and `ok: true`. Check JSON:
 | `required.GITHUB_CLIENT_ID` | `true` |
 | `required.GITHUB_CLIENT_SECRET` | `true` |
 | `optional.ALLOWED_EXTENSION_IDS` | `true` (recommended) |
-| `optional.UPSTASH_REDIS_REST_URL` | `true` (recommended) |
-| `optional.UPSTASH_REDIS_REST_TOKEN` | `true` (recommended) |
+| `optional.UPSTASH_REDIS_REST_URL` | `true` for single-use state (recommended) |
+| `optional.UPSTASH_REDIS_REST_TOKEN` | `true` for single-use state (recommended) |
 
-If Redis vars are **false**, OAuth `state` and rate limits use **in-memory** fallback per instance (`apps/backend/lib/rateLimit.ts`, `lib/redis.ts`)—unsafe for multi-instance production.
+`stateStore` reports `redis` when Redis is configured, otherwise
+`signed-fallback`. The signed fallback keeps OAuth login working across Vercel
+serverless instances, but Redis is still recommended for single-use state and
+shared rate limits.
 
 ### 3. Vercel / env
 
@@ -49,10 +52,10 @@ If Redis vars are **false**, OAuth `state` and rate limits use **in-memory** fal
 
 ## Rate limiting and Redis
 
-- **Production:** Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` on Vercel. `redisClient` is null without both (`apps/backend/lib/redis.ts`).
+- **Production:** Set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` on Vercel for single-use OAuth state and shared rate limits. `redisClient` is null without both (`apps/backend/lib/redis.ts`).
 - **Verify:** `GET /api/oauth/github/health` → `optional.UPSTASH_REDIS_REST_*` both `true`.
 - **Fallback:** Without Redis, `checkRateLimit` uses process memory (`memoryBuckets` in `rateLimit.ts`)—limits do not share across serverless instances and reset on cold start.
-- **OAuth state:** Prefer Redis-backed state storage when available (see backend OAuth handlers); do not rely on memory in production.
+- **OAuth state:** Without Redis, OAuth state uses signed, expiring tokens so login is not tied to one serverless instance. Prefer Redis-backed state storage when available for single-use state.
 
 ---
 
