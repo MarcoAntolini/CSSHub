@@ -7,6 +7,10 @@ export type SyncEventCode =
 	| "SYNC_AUTH_REQUIRED"
 	| "SYNC_REPO_REQUIRED"
 	| "AUTH_STATE_MISMATCH"
+	| "AUTH_SESSION_EXPIRED"
+	| "AUTH_REDIRECT_INVALID"
+	| "AUTH_BACKEND_REQUEST_INVALID"
+	| "AUTH_OAUTH_EXCHANGE_FAILED"
 	| "AUTH_OAUTH_CODE_MISSING"
 	| "AUTH_GITHUB_UNAUTHORIZED"
 	| "GITHUB_NOT_FOUND"
@@ -40,10 +44,37 @@ export const toUserSafeError = (
 			code: "AUTH_STATE_MISMATCH",
 		};
 	}
+	if (rawMessage.includes("Invalid or expired OAuth state")) {
+		return {
+			message: "GitHub login session expired. Please try again.",
+			code: "AUTH_SESSION_EXPIRED",
+		};
+	}
+	if (rawMessage.includes("Invalid redirect URI")) {
+		return {
+			message:
+				"This extension build is not authorized for GitHub sign-in. Contact support.",
+			code: "AUTH_REDIRECT_INVALID",
+		};
+	}
+	if (rawMessage.includes("Invalid request payload")) {
+		return {
+			message:
+				"GitHub sign-in could not reach the OAuth backend correctly. Please update the extension and try again.",
+			code: "AUTH_BACKEND_REQUEST_INVALID",
+		};
+	}
 	if (rawMessage.includes("Missing OAuth authorization code")) {
 		return {
 			message: "GitHub login did not return an authorization code.",
 			code: "AUTH_OAUTH_CODE_MISSING",
+		};
+	}
+	if (rawMessage.includes("OAuth exchange failed")) {
+		return {
+			message:
+				"GitHub did not complete sign-in. Verify the OAuth callback setup and try again.",
+			code: "AUTH_OAUTH_EXCHANGE_FAILED",
 		};
 	}
 	if (githubStatus === 401 || githubStatus === 403) {

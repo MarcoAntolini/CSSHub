@@ -15,6 +15,11 @@ const hasValue = (name: string): boolean => {
 	return typeof value === "string" && value.trim().length > 0;
 };
 
+const getStateStoreKind = (): "redis" | "signed-fallback" =>
+	hasValue("UPSTASH_REDIS_REST_URL") && hasValue("UPSTASH_REDIS_REST_TOKEN")
+		? "redis"
+		: "signed-fallback";
+
 export default async function handler(
 	req: VercelRequest,
 	res: VercelResponse
@@ -43,6 +48,7 @@ export default async function handler(
 	res.status(ok ? 200 : 503).json({
 		ok,
 		service: "oauth-github",
+		stateStore: getStateStoreKind(),
 		required,
 		optional,
 		missingRequired,
