@@ -2,10 +2,22 @@
 
 Sync [CSSBattle](https://cssbattle.dev) submissions to a GitHub repository from the browser.
 
-## Requirements
+Part of the [CssHub monorepo](../../README.md). End-user install and overview: [root README](../../README.md).
 
-- Node.js 20+ (same as the rest of the monorepo)
-- Google Chrome (or another Chromium browser that supports Manifest V3)
+## Quick Start
+
+From the **repository root**:
+
+```bash
+npm ci
+cp apps/backend/.env.example apps/backend/.env.local
+cp apps/extension/.env.development.example apps/extension/.env.development.local
+npm run dev
+```
+
+Load the unpacked extension from **`apps/extension/dist/`** (not `public/`).
+
+Requirements: **Node.js 20+**, **Google Chrome** (or another Chromium browser with Manifest V3).
 
 ## Scripts
 
@@ -16,6 +28,21 @@ Sync [CSSBattle](https://cssbattle.dev) submissions to a GitHub repository from 
 | `npm run build:staging` / `build:preview` / `npm run build:dev` | Other Vite modes |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run test` | Vitest (unit tests) |
+
+Root-level aliases (`npm run dev`, `npm run build:extension:prod`, etc.) are in the table below.
+
+### Root scripts (from monorepo root)
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Backend + extension |
+| `npm run dev:backend` / `npm run dev:extension` | One side only |
+| `npm run build:extension:prod` | Production extension (`dist/`) |
+| `npm run build:extension:staging` / `:preview` / `:dev` | Other Vite modes |
+| `npm run typecheck` | All workspaces |
+| `npm run doctor:oauth` / `npm run derive:manifest-key` | Helpers in `scripts/` |
+
+Aliases: `npm run build:extension`, `npm run build:staging`, `npm run build:preview`, `npm run build:dev`.
 
 ## Configuration
 
@@ -30,7 +57,13 @@ Important variables:
 - `VITE_OAUTH_BACKEND_BASE_URL` — CssHub Vercel backend used for **web** OAuth code exchange only (required for production builds; see [backend README](../backend/README.md)).
 - `EXTENSION_MANIFEST_KEY` — optional for **dev/staging/preview** builds only; stabilizes unpacked extension id for OAuth. **Omit for production** (Chrome Web Store rejects `manifest.key`; the store assigns your public extension id).
 
-After `npm run dev` or a production build, load the unpacked extension from **`dist/`** (not `public/`).
+## Web OAuth callback URL (extension id)
+
+GitHub OAuth Apps allow **one** authorization callback URL per app.
+
+**Local / staging unpacked builds:** set `EXTENSION_MANIFEST_KEY` in `.env.development.local` (or staging/preview), build, load unpacked, then register `chrome.identity.getRedirectURL("github")` on your GitHub OAuth App.
+
+**Chrome Web Store:** do **not** set `EXTENSION_MANIFEST_KEY` in `.env.production.local`. Production builds omit `manifest.key`. After the store publishes the extension, copy its id from `chrome://extensions` and add it to backend `ALLOWED_EXTENSION_IDS`, then register that build’s OAuth redirect URL on GitHub.
 
 ## Security & data handling
 
@@ -42,39 +75,9 @@ After `npm run dev` or a production build, load the unpacked extension from **`d
 
 For backend-side guarantees (OAuth state, rate limits, secrets), see the [backend README](../backend/README.md).
 
-## Monorepo development (from repository root)
-
-Clone the repo, then:
-
-1. Copy `apps/backend/.env.example` → `apps/backend/.env.local`.
-2. Copy `apps/extension/.env.development.example` → `apps/extension/.env.development.local`.
-3. Run `npm run dev` — starts the OAuth backend (`vercel dev`) and the extension watch build.
-4. Load **unpacked** from `apps/extension/dist`.
-
-### Useful root scripts
-
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Backend + extension |
-| `npm run dev:backend` / `npm run dev:extension` | One side only |
-| `npm run build:extension:prod` | Production extension (`dist/`) |
-| `npm run build:extension:staging` / `:preview` / `:dev` | Other Vite modes |
-| `npm run typecheck` | All workspaces |
-| `npm run doctor:oauth` / `npm run derive:manifest-key` | Helpers in `scripts/` |
-
-Aliases: `npm run build:extension`, `npm run build:staging`, `npm run build:preview`, `npm run build:dev`.
-
-## Web OAuth callback URL (extension id)
-
-GitHub OAuth Apps allow **one** authorization callback URL per app.
-
-**Local / staging unpacked builds:** set `EXTENSION_MANIFEST_KEY` in `.env.development.local` (or staging/preview), build, load unpacked, then register `chrome.identity.getRedirectURL("github")` on your GitHub OAuth App.
-
-**Chrome Web Store:** do **not** set `EXTENSION_MANIFEST_KEY` in `.env.production.local`. Production builds omit `manifest.key`. After the store publishes the extension, copy its id from `chrome://extensions` and add it to backend `ALLOWED_EXTENSION_IDS`, then register that build’s OAuth redirect URL on GitHub.
-
 ## CI and release builds
 
-Workflow: `.github/workflows/extension-build.yml`.
+Workflow: [`.github/workflows/extension-build.yml`](../../.github/workflows/extension-build.yml).
 
 - **Pull requests** — typecheck
 - **Push to `staging`** — staging extension artifact
@@ -94,3 +97,13 @@ Deploy `apps/backend` to Vercel (project root = `apps/backend`), configure env v
 4. After the first staging deploy, copy the stable preview URL into the repo variable `EXTENSION_STAGING_BACKEND_URL`; set `EXTENSION_PRODUCTION_BACKEND_URL` to production.
 5. Use the workflow artifact you need (`extension-dist-production` for store releases when applicable).
 6. Zip for Chrome Web Store: unzip artifact into `dist/`, then from repo root `npm run package:extension:store` → `release/csshub-<version>.zip`. Store listing copy: `docs/internal/chrome-web-store-listing.md` (gitignored).
+
+## Documentation
+
+| Resource | Description |
+|----------|-------------|
+| [Root README](../../README.md) | Product overview, install, architecture |
+| [Backend README](../backend/README.md) | OAuth API, Vercel deploy, health check |
+| [`docs/privacy-data-map.md`](../../docs/privacy-data-map.md) | Extension storage and third-party hosts |
+| [`docs/ops-runbook.md`](../../docs/ops-runbook.md) | OAuth login failures, rollback |
+| [`docs/content-script-selectors.md`](../../docs/content-script-selectors.md) | CSSBattle DOM selectors (maintainer) |

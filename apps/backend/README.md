@@ -2,7 +2,35 @@
 
 Small serverless API used by the extension for **GitHub web OAuth** only: issue CSRF `state`, exchange `code` → `access_token` with the **client secret** held on the server.
 
-Routes (under `/api/oauth/github/`):
+Part of the [CssHub monorepo](../../README.md). Product overview: [root README](../../README.md).
+
+## Quick Start
+
+From the **repository root**:
+
+```bash
+npm ci
+cp apps/backend/.env.example apps/backend/.env.local
+# fill in GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, ALLOWED_EXTENSION_IDS
+npm run dev:backend
+```
+
+Runs `vercel dev` on `http://localhost:3000`.
+
+### OAuth health check
+
+```bash
+curl http://localhost:3000/api/oauth/github/health
+```
+
+- `200` — required OAuth env vars are set
+- `503` — missing configuration (`missingRequired`)
+
+Or start backend + extension together: `npm run dev` from the repo root.
+
+## Routes
+
+Under `/api/oauth/github/`:
 
 | Path | Method | Role |
 | --- | --- | --- |
@@ -18,31 +46,6 @@ Copy `.env.example` to `.env.local` and configure:
 - `GITHUB_CLIENT_SECRET`
 - `ALLOWED_EXTENSION_IDS` (comma-separated Chrome extension ids; **strongly recommended** in preview/production so only your builds can complete web OAuth)
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (recommended in preview/production for OAuth `state`; without Redis, state is kept in **process memory** and is less suitable for multi-instance or cold-start reuse)
-
-## Local development
-
-From the **repository root**:
-
-```bash
-npm run dev
-```
-
-or backend only:
-
-```bash
-npm run dev:backend
-```
-
-This runs `vercel dev` on `http://localhost:3000`.
-
-### OAuth health check
-
-```bash
-curl http://localhost:3000/api/oauth/github/health
-```
-
-- `200` — required OAuth env vars are set
-- `503` — missing configuration (`missingRequired`)
 
 ## Deploying on Vercel
 
@@ -61,9 +64,7 @@ If the project root is the monorepo (function paths like `/var/task/apps/backend
 
 Relative imports in this package use **`.js` extensions** (required for Node ESM in production). `vercel dev` may work without them locally; production does not.
 
-For the full monorepo dev loop, CI variables, and OAuth callback notes, see the [extension README](../extension/README.md) (maintainer sections at the bottom).
-
-**Production ops:** [`docs/ops-runbook.md`](../../docs/ops-runbook.md) — login failures, Redis/rate limits, rollback.
+For the full monorepo dev loop, CI variables, and OAuth callback notes, see the [extension README](../extension/README.md).
 
 ## Security & data handling
 
@@ -75,3 +76,12 @@ For the full monorepo dev loop, CI variables, and OAuth callback notes, see the 
 - **CORS** — Responses include CORS headers appropriate for browser calls from the extension origin workflow.
 
 For what the extension stores locally and which third-party hosts it talks to, see the [extension README](../extension/README.md).
+
+## Documentation
+
+| Resource | Description |
+|----------|-------------|
+| [Root README](../../README.md) | Product overview, architecture diagram |
+| [Extension README](../extension/README.md) | Extension env, OAuth callback URL, CI |
+| [`docs/ops-runbook.md`](../../docs/ops-runbook.md) | Login failures, Redis/rate limits, rollback |
+| [`docs/privacy-data-map.md`](../../docs/privacy-data-map.md) | What the backend receives during web OAuth |
