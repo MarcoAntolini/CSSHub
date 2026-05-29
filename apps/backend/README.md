@@ -26,6 +26,9 @@ curl http://localhost:3000/api/oauth/github/health
 - `200` — required OAuth env vars are set
 - `503` — missing configuration (`missingRequired`)
 
+The response includes `stateStore: "redis"` when Upstash is configured, or
+`stateStore: "signed-fallback"` when short-lived signed state tokens are used.
+
 Or start backend + extension together: `npm run dev` from the repo root.
 
 ## Routes
@@ -45,7 +48,7 @@ Copy `.env.example` to `.env.local` and configure:
 - `GITHUB_CLIENT_ID`
 - `GITHUB_CLIENT_SECRET`
 - `ALLOWED_EXTENSION_IDS` (comma-separated Chrome extension ids; **strongly recommended** in preview/production so only your builds can complete web OAuth)
-- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (recommended in preview/production for OAuth `state`; without Redis, state is kept in **process memory** and is less suitable for multi-instance or cold-start reuse)
+- `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (recommended in preview/production for single-use OAuth `state`; without Redis, the backend uses short-lived signed state tokens so login still works across Vercel serverless instances)
 
 ## Deploying on Vercel
 
@@ -70,7 +73,7 @@ For the full monorepo dev loop, CI variables, and OAuth callback notes, see the 
 
 - **Client secret** — Only this service reads `GITHUB_CLIENT_SECRET`; the browser extension never contains it.
 - **Authorization codes** — The extension sends the one-time `code` to `exchange`; the handler trades it for an access token with GitHub and returns the token **in the JSON response to the extension**. The backend **does not persist** user access tokens.
-- **OAuth `state`** — Random, single-use values with a **short TTL** (about 10 minutes), stored in Redis when configured, or in-memory in local dev without Redis.
+- **OAuth `state`** — Random, single-use values with a **short TTL** (about 10 minutes), stored in Redis when configured. Without Redis, the backend falls back to signed, expiring state tokens so serverless cold starts and instance changes do not break the login flow.
 - **`redirectUri` allowlist** — Must be a Chrome extension identity redirect (`https://<extension-id>.chromiumapp.org/github`). When `ALLOWED_EXTENSION_IDS` is non-empty, the extension id parsed from the redirect must match the list.
 - **Rate limiting** — IP-based limits on `state` and `exchange` reduce brute-force and abuse (see `lib/rateLimit.ts`).
 - **CORS** — Responses include CORS headers appropriate for browser calls from the extension origin workflow.

@@ -6,7 +6,7 @@
 
 **Automatically sync your [CSSBattle](https://cssbattle.dev) submissions to GitHub.**
 
-[![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white&style=for-the-badge)](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white&style=for-the-badge)](https://chromewebstore.google.com/detail/csshub/oakkijoinjkdhcgnpnmnpjkmpdekajid)
 [![release](https://img.shields.io/github/v/release/MarcoAntolini/CSSHub?style=for-the-badge)](https://github.com/MarcoAntolini/CSSHub/releases)
 [![license](https://img.shields.io/github/license/MarcoAntolini/CSSHub?style=for-the-badge)](LICENSE)
 [![stars](https://img.shields.io/github/stars/MarcoAntolini/CSSHub?style=for-the-badge)](https://github.com/MarcoAntolini/CSSHub/stargazers)
@@ -47,7 +47,7 @@ No copy-paste, no drag-and-drop zip files: you play on CSSBattle, CssHub keeps y
 
 ### Use CssHub (players)
 
-1. **[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp)** — updates install automatically.
+1. **[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/csshub/oakkijoinjkdhcgnpnmnpjkmpdekajid)** — updates install automatically.
 2. Pin **CssHub** from the puzzle menu if you want quick access.
 3. Open **Settings** → **Sign in with GitHub** → choose your **repository** (and branch if needed).
 4. Open a **CSSBattle** play page and solve as usual—CssHub syncs your submission when you use the extension flow on that challenge.
@@ -130,7 +130,7 @@ The extension reads submission data on CSSBattle, syncs commits via the GitHub A
 
 ## Support
 
-Using CssHub? Install or update from the [Chrome Web Store](https://chromewebstore.google.com/detail/csshub/jafemcjfpjjdbcfjjfohjfglckbkjbbp). If something breaks or you want a feature, open a [GitHub issue](https://github.com/MarcoAntolini/CSSHub/issues)—the [bug report](https://github.com/MarcoAntolini/CSSHub/issues/new?template=bug_report.yml) and [feature request](https://github.com/MarcoAntolini/CSSHub/issues/new?template=feature_request.yml) templates include the fields we need (CSSBattle URL, extension version, steps to reproduce).
+Using CssHub? Install or update from the [Chrome Web Store](https://chromewebstore.google.com/detail/csshub/oakkijoinjkdhcgnpnmnpjkmpdekajid). If something breaks or you want a feature, open a [GitHub issue](https://github.com/MarcoAntolini/CSSHub/issues)—the [bug report](https://github.com/MarcoAntolini/CSSHub/issues/new?template=bug_report.yml) and [feature request](https://github.com/MarcoAntolini/CSSHub/issues/new?template=feature_request.yml) templates include the fields we need (CSSBattle URL, extension version, steps to reproduce).
 
 ## Contributing
 

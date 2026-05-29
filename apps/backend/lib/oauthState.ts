@@ -1,7 +1,9 @@
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { backendEnv } from "./env.js";
 import { redisClient } from "./redis.js";
 
 const OAUTH_STATE_TTL_SEC = 10 * 60;
-const memoryStateStore = new Map<string, number>();
+const STATE_TOKEN_VERSION = "v1";
 
 const stateKey = (state: string): string => `oauth:state:${state}`;
 
@@ -9,6 +11,47 @@ const newStateToken = (): string =>
 	`${crypto.randomUUID().replace(/-/g, "")}${crypto
 		.randomUUID()
 		.replace(/-/g, "")}`;
+
+const getNowSec = (): number => Math.floor(Date.now() / 1000);
+
+const signStatePayload = (payload: string): string =>
+	createHmac("sha256", backendEnv.githubClientSecret)
+		.update(payload)
+		.digest("base64url");
+
+const issueSignedState = (): string => {
+	const expiresAtSec = getNowSec() + OAUTH_STATE_TTL_SEC;
+	const nonce = randomBytes(32).toString("base64url");
+	const payload = `${expiresAtSec}.${nonce}`;
+	const signature = signStatePayload(payload);
+	return `${STATE_TOKEN_VERSION}.${payload}.${signature}`;
+};
+
+const verifySignedState = (state: string): boolean => {
+	const parts = state.split(".");
+	if (parts.length !== 4 || parts[0] !== STATE_TOKEN_VERSION) {
+		return false;
+	}
+
+	const [, expiresAtRaw, nonce, signature] = parts;
+	if (!expiresAtRaw || !nonce || !signature) {
+		return false;
+	}
+
+	const expiresAtSec = Number(expiresAtRaw);
+	if (!Number.isSafeInteger(expiresAtSec) || expiresAtSec <= getNowSec()) {
+		return false;
+	}
+
+	const payload = `${expiresAtRaw}.${nonce}`;
+	const expected = signStatePayload(payload);
+	const actualBuffer = Buffer.from(signature, "base64url");
+	const expectedBuffer = Buffer.from(expected, "base64url");
+	if (actualBuffer.length !== expectedBuffer.length) {
+		return false;
+	}
+	return timingSafeEqual(actualBuffer, expectedBuffer);
+};
 
 export const issueOAuthState = async (): Promise<{
 	state: string;
@@ -27,8 +70,7 @@ export const issueOAuthState = async (): Promise<{
 		}
 		throw new Error("Unable to allocate OAuth state");
 	} else {
-		const state = newStateToken();
-		memoryStateStore.set(state, Date.now() + OAUTH_STATE_TTL_SEC * 1000);
+		const state = issueSignedState();
 		return { state, expiresInSec: OAUTH_STATE_TTL_SEC };
 	}
 };
@@ -44,10 +86,5 @@ export const consumeOAuthState = async (state: string): Promise<boolean> => {
 		return true;
 	}
 
-	const expiresAt = memoryStateStore.get(state);
-	if (!expiresAt) {
-		return false;
-	}
-	memoryStateStore.delete(state);
-	return expiresAt > Date.now();
+	return verifySignedState(state);
 };
