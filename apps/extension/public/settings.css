@@ -167,6 +167,8 @@ body {
 
 .btn:focus-visible,
 .repo-picker-item:focus-visible,
+.account-link:focus-visible,
+.repo-link:focus-visible,
 .help-badge:focus-visible,
 .device-github-again-link:focus-visible,
 .event-link:focus-visible,
@@ -243,9 +245,31 @@ body {
 	line-height: 1.35;
 }
 
+.repo-link {
+	text-decoration: none;
+	text-underline-offset: 2px;
+	transition: color 0.15s;
+}
+
+.repo-link:hover {
+	text-decoration: underline;
+}
+
+.repo-fullname-link {
+	color: inherit;
+}
+
+.repo-fullname-link:hover {
+	color: #7dd3fc;
+}
+
 .repo-branch-name {
 	font-weight: 600;
-	color: #e2e8f0;
+	color: #e0f2fe;
+}
+
+.repo-branch-name:hover {
+	color: #7dd3fc;
 }
 
 .repo-panel-toolbar {
@@ -460,6 +484,19 @@ body {
 
 .auth-methods-intro {
 	margin-bottom: 0.85rem;
+}
+
+.account-link {
+	color: #e0f2fe;
+	font-weight: 600;
+	text-decoration: none;
+	text-underline-offset: 2px;
+	transition: color 0.15s;
+}
+
+.account-link:hover {
+	color: #7dd3fc;
+	text-decoration: underline;
 }
 
 .auth-methods {
@@ -766,17 +803,9 @@ body {
 	gap: 0.4rem;
 	border: 1px solid rgba(51, 65, 85, 0.6);
 	border-radius: 10px;
-	padding: 0.55rem 0.75rem 0.62rem;
+	padding: 0.75rem;
 	font-size: 0.78rem;
 	background: rgba(2, 6, 23, 0.32);
-	transition:
-		border-color 0.15s ease,
-		background 0.15s ease;
-}
-
-.event:hover {
-	border-color: rgba(100, 116, 139, 0.55);
-	background: rgba(15, 23, 42, 0.38);
 }
 
 .event-head {

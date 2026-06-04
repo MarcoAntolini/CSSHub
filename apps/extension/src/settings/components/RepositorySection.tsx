@@ -37,116 +37,113 @@ export const RepositorySection = ({
 	onOpenCreateModal,
 	onSaveSettings,
 	onConfirmCreateBranch,
-}: RepositorySectionProps): ReactElement => (
-	<section className="settings-section">
-		<h2>Repository</h2>
-		{settings.selectedRepoFullName ? (
-			<>
-				<div className="repo-panel">
-					<div className="repo-panel-meta">
-						<p className="repo-fullname">{settings.selectedRepoFullName}</p>
-						<p className="repo-branch-line">
-							Branch:{" "}
-							<strong className="repo-branch-name">
-								{settings.selectedBranch ??
-									selectedRepoMeta?.defaultBranch ??
-									"main"}
-							</strong>
-						</p>
-					</div>
-					<div
-						className="repo-panel-toolbar"
-						role="group"
-						aria-label="Repository actions"
-					>
-						<div className="repo-toolbar-start">
-							<button
-								type="button"
-								className="btn btn-ghost repo-panel-btn"
-								onClick={onOpenPickModal}
-								disabled={busy}
-							>
-								Change repository…
-							</button>
-							<button
-								type="button"
-								className="btn btn-ghost repo-panel-btn"
-								onClick={onClearRepoSelection}
-								disabled={busy}
-							>
-								Clear selection
-							</button>
-						</div>
-						<button
-							type="button"
-							className="btn btn-primary repo-panel-btn repo-toolbar-primary"
-							onClick={onOpenCreateModal}
-							disabled={busy}
-						>
-							Create new…
-						</button>
-					</div>
-				</div>
-				{branchesLoading ? (
-					<p className="repo-branches-hint muted">Loading branches…</p>
-				) : null}
-				<div className="branch-workspace">
-					<p className="branch-workspace-title">Branch</p>
-					<div className="branch-sync-panel">
-						<div className="row">
-							<label htmlFor="branch-settings">Sync branch</label>
-							<select
-								id="branch-settings"
-								value={settings.selectedBranch ?? ""}
-								disabled={busy || branchesLoading || branches.length === 0}
-								onChange={(e) => {
-									const nextBranch = e.target.value || null;
-									onSaveSettings({
-										...settings,
-										selectedBranch: nextBranch,
-									});
-								}}
-							>
-								{branches.length === 0 ? (
-									<option value="">No branches found</option>
+}: RepositorySectionProps): ReactElement => {
+	const selectedBranch =
+		settings.selectedBranch ?? selectedRepoMeta?.defaultBranch ?? "main";
+	const repoUrl = settings.selectedRepoFullName
+		? `https://github.com/${settings.selectedRepoFullName}`
+		: null;
+	const branchPath = selectedBranch
+		.split("/")
+		.map((part) => encodeURIComponent(part))
+		.join("/");
+	const branchUrl = repoUrl ? `${repoUrl}/tree/${branchPath}` : null;
+
+	return (
+		<section className="settings-section">
+			<h2>Repository</h2>
+			{settings.selectedRepoFullName ? (
+				<>
+					<div className="repo-panel">
+						<div className="repo-panel-meta">
+							<p className="repo-fullname">
+								{repoUrl ? (
+									<a
+										className="repo-link repo-fullname-link"
+										href={repoUrl}
+										target="_blank"
+										rel="noreferrer noopener"
+									>
+										{settings.selectedRepoFullName}
+									</a>
 								) : (
-									branches.map((branch) => (
-										<option key={branch.name} value={branch.name}>
-											{branch.name}
-										</option>
-									))
+									settings.selectedRepoFullName
 								)}
-							</select>
+							</p>
+							<p className="repo-branch-line">
+								Branch:{" "}
+								{branchUrl ? (
+									<a
+										className="repo-link repo-branch-name"
+										href={branchUrl}
+										target="_blank"
+										rel="noreferrer noopener"
+									>
+										{selectedBranch}
+									</a>
+								) : (
+									<strong className="repo-branch-name">{selectedBranch}</strong>
+								)}
+							</p>
+						</div>
+						<div
+							className="repo-panel-toolbar"
+							role="group"
+							aria-label="Repository actions"
+						>
+							<div className="repo-toolbar-start">
+								<button
+									type="button"
+									className="btn btn-ghost repo-panel-btn"
+									onClick={onOpenPickModal}
+									disabled={busy}
+								>
+									Change repository…
+								</button>
+								<button
+									type="button"
+									className="btn btn-ghost repo-panel-btn"
+									onClick={onClearRepoSelection}
+									disabled={busy}
+								>
+									Clear selection
+								</button>
+							</div>
+							<button
+								type="button"
+								className="btn btn-primary repo-panel-btn repo-toolbar-primary"
+								onClick={onOpenCreateModal}
+								disabled={busy}
+							>
+								Create new…
+							</button>
 						</div>
 					</div>
-					<div className="branch-create-panel">
-						<div className="branch-create-grid">
+					{branchesLoading ? (
+						<p className="repo-branches-hint muted">Loading branches…</p>
+					) : null}
+					<div className="branch-workspace">
+						<p className="branch-workspace-title">Branch</p>
+						<div className="branch-sync-panel">
 							<div className="row">
-								<label htmlFor="branch-create-name">Create new branch</label>
-								<input
-									id="branch-create-name"
-									type="text"
-									placeholder="feature/my-branch"
-									value={createBranchName}
-									onChange={(e) => onCreateBranchNameChange(e.target.value)}
-									disabled={busy || branchesLoading}
-								/>
-							</div>
-							<div className="row">
-								<label htmlFor="branch-create-from">From branch</label>
+								<label htmlFor="branch-settings">Sync branch</label>
 								<select
-									id="branch-create-from"
-									value={createBranchFrom}
-									onChange={(e) => onCreateBranchFromChange(e.target.value)}
-									disabled={
-										busy || branchesLoading || branches.length === 0
-									}
+									id="branch-settings"
+									value={settings.selectedBranch ?? ""}
+									disabled={busy || branchesLoading || branches.length === 0}
+									onChange={(e) => {
+										const nextBranch = e.target.value || null;
+										onSaveSettings({
+											...settings,
+											selectedBranch: nextBranch,
+										});
+									}}
 								>
 									{branches.length === 0 ? (
-										<option value="">No source branch</option>
+										<option value="">No branches found</option>
 									) : (
 										branches.map((branch) => (
-											<option key={`from-${branch.name}`} value={branch.name}>
+											<option key={branch.name} value={branch.name}>
 												{branch.name}
 											</option>
 										))
@@ -154,21 +151,54 @@ export const RepositorySection = ({
 								</select>
 							</div>
 						</div>
+						<div className="branch-create-panel">
+							<div className="branch-create-grid">
+								<div className="row">
+									<label htmlFor="branch-create-name">Create new branch</label>
+									<input
+										id="branch-create-name"
+										type="text"
+										placeholder="feature/my-branch"
+										value={createBranchName}
+										onChange={(e) => onCreateBranchNameChange(e.target.value)}
+										disabled={busy || branchesLoading}
+									/>
+								</div>
+								<div className="row">
+									<label htmlFor="branch-create-from">From branch</label>
+									<select
+										id="branch-create-from"
+										value={createBranchFrom}
+										onChange={(e) => onCreateBranchFromChange(e.target.value)}
+										disabled={busy || branchesLoading || branches.length === 0}
+									>
+										{branches.length === 0 ? (
+											<option value="">No source branch</option>
+										) : (
+											branches.map((branch) => (
+												<option key={`from-${branch.name}`} value={branch.name}>
+													{branch.name}
+												</option>
+											))
+										)}
+									</select>
+								</div>
+							</div>
+						</div>
+						<div className="branch-workspace-foot">
+							<button
+								type="button"
+								className="btn btn-primary branch-create-submit"
+								onClick={onConfirmCreateBranch}
+								disabled={busy || branchesLoading || branches.length === 0}
+							>
+								Create branch
+							</button>
+						</div>
 					</div>
-					<div className="branch-workspace-foot">
-						<button
-							type="button"
-							className="btn btn-primary branch-create-submit"
-							onClick={onConfirmCreateBranch}
-							disabled={busy || branchesLoading || branches.length === 0}
-						>
-							Create branch
-						</button>
-					</div>
-				</div>
-				<div className="repo-readme-card">
-					<div className="repo-readme-card-head">
-						<h3 className="repo-readme-card-title">Root README</h3>
+					<div className="repo-readme-card">
+						<div className="repo-readme-card-head">
+							<h3 className="repo-readme-card-title">Root README</h3>
 						<button
 							type="button"
 							className="help-badge"
@@ -260,5 +290,6 @@ export const RepositorySection = ({
 				</div>
 			</>
 		)}
-	</section>
-);
+		</section>
+	);
+};

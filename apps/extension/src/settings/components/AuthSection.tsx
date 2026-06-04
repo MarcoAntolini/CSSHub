@@ -45,6 +45,9 @@ export const AuthSection = ({
 	const [patToken, setPatToken] = useState("");
 	const [patTokenVisible, setPatTokenVisible] = useState(false);
 	const [patTutorialOpen, setPatTutorialOpen] = useState(false);
+	const profileUrl = auth.username
+		? `https://github.com/${encodeURIComponent(auth.username)}`
+		: null;
 
 	return (
 		<section className="settings-section">
@@ -52,7 +55,19 @@ export const AuthSection = ({
 			{auth.isAuthenticated ? (
 				<>
 					<p className="muted">
-						Signed in as <strong className="mono">{auth.username}</strong>
+						Signed in as{" "}
+						{profileUrl ? (
+							<a
+								className="account-link mono"
+								href={profileUrl}
+								target="_blank"
+								rel="noreferrer noopener"
+							>
+								{auth.username}
+							</a>
+						) : (
+							<strong className="mono">GitHub</strong>
+						)}
 					</p>
 					<div className="btn-stack">
 						<button
