@@ -3,7 +3,10 @@ import type { RepositoryReadmeMode } from "./shared/contracts";
 export const CSSHUB_README_START = "<!-- CSSHUB:README-START -->";
 export const CSSHUB_README_END = "<!-- CSSHUB:README-END -->";
 
-const SUBMISSION_JSON = /^challenges\/([^/]+)\/submission\.json$/;
+const BATTLE_SUBMISSION_JSON =
+	/^Battles\/([^/]+)\/([^/]+)\/submission\.json$/;
+const DAILY_SUBMISSION_JSON = /^Daily Targets\/([^/]+)\/submission\.json$/;
+const LEGACY_SUBMISSION_JSON = /^challenges\/([^/]+)\/submission\.json$/;
 
 const humanizeSlug = (slug: string): string =>
 	slug
@@ -12,33 +15,141 @@ const humanizeSlug = (slug: string): string =>
 		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
 		.join(" ");
 
-export const compareChallengeKeys = (a: string, b: string): number => {
-	const numA = a.match(/^(\d+)/)?.[1];
-	const numB = b.match(/^(\d+)/)?.[1];
-	if (numA !== undefined && numB !== undefined) {
-		const cmp = parseInt(numA, 10) - parseInt(numB, 10);
+export type ChallengeIndexEntry = {
+	folder: string;
+	label: string;
+};
+
+export type ChallengeIndexBuckets = {
+	battles: ChallengeIndexEntry[];
+	daily: ChallengeIndexEntry[];
+	legacy: ChallengeIndexEntry[];
+};
+
+export const encodeRepoPathForMarkdownLink = (folder: string): string =>
+	folder
+		.split("/")
+		.map((segment) => encodeURIComponent(segment))
+		.join("/");
+
+export const compareBattleEntries = (a: ChallengeIndexEntry, b: ChallengeIndexEntry): number => {
+	const battleA = a.folder.match(/^Battles\/Battle #(\d+)\//)?.[1];
+	const battleB = b.folder.match(/^Battles\/Battle #(\d+)\//)?.[1];
+	if (battleA !== undefined && battleB !== undefined) {
+		const cmp = parseInt(battleA, 10) - parseInt(battleB, 10);
 		if (cmp !== 0) {
 			return cmp;
 		}
 	}
-	return a.localeCompare(b);
+	return a.label.localeCompare(b.label);
 };
 
-const README_CHALLENGE_LINK =
-	/\[([^\]]+)\]\(\.\/challenges\/([^/)]+)\/\)/;
+export const compareDailyEntries = (a: ChallengeIndexEntry, b: ChallengeIndexEntry): number => {
+	const isoA = a.folder.match(/^Daily Targets\/(\d{4}-\d{2}-\d{2})$/)?.[1] ?? "";
+	const isoB = b.folder.match(/^Daily Targets\/(\d{4}-\d{2}-\d{2})$/)?.[1] ?? "";
+	return isoA.localeCompare(isoB);
+};
+
+const MONTH_NAMES = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+] as const;
+
+export const extractDailyIsoFromFolder = (folder: string): string | null =>
+	folder.match(/^Daily Targets\/(\d{4}-\d{2}-\d{2})$/)?.[1] ?? null;
+
+export const extractDailyMonthKeyFromFolder = (folder: string): string | null => {
+	const iso = extractDailyIsoFromFolder(folder);
+	return iso ? iso.slice(0, 7) : null;
+};
+
+export const formatDailyDateLabelFromIso = (iso: string): string => {
+	const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	if (!match) {
+		return iso;
+	}
+	const monthIndex = parseInt(match[2], 10) - 1;
+	const day = parseInt(match[3], 10);
+	const year = match[1];
+	if (monthIndex < 0 || monthIndex > 11) {
+		return iso;
+	}
+	return `${MONTH_NAMES[monthIndex].slice(0, 3)} ${day}, ${year}`;
+};
+
+export const formatMonthLabelFromKey = (monthKey: string): string => {
+	const match = monthKey.match(/^(\d{4})-(\d{2})$/);
+	if (!match) {
+		return monthKey;
+	}
+	const monthIndex = parseInt(match[2], 10) - 1;
+	if (monthIndex < 0 || monthIndex > 11) {
+		return monthKey;
+	}
+	return `${MONTH_NAMES[monthIndex]} ${match[1]}`;
+};
+
+export const compareDailyMonthKeys = (a: string, b: string): number => a.localeCompare(b);
+
+export const groupDailyEntriesByMonth = (
+	entries: ChallengeIndexEntry[]
+): { monthKey: string; monthLabel: string; entries: ChallengeIndexEntry[] }[] => {
+	const byMonth = new Map<string, ChallengeIndexEntry[]>();
+	for (const entry of entries) {
+		const monthKey = extractDailyMonthKeyFromFolder(entry.folder) ?? "unknown";
+		const list = byMonth.get(monthKey) ?? [];
+		list.push(entry);
+		byMonth.set(monthKey, list);
+	}
+	return [...byMonth.entries()]
+		.sort(([monthA], [monthB]) => compareDailyMonthKeys(monthA, monthB))
+		.map(([monthKey, monthEntries]) => ({
+			monthKey,
+			monthLabel: formatMonthLabelFromKey(monthKey),
+			entries: [...monthEntries].sort(compareDailyEntries),
+		}));
+};
+
+export const compareLegacyEntries = (a: ChallengeIndexEntry, b: ChallengeIndexEntry): number => {
+	const numA = a.folder.match(/^challenges\/(\d+)$/)?.[1];
+	const numB = b.folder.match(/^challenges\/(\d+)$/)?.[1];
+	if (numA !== undefined && numB !== undefined) {
+		return parseInt(numA, 10) - parseInt(numB, 10);
+	}
+	return a.folder.localeCompare(b.folder);
+};
+
+const README_MARKDOWN_LINK = /\[([^\]]+)\]\(\.\/([^)]+)\/\)/;
+const README_HTML_LINK = /<a href="\.\/([^"]+)">([^<]*)<\/a>/gi;
+
+const normalizeReadmeLinkPath = (path: string): string =>
+	decodeURIComponent(path).replace(/\/$/, "");
 
 export const parseExistingReadmeLabels = (readme: string): Map<string, string> => {
 	const labels = new Map<string, string>();
 	for (const line of readme.split("\n")) {
-		const match = line.match(README_CHALLENGE_LINK);
+		const match = line.match(README_MARKDOWN_LINK);
 		if (match) {
-			labels.set(match[2], match[1]);
+			labels.set(normalizeReadmeLinkPath(match[2]), match[1]);
 		}
+	}
+	for (const match of readme.matchAll(README_HTML_LINK)) {
+		labels.set(normalizeReadmeLinkPath(match[1]), match[2]);
 	}
 	return labels;
 };
 
-export const deriveLabelFromSlug = (key: string): string => {
+export const deriveLabelFromLegacyKey = (key: string): string => {
 	if (/^\d+$/.test(key)) {
 		return `Target ${key}`;
 	}
@@ -53,49 +164,225 @@ export const deriveLabelFromSlug = (key: string): string => {
 	return humanizeSlug(key);
 };
 
-export const collectChallengeKeys = (
+export const collectChallengeIndexBuckets = (
 	paths: Iterable<string>,
-	challengeFolder: string
-): string[] => {
-	const keys = new Set<string>();
-	for (const p of paths) {
-		const m = p.match(SUBMISSION_JSON);
-		if (m) {
-			keys.add(m[1]);
+	currentFolder: string,
+	currentTitle: string
+): ChallengeIndexBuckets => {
+	const battles = new Map<string, ChallengeIndexEntry>();
+	const daily = new Map<string, ChallengeIndexEntry>();
+	const legacy = new Map<string, ChallengeIndexEntry>();
+
+	const upsert = (
+		map: Map<string, ChallengeIndexEntry>,
+		folder: string,
+		label: string
+	): void => {
+		map.set(folder, { folder, label });
+	};
+
+	for (const path of paths) {
+		const battleMatch = path.match(BATTLE_SUBMISSION_JSON);
+		if (battleMatch) {
+			const folder = `Battles/${battleMatch[1]}/${battleMatch[2]}`;
+			upsert(battles, folder, `${battleMatch[2]}`);
+			continue;
+		}
+		const dailyMatch = path.match(DAILY_SUBMISSION_JSON);
+		if (dailyMatch) {
+			const folder = `Daily Targets/${dailyMatch[1]}`;
+			upsert(daily, folder, formatDailyDateLabelFromIso(dailyMatch[1]));
+			continue;
+		}
+		const legacyMatch = path.match(LEGACY_SUBMISSION_JSON);
+		if (legacyMatch) {
+			const folder = `challenges/${legacyMatch[1]}`;
+			upsert(legacy, folder, deriveLabelFromLegacyKey(legacyMatch[1]));
 		}
 	}
-	const currentKey = challengeFolder.replace(/^challenges\//, "");
-	keys.add(currentKey);
-	return [...keys].sort(compareChallengeKeys);
+
+	if (currentFolder.startsWith("Battles/")) {
+		upsert(battles, currentFolder, currentTitle);
+	} else if (currentFolder.startsWith("Daily Targets/")) {
+		const iso = extractDailyIsoFromFolder(currentFolder) ?? "";
+		upsert(
+			daily,
+			currentFolder,
+			currentTitle.replace(/^Daily Target — /, "") || formatDailyDateLabelFromIso(iso)
+		);
+	} else if (currentFolder.startsWith("challenges/")) {
+		upsert(legacy, currentFolder, currentTitle);
+	}
+
+	const sortEntries = (
+		entries: ChallengeIndexEntry[],
+		compare: (a: ChallengeIndexEntry, b: ChallengeIndexEntry) => number
+	): ChallengeIndexEntry[] => [...entries].sort(compare);
+
+	return {
+		battles: sortEntries([...battles.values()], compareBattleEntries),
+		daily: sortEntries([...daily.values()], compareDailyEntries),
+		legacy: sortEntries([...legacy.values()], compareLegacyEntries),
+	};
 };
 
-export const formatReadmeIndexLines = (
-	keys: string[],
-	currentKey: string,
-	currentTitle: string,
-	existingLabels?: Map<string, string>
+const escapeHtmlText = (value: string): string =>
+	value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;");
+
+/** HTML links render reliably inside nested <details> on GitHub; markdown does not. */
+export const formatIndexLinkHtml = (entry: ChallengeIndexEntry): string => {
+	const href = `./${encodeRepoPathForMarkdownLink(entry.folder)}/`;
+	return `<li><a href="${href}">${escapeHtmlText(entry.label)}</a></li>`;
+};
+
+const formatIndexList = (entries: ChallengeIndexEntry[]): string =>
+	["<ul>", ...entries.map(formatIndexLinkHtml), "</ul>"].join("\n");
+
+export const formatSummaryHtml = (title: string, count: number): string => {
+	const label = `${title} (${count})`;
+	return `<summary><strong>${label}</strong></summary>`;
+};
+
+/** Markdown ### headings — reliable on GitHub (SVG foreignObject leaks raw &lt;style&gt; text). */
+const formatTopLevelHeading = (title: string, count: number): string =>
+	`### ${title} (${count})`;
+
+const joinIndexBlock = (lines: string[]): string => lines.join("\n");
+
+export const extractBattleGroupFromFolder = (folder: string): string | null => {
+	const match = folder.match(/^Battles\/([^/]+)\//);
+	return match?.[1] ?? null;
+};
+
+const compareBattleGroupNames = (a: string, b: string): number => {
+	const numA = a.match(/^Battle #(\d+)$/i)?.[1];
+	const numB = b.match(/^Battle #(\d+)$/i)?.[1];
+	if (numA !== undefined && numB !== undefined) {
+		return parseInt(numA, 10) - parseInt(numB, 10);
+	}
+	return a.localeCompare(b);
+};
+
+export const groupBattleEntriesByGroup = (
+	entries: ChallengeIndexEntry[]
+): { group: string; entries: ChallengeIndexEntry[] }[] => {
+	const byGroup = new Map<string, ChallengeIndexEntry[]>();
+	for (const entry of entries) {
+		const group = extractBattleGroupFromFolder(entry.folder) ?? "Other";
+		const list = byGroup.get(group) ?? [];
+		list.push(entry);
+		byGroup.set(group, list);
+	}
+	return [...byGroup.entries()]
+		.sort(([groupA], [groupB]) => compareBattleGroupNames(groupA, groupB))
+		.map(([group, groupEntries]) => ({
+			group,
+			entries: [...groupEntries].sort(compareBattleEntries),
+		}));
+};
+
+const formatNestedBattleGroup = (
+	battleGroup: string,
+	entries: ChallengeIndexEntry[]
 ): string =>
-	keys
-		.map((key) => {
-			const label =
-				key === currentKey
-					? currentTitle
-					: (existingLabels?.get(key) ?? deriveLabelFromSlug(key));
-			return `- [${label}](./challenges/${key}/)`;
-		})
+	joinIndexBlock([
+		"<details>",
+		formatSummaryHtml(battleGroup, entries.length),
+		"",
+		formatIndexList(entries),
+		"</details>",
+	]);
+
+const formatFlatTopLevelSection = (
+	title: string,
+	entries: ChallengeIndexEntry[]
+): string | null => {
+	if (entries.length === 0) {
+		return null;
+	}
+	return joinIndexBlock([
+		formatTopLevelHeading(title, entries.length),
+		"",
+		formatIndexList(entries),
+	]);
+};
+
+const formatBattlesDetailsSection = (entries: ChallengeIndexEntry[]): string | null => {
+	if (entries.length === 0) {
+		return null;
+	}
+	const groups = groupBattleEntriesByGroup(entries);
+	const nestedItems = groups
+		.map((group) => `<li>\n${formatNestedBattleGroup(group.group, group.entries)}\n</li>`)
 		.join("\n");
 
-const buildManagedIndexBlock = (
-	keys: string[],
-	currentKey: string,
-	currentTitle: string,
-	existingLabels?: Map<string, string>
-): string =>
-	[
-		"## CssHub challenge index",
+	return joinIndexBlock([
+		formatTopLevelHeading("Battles", entries.length),
 		"",
-		formatReadmeIndexLines(keys, currentKey, currentTitle, existingLabels),
-	].join("\n");
+		"<ul>",
+		nestedItems,
+		"</ul>",
+	]);
+};
+
+const formatNestedDailyMonth = (
+	monthLabel: string,
+	entries: ChallengeIndexEntry[]
+): string =>
+	joinIndexBlock([
+		"<details>",
+		formatSummaryHtml(monthLabel, entries.length),
+		"",
+		formatIndexList(entries),
+		"</details>",
+	]);
+
+const formatDailyTargetsDetailsSection = (entries: ChallengeIndexEntry[]): string | null => {
+	if (entries.length === 0) {
+		return null;
+	}
+	const groups = groupDailyEntriesByMonth(entries);
+	const nestedItems = groups
+		.map((group) => `<li>\n${formatNestedDailyMonth(group.monthLabel, group.entries)}\n</li>`)
+		.join("\n");
+
+	return joinIndexBlock([
+		formatTopLevelHeading("Daily Targets", entries.length),
+		"",
+		"<ul>",
+		nestedItems,
+		"</ul>",
+	]);
+};
+
+export const formatGroupedReadmeIndex = (
+	buckets: ChallengeIndexBuckets,
+	existingLabels?: Map<string, string>
+): string => {
+	const withLabels = (entries: ChallengeIndexEntry[]): ChallengeIndexEntry[] =>
+		entries.map((entry) => ({
+			...entry,
+			label: existingLabels?.get(entry.folder) ?? entry.label,
+		}));
+
+	const sections = [
+		formatBattlesDetailsSection(withLabels(buckets.battles)),
+		formatDailyTargetsDetailsSection(withLabels(buckets.daily)),
+		formatFlatTopLevelSection("Legacy", withLabels(buckets.legacy)),
+	].filter((section): section is string => section !== null);
+
+	// Blank line between sections so ### headings parse after closing </ul> on GitHub.
+	return joinIndexBlock(["## CssHub challenge index", "", sections.join("\n\n")]);
+};
+
+const buildManagedIndexBlock = (
+	buckets: ChallengeIndexBuckets,
+	existingLabels?: Map<string, string>
+): string => formatGroupedReadmeIndex(buckets, existingLabels);
 
 export const injectManagedReadmeSection = (existing: string, indexBlock: string): string => {
 	const trimmed = existing.trimEnd();
@@ -126,36 +413,68 @@ export const buildRootReadmeContent = (options: {
 		return null;
 	}
 
-	const currentKey = options.challengeFolder.replace(/^challenges\//, "");
-	const keys = collectChallengeKeys(options.existingBlobPaths, options.challengeFolder);
+	const buckets = collectChallengeIndexBuckets(
+		options.existingBlobPaths,
+		options.challengeFolder,
+		options.challengeTitle
+	);
 	const existingLabels = options.existingReadme
 		? parseExistingReadmeLabels(options.existingReadme)
 		: undefined;
 
 	if (options.mode === "full") {
-		const lines = formatReadmeIndexLines(
-			keys,
-			currentKey,
-			options.challengeTitle,
-			existingLabels
-		);
 		return [
 			"# CssHub — CSSBattle solutions",
 			"",
 			"_This README is fully managed while “Full” mode is enabled. Use “Managed section” in CssHub settings to keep your own text above the index._",
 			"",
-			"## Challenge index",
-			"",
-			lines,
+			buildManagedIndexBlock(buckets, existingLabels),
 			"",
 		].join("\n");
 	}
 
-	const indexBlock = buildManagedIndexBlock(
-		keys,
-		currentKey,
-		options.challengeTitle,
-		existingLabels
+	return injectManagedReadmeSection(
+		options.existingReadme ?? "",
+		buildManagedIndexBlock(buckets, existingLabels)
 	);
-	return injectManagedReadmeSection(options.existingReadme ?? "", indexBlock);
+};
+
+// Backward-compatible exports for tests that imported the old flat index helpers.
+export const compareChallengeKeys = (a: string, b: string): number =>
+	compareLegacyEntries(
+		{ folder: `challenges/${a}`, label: a },
+		{ folder: `challenges/${b}`, label: b }
+	);
+
+export const collectChallengeKeys = (
+	paths: Iterable<string>,
+	challengeFolder: string
+): string[] => {
+	const buckets = collectChallengeIndexBuckets(paths, challengeFolder, "");
+	const keys = new Set<string>();
+	for (const entry of [...buckets.battles, ...buckets.daily, ...buckets.legacy]) {
+		if (entry.folder.startsWith("challenges/")) {
+			keys.add(entry.folder.replace(/^challenges\//, ""));
+		}
+	}
+	if (challengeFolder.startsWith("challenges/")) {
+		keys.add(challengeFolder.replace(/^challenges\//, ""));
+	}
+	return [...keys].sort(compareChallengeKeys);
+};
+
+export const formatReadmeIndexLines = (
+	keys: string[],
+	currentKey: string,
+	currentTitle: string,
+	existingLabels?: Map<string, string>
+): string => {
+	const legacyEntries = keys.map((key) => ({
+		folder: `challenges/${key}`,
+		label:
+			key === currentKey
+				? currentTitle
+				: (existingLabels?.get(`challenges/${key}`) ?? deriveLabelFromLegacyKey(key)),
+	}));
+	return formatIndexList(legacyEntries);
 };

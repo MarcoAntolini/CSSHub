@@ -20,10 +20,25 @@ CssHub’s content script scrapes CSSBattle’s play page DOM. Selectors are bri
 
 | Constant | Pattern | Purpose |
 |----------|---------|---------|
-| `CHALLENGE_ID_PATH_REGEX` | `^/play/(\d+)` on `location.pathname` | Challenge id for payload |
-| `CHALLENGE_TITLE_REGEX` | `Target\s*#?\d+\s*:\s*(.+)$` on `document.title` | Human-readable challenge name |
+| `CHALLENGE_ID_PATH_REGEX` | `^/play/([^/]+)` on `location.pathname` | Challenge id for payload (numeric or opaque daily id) |
+| `CHALLENGE_TITLE_REGEX` | `Target\s*#?\d+\s*:\s*(.+)$` on `document.title` | Human-readable challenge name (battles) |
 
 **Helpers:** `getChallengeIdFromPathname`, `getChallengeNameFromTitle`
+
+## Challenge mode (`contentScriptChallengeContext.ts`)
+
+| Constant | Selector / rule | Purpose |
+|----------|-----------------|---------|
+| `BREADCRUMB_CONTAINER_SELECTOR` | `[class*="breadcrumbs"]` | Header breadcrumb container |
+| (implicit) | `a, button` inside container | Battle crumbs (links + current target button) |
+| (fallback) | `innerText` split by newline | Daily date crumb when only one link is present |
+| Classification | First crumb `Battles` + ≥3 crumbs | `battle` mode → sync |
+| Classification | First crumb `Daily Targets` + date crumb | `daily` mode → sync |
+| Classification | Anything else | `unsupported` → skip sync (no background message) |
+
+**Helpers:** `collectBreadcrumbTexts`, `classifyChallengeContext`, `detectChallengeContext`, `parseDailyDateLabelToIso`
+
+**Fixtures:** `cssbattle-play-battle.html`, `cssbattle-play-daily.html` — **Tests:** `contentScriptChallengeContext.test.ts`
 
 ## Submit detection (`contentScriptDom.ts` + `contentScript.ts`)
 

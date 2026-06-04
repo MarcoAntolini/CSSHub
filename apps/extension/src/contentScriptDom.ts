@@ -5,7 +5,7 @@ export const SUBMIT_LABEL = /submit/i;
 export const CLICKABLE_SELECTOR =
 	"button, [role='button'], input[type='submit'], a";
 export const CM_LINE_SELECTOR = ".cm-line";
-export const CHALLENGE_ID_PATH_REGEX = /^\/play\/(\d+)/;
+export const CHALLENGE_ID_PATH_REGEX = /^\/play\/([^/]+)/;
 export const CHALLENGE_TITLE_REGEX = /Target\s*#?\d+\s*:\s*(.+)$/i;
 
 export type ElementDimensions = {

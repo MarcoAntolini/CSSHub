@@ -64,9 +64,24 @@ export type SyncSubmissionResult = {
 	shouldAdvanceDuplicateBaseline: boolean;
 };
 
+const submissionIdentityKey = (payload: SubmissionPayload): string => {
+	if (payload.challengeMode === "daily" && payload.dailyDateIso) {
+		return `daily:${payload.dailyDateIso}`;
+	}
+	if (
+		payload.challengeMode === "battle" &&
+		payload.battleGroup &&
+		payload.challengeLabel
+	) {
+		return `battle:${payload.battleGroup}:${payload.challengeLabel}`;
+	}
+	return `id:${payload.challengeId}`;
+};
+
 export const fingerprintSubmission = (payload: SubmissionPayload): string => {
 	const compact = JSON.stringify({
-		challengeId: payload.challengeId,
+		identity: submissionIdentityKey(payload),
+		challengeMode: payload.challengeMode,
 		score: payload.score,
 		matchPct: payload.matchPct,
 		code: payload.code,

@@ -13,6 +13,14 @@ const slugify = (value: string): string =>
 		.slice(0, 80);
 
 export const challengeStorageKey = (payload: SubmissionPayload): string => {
+	if (payload.challengeMode === "daily" && payload.dailyDateIso) {
+		return payload.dailyDateIso;
+	}
+
+	if (payload.challengeMode === "battle" && payload.battleGroup && payload.challengeLabel) {
+		return `${payload.battleGroup}/${payload.challengeLabel}`;
+	}
+
 	const rawId = payload.challengeId.trim().toLowerCase();
 	if (/^\d+$/.test(rawId)) {
 		return rawId;
@@ -29,15 +37,39 @@ export const challengeStorageKey = (payload: SubmissionPayload): string => {
 	return fallback ? `unknown-${fallback}` : "unknown";
 };
 
-export const challengeFolderPath = (payload: SubmissionPayload): string =>
-	`challenges/${challengeStorageKey(payload)}`;
+export const challengeFolderPath = (payload: SubmissionPayload): string => {
+	if (payload.challengeMode === "daily" && payload.dailyDateIso) {
+		return `Daily Targets/${payload.dailyDateIso}`;
+	}
+	if (payload.challengeMode === "battle" && payload.battleGroup && payload.challengeLabel) {
+		return `Battles/${payload.battleGroup}/${payload.challengeLabel}`;
+	}
+	return `challenges/${challengeStorageKey(payload)}`;
+};
 
-const submissionMetadataPath = (payload: SubmissionPayload): string =>
-	`${challengeFolderPath(payload)}/submission.json`;
+const submissionMetadataPath = (folder: string): string => `${folder}/submission.json`;
 
-const legacySubmissionMetadataPath = (payload: SubmissionPayload): string => {
+const legacyNumericSubmissionPath = (payload: SubmissionPayload): string | null => {
+	const rawId = payload.challengeId.trim();
+	if (/^\d+$/.test(rawId)) {
+		return submissionMetadataPath(`challenges/${rawId}`);
+	}
+	return null;
+};
+
+const legacySlugSubmissionPath = (payload: SubmissionPayload): string => {
 	const legacySlug = slugify(`${payload.challengeId}-${payload.challengeName}`);
-	return `challenges/${legacySlug}/submission.json`;
+	return submissionMetadataPath(`challenges/${legacySlug}`);
+};
+
+export const listBestSubmissionMetadataPaths = (payload: SubmissionPayload): string[] => {
+	const paths = [submissionMetadataPath(challengeFolderPath(payload))];
+	const legacyNumeric = legacyNumericSubmissionPath(payload);
+	if (legacyNumeric) {
+		paths.push(legacyNumeric);
+	}
+	paths.push(legacySlugSubmissionPath(payload));
+	return paths;
 };
 
 export const readBestSubmissionMetrics = async (
@@ -46,21 +78,13 @@ export const readBestSubmissionMetrics = async (
 	branch: string,
 	payload: SubmissionPayload
 ): Promise<SavedSubmissionMetrics | null> => {
-	const primary = await getSavedSubmissionMetrics(
-		token,
-		repoFullName,
-		branch,
-		submissionMetadataPath(payload)
-	);
-	if (primary) {
-		return primary;
+	for (const path of listBestSubmissionMetadataPaths(payload)) {
+		const metrics = await getSavedSubmissionMetrics(token, repoFullName, branch, path);
+		if (metrics) {
+			return metrics;
+		}
 	}
-	return getSavedSubmissionMetrics(
-		token,
-		repoFullName,
-		branch,
-		legacySubmissionMetadataPath(payload)
-	);
+	return null;
 };
 
 const toBase64 = (bytes: Uint8Array): string => {
@@ -79,13 +103,6 @@ const getBase64FromDataUrl = (dataUrl: string): string => {
 	return base64;
 };
 
-const escapeHtml = (value: string): string =>
-	value
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;");
-
 const getMarkdownFence = (content: string): string => {
 	let fence = "```";
 	while (content.includes(fence)) {
@@ -95,6 +112,12 @@ const getMarkdownFence = (content: string): string => {
 };
 
 export const formatChallengeTitle = (payload: SubmissionPayload): string => {
+	if (payload.challengeMode === "daily" && payload.dailyDateLabel) {
+		return `Daily Target — ${payload.dailyDateLabel}`;
+	}
+	if (payload.challengeMode === "battle" && payload.challengeLabel) {
+		return payload.challengeLabel;
+	}
 	if (payload.challengeId === "unknown") {
 		return payload.challengeName;
 	}
@@ -104,9 +127,6 @@ export const formatChallengeTitle = (payload: SubmissionPayload): string => {
 const getChallengeUrl = (payload: SubmissionPayload): string =>
 	payload.challengeUrl ??
 	`https://cssbattle.dev/play/${encodeURIComponent(payload.challengeId)}`;
-
-const formatSubmissionMetric = (value: number | null, suffix = ""): string =>
-	value === null ? "Not available" : `${value}${suffix}`;
 
 const fetchImageAsBase64 = async (url: string): Promise<string | null> => {
 	try {
@@ -128,7 +148,6 @@ const buildReadme = (
 	hasTargetImage: boolean
 ): string => {
 	const title = formatChallengeTitle(payload);
-	const escapedTitle = escapeHtml(title);
 	const challengeUrl = getChallengeUrl(payload);
 	const userCell = hasUserImage
 		? `<img src="./user.png" alt="User Submission" width="100%">`
@@ -165,13 +184,6 @@ Challenge: <${challengeUrl}>
 ${fence}html
 ${code}
 ${fence}
-
-## Submission Data
-
-- Challenge: ${escapedTitle}
-- Score: ${formatSubmissionMetric(payload.score)}
-- Match: ${formatSubmissionMetric(payload.matchPct, "%")}
-- Submitted at: ${payload.submittedAt}
 `;
 };
 
@@ -188,9 +200,14 @@ export const buildSubmissionFiles = async (
 	);
 
 	const metadata = {
+		challengeMode: payload.challengeMode,
 		challengeId: payload.challengeId,
 		challengeName: payload.challengeName,
 		challengeUrl: getChallengeUrl(payload),
+		battleGroup: payload.battleGroup ?? null,
+		challengeLabel: payload.challengeLabel ?? null,
+		dailyDateIso: payload.dailyDateIso ?? null,
+		dailyDateLabel: payload.dailyDateLabel ?? null,
 		submittedAt: payload.submittedAt,
 		score: payload.score,
 		matchPct: payload.matchPct,

@@ -10,8 +10,11 @@ import {
 } from "../../src/submission/syncSubmission";
 
 const basePayload = (): SubmissionPayload => ({
+	challengeMode: "battle",
 	challengeId: "42",
 	challengeName: "Carrom",
+	battleGroup: "Battle #1",
+	challengeLabel: "#42. Carrom",
 	challengeUrl: "https://cssbattle.dev/play/42",
 	submittedAt: new Date().toISOString(),
 	score: 640,
@@ -58,8 +61,8 @@ const noopDeps = () => ({
 		commitSha: "abc",
 		commitUrl: "https://github.com/qa-user/csshub-test/commit/abc",
 	}),
-	challengeFolderPath: () => "challenges/42",
-	formatChallengeTitle: () => "Target 42: Carrom",
+	challengeFolderPath: () => "Battles/Battle #1/#42. Carrom",
+	formatChallengeTitle: () => "#42. Carrom",
 	formatCommitMessage: () => "Score: 640 (99.00% match) - CSSHub",
 });
 

@@ -227,7 +227,9 @@ export const RepositorySection = ({
 <!-- CSSHUB:README-END -->`}</pre>
 							<p>
 								Text above or below that block is never touched. Each sync refreshes
-								the index in the same commit as your solution.
+								the index in the same commit as your solution. The index lists{" "}
+								<strong>Battles</strong> and <strong>Daily Targets</strong> in
+								collapsible sections; other CSSBattle modes are not synced.
 							</p>
 							<p>
 								<strong>Full</strong> replaces the entire root README on every sync.

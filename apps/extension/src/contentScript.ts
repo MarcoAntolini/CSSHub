@@ -1,3 +1,4 @@
+import { detectChallengeContext } from "./contentScriptChallengeContext";
 import {
 	CLICKABLE_SELECTOR,
 	extractCodeFromCmLines,
@@ -9,6 +10,7 @@ import {
 	isSubmitControlText,
 	type ElementDimensions,
 } from "./contentScriptDom";
+import type { SubmissionPayload } from "./shared/contracts";
 import {
 	didStatsChange,
 	extractStatsFromDocument,
@@ -51,6 +53,29 @@ const getChallengeId = (): string => getChallengeIdFromPathname(window.location.
 
 const getChallengeName = (): string =>
 	getChallengeNameFromTitle(document.title, getChallengeId());
+
+const buildSubmissionPayloadBase = (
+	context: ReturnType<typeof detectChallengeContext>
+): Pick<
+	SubmissionPayload,
+	"challengeMode" | "battleGroup" | "challengeLabel" | "dailyDateIso" | "dailyDateLabel"
+> | null => {
+	if (context.mode === "battle") {
+		return {
+			challengeMode: "battle",
+			battleGroup: context.battleGroup,
+			challengeLabel: context.challengeLabel,
+		};
+	}
+	if (context.mode === "daily") {
+		return {
+			challengeMode: "daily",
+			dailyDateIso: context.dailyDateIso,
+			dailyDateLabel: context.dailyDateLabel,
+		};
+	}
+	return null;
+};
 
 const extractCode = async (): Promise<string> => {
 	try {
@@ -126,14 +151,35 @@ const processSubmission = async (): Promise<void> => {
 	isProcessingSubmission = true;
 
 	try {
+		const challengeContext = detectChallengeContext(document);
+		if (challengeContext.mode === "unsupported") {
+			console.info("[CssHub] Skipped: unsupported challenge mode", {
+				crumbs: challengeContext.crumbs,
+			});
+			return;
+		}
+
+		const modeFields = buildSubmissionPayloadBase(challengeContext);
+		if (!modeFields) {
+			return;
+		}
+
 		const initialStats = extractStats();
 		const [postSubmitStats, resultImageDataUrl] = await Promise.all([
 			waitForPostSubmitStats(initialStats),
 			capturePreviewImage(),
 		]);
-		const payload = {
+		const challengeName =
+			challengeContext.mode === "daily"
+				? challengeContext.dailyDateLabel
+				: challengeContext.mode === "battle"
+					? challengeContext.challengeLabel
+					: getChallengeName();
+
+		const payload: SubmissionPayload = {
+			...modeFields,
 			challengeId: getChallengeId(),
-			challengeName: getChallengeName(),
+			challengeName,
 			challengeUrl: window.location.href,
 			submittedAt: new Date().toISOString(),
 			score: postSubmitStats.score,

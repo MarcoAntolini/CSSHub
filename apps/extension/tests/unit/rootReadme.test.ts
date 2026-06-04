@@ -1,129 +1,484 @@
 import { describe, expect, it } from "vitest";
+
 import {
+
 	CSSHUB_README_END,
+
 	CSSHUB_README_START,
+
 	buildRootReadmeContent,
-	collectChallengeKeys,
+
+	collectChallengeIndexBuckets,
+
+	encodeRepoPathForMarkdownLink,
+
+	formatIndexLinkHtml,
+
+	formatSummaryHtml,
+
+	formatDailyDateLabelFromIso,
+	formatGroupedReadmeIndex,
+	groupBattleEntriesByGroup,
+	groupDailyEntriesByMonth,
+
 	injectManagedReadmeSection,
+
 	parseExistingReadmeLabels,
+
 } from "../../src/rootReadme";
 
-describe("collectChallengeKeys", () => {
-	it("merges tree paths with the current challenge folder", () => {
-		const paths = new Set(["challenges/1/submission.json", "challenges/2/submission.json"]);
-		expect(collectChallengeKeys(paths, "challenges/3")).toEqual(["1", "2", "3"]);
+
+
+describe("collectChallengeIndexBuckets", () => {
+
+	it("groups battles, daily, and legacy paths", () => {
+
+		const paths = new Set([
+
+			"Battles/Battle #39/#254. Unfitting/submission.json",
+
+			"Daily Targets/2026-06-04/submission.json",
+
+			"challenges/1/submission.json",
+
+		]);
+
+		const buckets = collectChallengeIndexBuckets(
+
+			paths,
+
+			"Battles/Battle #40/#255. Next",
+
+			"#255. Next"
+
+		);
+
+		expect(buckets.battles.map((e) => e.folder)).toEqual([
+
+			"Battles/Battle #39/#254. Unfitting",
+
+			"Battles/Battle #40/#255. Next",
+
+		]);
+
+		expect(buckets.daily.map((e) => e.folder)).toEqual(["Daily Targets/2026-06-04"]);
+
+		expect(buckets.legacy.map((e) => e.folder)).toEqual(["challenges/1"]);
+
 	});
+
 });
 
-describe("parseExistingReadmeLabels", () => {
-	it("extracts labels from challenge index links", () => {
-		const readme = [
-			"- [Target 8: Forking Crazy](./challenges/8/)",
-			"- - [Target 10: Ten](./challenges/10/)",
-			"not a link",
-		].join("\n");
-		expect(parseExistingReadmeLabels(readme)).toEqual(
-			new Map([
-				["8", "Target 8: Forking Crazy"],
-				["10", "Target 10: Ten"],
-			])
+
+
+describe("formatSummaryHtml", () => {
+	it("formats nested battle group summaries", () => {
+		expect(formatSummaryHtml("Battle #1", 2)).toBe(
+			"<summary><strong>Battle #1 (2)</strong></summary>"
 		);
 	});
 });
 
-describe("buildRootReadmeContent", () => {
-	it("returns null when mode is off", () => {
+describe("formatIndexLinkHtml", () => {
+
+	it("emits HTML list links for GitHub details blocks", () => {
+
 		expect(
-			buildRootReadmeContent({
-				mode: "off",
-				existingReadme: "# Hi",
-				existingBlobPaths: new Set(),
-				challengeFolder: "challenges/99",
-				challengeTitle: "Target 99: Example",
+
+			formatIndexLinkHtml({
+
+				folder: "Battles/Battle #1/#1. Simply Square",
+
+				label: "#1. Simply Square",
+
 			})
-		).toBeNull();
+
+		).toBe(
+
+			'<li><a href="./Battles/Battle%20%231/%231.%20Simply%20Square/">#1. Simply Square</a></li>'
+
+		);
+
 	});
 
-	it("managed: appends markers when README has no markers", () => {
-		const out = buildRootReadmeContent({
-			mode: "managed-section",
-			existingReadme: "# My repo\n\nHello.",
-			existingBlobPaths: new Set(["challenges/1/submission.json"]),
-			challengeFolder: "challenges/2",
-			challengeTitle: "Target 2: New",
+});
+
+
+
+describe("formatGroupedReadmeIndex", () => {
+	it("separates top-level sections with a blank line for GitHub heading parsing", () => {
+		const out = formatGroupedReadmeIndex({
+			battles: [{ folder: "Battles/Battle #1/#1. A", label: "#1. A" }],
+			daily: [{ folder: "Daily Targets/2026-06-04", label: "Jun 4, 2026" }],
+			legacy: [{ folder: "challenges/1", label: "Target 1" }],
 		});
-		expect(out).toContain("# My repo");
-		expect(out).toContain("Hello.");
-		expect(out).toContain(CSSHUB_README_START);
-		expect(out).toContain(CSSHUB_README_END);
-		expect(out).toContain("./challenges/1/");
-		expect(out).toContain("./challenges/2/");
-		expect(out).toContain("Target 2: New");
+		expect(out).toContain("</ul>\n\n### Daily Targets");
+		expect(out).toContain("</ul>\n\n### Legacy");
 	});
+});
+
+describe("groupDailyEntriesByMonth", () => {
+	it("clusters daily targets by year-month, ascending like battle groups", () => {
+		const entries = [
+			{ folder: "Daily Targets/2026-05-15", label: "May 15, 2026" },
+			{ folder: "Daily Targets/2026-06-04", label: "Jun 4, 2026" },
+			{ folder: "Daily Targets/2026-06-01", label: "Jun 1, 2026" },
+		];
+		const groups = groupDailyEntriesByMonth(entries);
+		expect(groups.map((g) => g.monthLabel)).toEqual(["May 2026", "June 2026"]);
+		expect(groups[0].entries).toHaveLength(1);
+		expect(groups[1].entries).toHaveLength(2);
+	});
+});
+
+describe("formatDailyDateLabelFromIso", () => {
+	it("formats ISO dates for index link labels", () => {
+		expect(formatDailyDateLabelFromIso("2026-06-04")).toBe("Jun 4, 2026");
+	});
+});
+
+describe("groupBattleEntriesByGroup", () => {
+
+	it("clusters challenges under their battle group", () => {
+
+		const entries = [
+
+			{ folder: "Battles/Battle #39/#254. Unfitting", label: "#254. Unfitting" },
+
+			{ folder: "Battles/Battle #1/#1. Simply Square", label: "#1. Simply Square" },
+
+			{ folder: "Battles/Battle #39/#255. Next", label: "#255. Next" },
+
+		];
+
+		expect(groupBattleEntriesByGroup(entries).map((g) => g.group)).toEqual([
+
+			"Battle #1",
+
+			"Battle #39",
+
+		]);
+
+		expect(groupBattleEntriesByGroup(entries)[1].entries).toHaveLength(2);
+
+	});
+
+});
+
+
+
+describe("encodeRepoPathForMarkdownLink", () => {
+
+	it("encodes hash and spaces per segment", () => {
+
+		expect(encodeRepoPathForMarkdownLink("Battles/Battle #39/#254. Unfitting")).toBe(
+
+			"Battles/Battle%20%2339/%23254.%20Unfitting"
+
+		);
+
+	});
+
+});
+
+
+
+describe("parseExistingReadmeLabels", () => {
+
+	it("extracts labels from markdown index links", () => {
+
+		const readme = [
+
+			"- [Target 8: Forking Crazy](./challenges/8/)",
+
+			"not a link",
+
+		].join("\n");
+
+		expect(parseExistingReadmeLabels(readme)).toEqual(
+
+			new Map([["challenges/8", "Target 8: Forking Crazy"]])
+
+		);
+
+	});
+
+
+
+	it("extracts labels from HTML index links", () => {
+
+		const readme =
+
+			'<li><a href="./Battles/Battle%20%2339/%23254.%20Unfitting/">#254. Unfitting</a></li>';
+
+		expect(parseExistingReadmeLabels(readme)).toEqual(
+
+			new Map([["Battles/Battle #39/#254. Unfitting", "#254. Unfitting"]])
+
+		);
+
+	});
+
+});
+
+
+
+describe("buildRootReadmeContent", () => {
+
+	it("returns null when mode is off", () => {
+
+		expect(
+
+			buildRootReadmeContent({
+
+				mode: "off",
+
+				existingReadme: "# Hi",
+
+				existingBlobPaths: new Set(),
+
+				challengeFolder: "Battles/Battle #1/#42. Carrom",
+
+				challengeTitle: "#42. Carrom",
+
+			})
+
+		).toBeNull();
+
+	});
+
+
+
+	it("managed: appends collapsible sections when README has no markers", () => {
+
+		const out = buildRootReadmeContent({
+
+			mode: "managed-section",
+
+			existingReadme: "# My repo\n\nHello.",
+
+			existingBlobPaths: new Set([
+
+				"challenges/1/submission.json",
+
+				"Daily Targets/2026-06-01/submission.json",
+
+			]),
+
+			challengeFolder: "Battles/Battle #2/#3. New",
+
+			challengeTitle: "#3. New",
+
+		});
+
+		expect(out).toContain("# My repo");
+
+		expect(out).toContain("Hello.");
+
+		expect(out).toContain(CSSHUB_README_START);
+
+		expect(out).toContain(CSSHUB_README_END);
+
+		expect(out).toContain("### Battles (1)");
+		expect(out).toContain("### Daily Targets (1)");
+		expect(out).toContain("<strong>June 2026");
+		expect(out).toContain("### Legacy (1)");
+		expect(out).not.toContain("<foreignObject");
+		expect(out).not.toContain(".csshub-h");
+		expect(out).toContain("<details>");
+		expect(out).toContain("<strong>Battle #2 (1)</strong>");
+		expect(out).not.toContain("<blockquote>");
+
+		expect(out).toContain('<a href="./Battles/Battle%20%232/%233.%20New/">#3. New</a>');
+
+		expect(out).not.toMatch(/\[\s*#3\. New\s*\]\(/);
+
+	});
+
+
 
 	it("managed: replaces only the marked region", () => {
+
 		const existing = `Intro stays.
 
+
+
 ${CSSHUB_README_START}
+
 old
+
 ${CSSHUB_README_END}
 
+
+
 Footer stays.`;
+
 		const out = buildRootReadmeContent({
+
 			mode: "managed-section",
+
 			existingReadme: existing,
-			existingBlobPaths: new Set(["challenges/10/submission.json"]),
-			challengeFolder: "challenges/10",
-			challengeTitle: "Target 10: Ten",
+
+			existingBlobPaths: new Set(["Battles/Battle #1/#10. Ten/submission.json"]),
+
+			challengeFolder: "Battles/Battle #1/#10. Ten",
+
+			challengeTitle: "#10. Ten",
+
 		});
+
 		expect(out).toContain("Intro stays.");
+
 		expect(out).toContain("Footer stays.");
+
 		expect(out).not.toContain("\nold\n");
-		expect(out).toContain("Target 10: Ten");
+
+		expect(out).toContain("#10. Ten");
+
 		expect(out).toContain("## CssHub challenge index");
+
 	});
+
+
 
 	it("managed: preserves titles from existing index when adding a challenge", () => {
+
+		const battlePath = encodeRepoPathForMarkdownLink("Battles/Battle #1/#8. Forking");
+
 		const existing = `# My repo
 
+
+
 ${CSSHUB_README_START}
+
 ## CssHub challenge index
 
-- [Target 8: Forking Crazy](./challenges/8/)
+
+
+### Battles (1)
+
+<ul>
+<li>
+<details>
+<summary><strong>Battle #1 (1)</strong></summary>
+
+<ul>
+<li><a href="./${battlePath}/">Target 8: Forking Crazy</a></li>
+</ul>
+</details>
+</li>
+</ul>
+
 ${CSSHUB_README_END}`;
+
 		const out = buildRootReadmeContent({
+
 			mode: "managed-section",
+
 			existingReadme: existing,
-			existingBlobPaths: new Set(["challenges/8/submission.json"]),
-			challengeFolder: "challenges/11",
-			challengeTitle: "Target 11: Eye of Sauron",
+
+			existingBlobPaths: new Set(["Battles/Battle #1/#8. Forking/submission.json"]),
+
+			challengeFolder: "Battles/Battle #1/#11. Eye",
+
+			challengeTitle: "#11. Eye of Sauron",
+
 		});
+
 		expect(out).toContain("Target 8: Forking Crazy");
-		expect(out).toContain("Target 11: Eye of Sauron");
-		expect(out).not.toMatch(/^-\s+-\s+\[/m);
+
+		expect(out).toContain("Battle #1 (2)");
+
+		expect(out).toContain("#11. Eye of Sauron");
+
 	});
 
-	it("full: replaces entire README", () => {
+
+
+	it("managed: nests multiple battles under separate Battle # sections", () => {
+
 		const out = buildRootReadmeContent({
-			mode: "full",
-			existingReadme: "# USER\n\nDo not keep me",
-			existingBlobPaths: new Set(),
-			challengeFolder: "challenges/5",
-			challengeTitle: "Target 5: Five",
+
+			mode: "managed-section",
+
+			existingReadme: "",
+
+			existingBlobPaths: new Set([
+
+				"Battles/Battle #1/#1. Simply Square/submission.json",
+
+				"Battles/Battle #39/#254. Unfitting/submission.json",
+
+			]),
+
+			challengeFolder: "Battles/Battle #1/#1. Simply Square",
+
+			challengeTitle: "#1. Simply Square",
+
 		});
-		expect(out).not.toContain("Do not keep me");
-		expect(out).toContain("# CssHub — CSSBattle solutions");
-		expect(out).toContain("./challenges/5/");
-		expect(out).toContain("Target 5: Five");
+
+		expect(out).toContain("### Battles (2)");
+
+		expect(out).toContain("<strong>Battle #1 (1)</strong>");
+
+		expect(out).toContain("<strong>Battle #39 (1)</strong>");
+
+		expect(out).toContain('<a href="./Battles/Battle%20%231/%231.%20Simply%20Square/">#1. Simply Square</a>');
+
+		expect(out).toContain('<a href="./Battles/Battle%20%2339/%23254.%20Unfitting/">#254. Unfitting</a>');
+
 	});
+
+
+
+	it("full: replaces entire README with grouped index", () => {
+
+		const out = buildRootReadmeContent({
+
+			mode: "full",
+
+			existingReadme: "# USER\n\nDo not keep me",
+
+			existingBlobPaths: new Set(),
+
+			challengeFolder: "Daily Targets/2026-06-04",
+
+			challengeTitle: "Daily Target — Jun 4, 2026",
+
+		});
+
+		expect(out).not.toContain("Do not keep me");
+
+		expect(out).toContain("# CssHub — CSSBattle solutions");
+
+		expect(out).toContain("### Daily Targets (1)");
+
+		expect(out).toContain("Jun 4, 2026");
+
+	});
+
 });
+
+
 
 describe("injectManagedReadmeSection", () => {
+
 	it("creates markers-only file when existing is empty", () => {
-		const block = "## CssHub challenge index\n\n- [A](./challenges/a/)";
+
+		const block =
+
+			'## CssHub challenge index\n\n### Legacy (1)\n\n<ul>\n<li><a href="./challenges/a/">A</a></li>\n</ul>';
+
 		const out = injectManagedReadmeSection("", block);
+
 		expect(out.trim()).toContain(CSSHUB_README_START);
-		expect(out).toContain("- [A](./challenges/a/)");
+
+		expect(out).toContain('<a href="./challenges/a/">A</a>');
+
 		expect(out).toContain(CSSHUB_README_END);
+
 	});
+
 });
+
+

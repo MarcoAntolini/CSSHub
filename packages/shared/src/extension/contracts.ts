@@ -62,22 +62,65 @@ export const authStatusSchema = z.object({
 
 export type AuthStatus = z.infer<typeof authStatusSchema>;
 
-export const submissionPayloadSchema = z.object({
-	challengeId: z.string().min(1),
-	challengeName: z.string().min(1),
-	challengeUrl: z.string().url().optional(),
-	submittedAt: z.string(),
-	score: z.number().nullable(),
-	matchPct: z.number().min(0).max(100).nullable(),
-	code: z.string(),
-	targetImage: z
-		.object({
-			type: z.enum(["dataUrl", "url"]),
-			value: z.string().min(1),
-		})
-		.nullable(),
-	resultImageDataUrl: z.string().startsWith("data:image/").nullable(),
-});
+export const submissionPayloadSchema = z
+	.object({
+		challengeMode: z.enum(["battle", "daily"]),
+		challengeId: z.string().min(1),
+		challengeName: z.string().min(1),
+		challengeUrl: z.string().url().optional(),
+		battleGroup: z.string().min(1).optional(),
+		challengeLabel: z.string().min(1).optional(),
+		dailyDateIso: z
+			.string()
+			.regex(/^\d{4}-\d{2}-\d{2}$/)
+			.optional(),
+		dailyDateLabel: z.string().min(1).optional(),
+		submittedAt: z.string(),
+		score: z.number().nullable(),
+		matchPct: z.number().min(0).max(100).nullable(),
+		code: z.string(),
+		targetImage: z
+			.object({
+				type: z.enum(["dataUrl", "url"]),
+				value: z.string().min(1),
+			})
+			.nullable(),
+		resultImageDataUrl: z.string().startsWith("data:image/").nullable(),
+	})
+	.superRefine((payload, ctx) => {
+		if (payload.challengeMode === "battle") {
+			if (!payload.battleGroup) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: "battleGroup is required for battle mode",
+					path: ["battleGroup"],
+				});
+			}
+			if (!payload.challengeLabel) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: "challengeLabel is required for battle mode",
+					path: ["challengeLabel"],
+				});
+			}
+		}
+		if (payload.challengeMode === "daily") {
+			if (!payload.dailyDateIso) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: "dailyDateIso is required for daily mode",
+					path: ["dailyDateIso"],
+				});
+			}
+			if (!payload.dailyDateLabel) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: "dailyDateLabel is required for daily mode",
+					path: ["dailyDateLabel"],
+				});
+			}
+		}
+	});
 
 export type SubmissionPayload = z.infer<typeof submissionPayloadSchema>;
 

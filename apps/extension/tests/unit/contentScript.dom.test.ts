@@ -25,6 +25,12 @@ describe("getChallengeIdFromPathname", () => {
 		expect(getChallengeIdFromPathname("/play/42")).toBe("42");
 	});
 
+	it("extracts opaque id from daily play URL", () => {
+		expect(getChallengeIdFromPathname("/play/17Bc6kIuAsiQgqP65moB")).toBe(
+			"17Bc6kIuAsiQgqP65moB"
+		);
+	});
+
 	it("returns unknown for non-play paths", () => {
 		expect(getChallengeIdFromPathname("/leaderboard")).toBe("unknown");
 	});

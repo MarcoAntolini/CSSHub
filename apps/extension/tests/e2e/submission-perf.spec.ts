@@ -173,8 +173,11 @@ test("cssbattleSubmission commits within SLO with mocked GitHub", async () => {
 			return chrome.runtime.sendMessage({
 				action: "cssbattleSubmission",
 				payload: {
+					challengeMode: "battle",
 					challengeId: "99",
 					challengeName: "Perf",
+					battleGroup: "Battle #1",
+					challengeLabel: "#99. Perf",
 					challengeUrl: "https://cssbattle.dev/play/99",
 					submittedAt: new Date().toISOString(),
 					score: 500,
