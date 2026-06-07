@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -46,6 +48,11 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Fallow PR audit
+        env:
+          FALLOW_AGENT_SOURCE: cursor
+        run: npm run audit:fallow
 
       - name: Unit tests
         run: npm run test

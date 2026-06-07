@@ -35,6 +35,7 @@
 		"typecheck:backend": "npm --workspace @csshub/backend run typecheck",
 		"typecheck:extension": "npm --workspace @csshub/extension run typecheck",
 		"audit:deps": "npm audit --workspaces",
+		"audit:fallow": "npx fallow audit --base origin/main --format json --quiet --ci --fail-on-issues",
 		"test:security": "node scripts/test-security.mjs",
 		"test:security:strict": "node scripts/test-security.mjs --strict",
 		"test:security:json": "node scripts/test-security.mjs --json",
