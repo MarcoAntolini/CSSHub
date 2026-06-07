@@ -23,7 +23,9 @@
 		"https://api.github.com/*",
 		"https://github.com/*",
 		"https://cssbattle.dev/*",
-		"https://www.cssbattle.dev/*"
+		"https://www.cssbattle.dev/*",
+		"https://ik.imagekit.io/*",
+		"https://firebasestorage.googleapis.com/*"
 	],
 	"content_scripts": [
 		{

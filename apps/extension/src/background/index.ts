@@ -16,8 +16,10 @@ import {
 } from "./handlers/auth";
 import {
 	handleCaptureElement,
+	handleCapturePreview,
 	handleExtractCssbattleEditorCode,
 } from "./handlers/captureHandlers";
+import { handleFetchRemoteImage } from "./handlers/fetchImage";
 import {
 	handleCreateBranch,
 	handleCreateRepo,
@@ -38,6 +40,8 @@ const actionHandlers: {
 	[K in PopupToBackgroundMessage["action"]]: Handler<K>;
 } = {
 	captureElement: handleCaptureElement,
+	capturePreview: handleCapturePreview,
+	fetchRemoteImage: handleFetchRemoteImage,
 	getExtensionState: handleGetExtensionState,
 	saveSettings: handleSaveSettings,
 	startGithubDeviceFlow: handleStartGithubDeviceFlow,

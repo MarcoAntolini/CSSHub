@@ -1,4 +1,6 @@
 import type { SubmissionPayload } from "../shared/contracts";
+import { fetchRemoteImageAsDataUrl } from "../remoteImageFetch";
+import { resolveCssBattleImageUrl } from "./cssBattleAssets";
 import {
 	getSavedSubmissionMetrics,
 	type CommitFile,
@@ -128,18 +130,20 @@ const getChallengeUrl = (payload: SubmissionPayload): string =>
 	payload.challengeUrl ??
 	`https://cssbattle.dev/play/${encodeURIComponent(payload.challengeId)}`;
 
-const fetchImageAsBase64 = async (url: string): Promise<string | null> => {
-	try {
-		const response = await fetch(url);
-		if (!response.ok) {
-			return null;
-		}
-
-		const bytes = new Uint8Array(await response.arrayBuffer());
-		return toBase64(bytes);
-	} catch (_error) {
+const fetchImageAsBase64 = async (
+	url: string,
+	challengeUrl?: string | null
+): Promise<string | null> => {
+	const resolved = resolveCssBattleImageUrl(url, challengeUrl);
+	const dataUrl = await fetchRemoteImageAsDataUrl(resolved);
+	if (!dataUrl) {
 		return null;
 	}
+	const commaIndex = dataUrl.indexOf(",");
+	if (commaIndex < 0) {
+		return null;
+	}
+	return dataUrl.slice(commaIndex + 1);
 };
 
 const buildReadme = (
@@ -237,7 +241,10 @@ export const buildSubmissionFiles = async (
 	}
 
 	if (payload.targetImage?.type === "url") {
-		const targetImageBase64 = await fetchImageAsBase64(payload.targetImage.value);
+		const targetImageBase64 = await fetchImageAsBase64(
+			payload.targetImage.value,
+			payload.challengeUrl
+		);
 		if (targetImageBase64) {
 			files.push({
 				path: `${folder}/target.png`,
