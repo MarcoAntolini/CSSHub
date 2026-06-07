@@ -3,14 +3,13 @@ import {
 	githubOAuthTokenRawSchema,
 	oauthExchangeRequestSchema,
 } from "../../../lib/oauthSchemas.js";
-import { handleCorsPreflight, setCorsHeaders } from "../../../lib/cors.js";
 import { backendEnv } from "../../../lib/env.js";
-import { rejectMethod, getClientIp } from "../../../lib/http.js";
-import { checkRateLimit } from "../../../lib/rateLimit.js";
+import { runOAuthPostRoute } from "../../../lib/oauthPostHandler.js";
 import { consumeOAuthState } from "../../../lib/oauthState.js";
 import { isAllowedRedirectUri } from "../../../lib/oauth.js";
 
 const EXCHANGE_RATE_LIMIT = {
+	keyPrefix: "oauth-exchange",
 	limit: 12,
 	windowMs: 5 * 60 * 1000,
 };
@@ -69,57 +68,39 @@ export default async function handler(
 	req: VercelRequest,
 	res: VercelResponse
 ): Promise<void> {
-	if (handleCorsPreflight(req, res)) {
-		return;
-	}
-	if (rejectMethod(req, res, "POST")) {
-		return;
-	}
-	setCorsHeaders(req, res);
-
-	const ip = getClientIp(req);
-	const rateLimit = await checkRateLimit({
-		key: `oauth-exchange:${ip}`,
-		limit: EXCHANGE_RATE_LIMIT.limit,
-		windowMs: EXCHANGE_RATE_LIMIT.windowMs,
-	});
-	if (!rateLimit.allowed) {
-		res.setHeader("Retry-After", String(rateLimit.retryAfterSec));
-		res.status(429).json({ error: "Too many requests" });
-		return;
-	}
-
-	const parsedPayload = oauthExchangeRequestSchema.safeParse(
-		normalizeRequestBody(req.body)
-	);
-	if (!parsedPayload.success) {
-		console.warn("OAuth exchange rejected: invalid request payload");
-		res.status(400).json({ error: "Invalid request payload" });
-		return;
-	}
-
-	const { code, state, redirectUri } = parsedPayload.data;
-	if (!isAllowedRedirectUri(redirectUri)) {
-		console.warn("OAuth exchange rejected: invalid redirect URI");
-		res.status(400).json({ error: "Invalid redirect URI" });
-		return;
-	}
-
-	const stateIsValid = await consumeOAuthState(state);
-	if (!stateIsValid) {
-		console.warn("OAuth exchange rejected: invalid or expired state");
-		res.status(400).json({ error: "Invalid or expired OAuth state" });
-		return;
-	}
-
-	try {
-		const token = await exchangeCodeForToken(code, redirectUri);
-		res.status(200).json(token);
-	} catch (error) {
-		console.warn(
-			"OAuth exchange rejected: GitHub token exchange failed",
-			error instanceof Error ? error.message : String(error)
+	await runOAuthPostRoute(req, res, EXCHANGE_RATE_LIMIT, async () => {
+		const parsedPayload = oauthExchangeRequestSchema.safeParse(
+			normalizeRequestBody(req.body)
 		);
-		res.status(502).json({ error: "OAuth exchange failed" });
-	}
+		if (!parsedPayload.success) {
+			console.warn("OAuth exchange rejected: invalid request payload");
+			res.status(400).json({ error: "Invalid request payload" });
+			return;
+		}
+
+		const { code, state, redirectUri } = parsedPayload.data;
+		if (!isAllowedRedirectUri(redirectUri)) {
+			console.warn("OAuth exchange rejected: invalid redirect URI");
+			res.status(400).json({ error: "Invalid redirect URI" });
+			return;
+		}
+
+		const stateIsValid = await consumeOAuthState(state);
+		if (!stateIsValid) {
+			console.warn("OAuth exchange rejected: invalid or expired state");
+			res.status(400).json({ error: "Invalid or expired OAuth state" });
+			return;
+		}
+
+		try {
+			const token = await exchangeCodeForToken(code, redirectUri);
+			res.status(200).json(token);
+		} catch (error) {
+			console.warn(
+				"OAuth exchange rejected: GitHub token exchange failed",
+				error instanceof Error ? error.message : String(error)
+			);
+			res.status(502).json({ error: "OAuth exchange failed" });
+		}
+	});
 }
