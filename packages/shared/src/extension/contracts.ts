@@ -1,10 +1,5 @@
 import { z } from "zod";
 
-export const captureElementMessageSchema = z.object({
-	action: z.literal("captureElement"),
-	selector: z.string().min(1),
-});
-
 export const contentScriptTabMessageSchema = z.discriminatedUnion("action", [
 	z.object({
 		action: z.literal("getElementPositionAndDimensions"),
@@ -22,6 +17,23 @@ export const elementDimensionsSchema = z.object({
 });
 
 export type ElementDimensions = z.infer<typeof elementDimensionsSchema>;
+
+export const captureElementMessageSchema = z.object({
+	action: z.literal("captureElement"),
+	selector: z.string().min(1).optional(),
+	dimensions: elementDimensionsSchema.optional(),
+});
+
+/** One coordinated preview capture (child frames, then at most one tab screenshot). */
+export const capturePreviewMessageSchema = z.object({
+	action: z.literal("capturePreview"),
+	dimensions: elementDimensionsSchema.optional(),
+});
+
+export const fetchRemoteImageMessageSchema = z.object({
+	action: z.literal("fetchRemoteImage"),
+	url: z.string().url(),
+});
 
 export const repoSchema = z.object({
 	id: z.number(),
@@ -137,6 +149,8 @@ export type SyncEvent = z.infer<typeof syncEventSchema>;
 
 export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
 	captureElementMessageSchema,
+	capturePreviewMessageSchema,
+	fetchRemoteImageMessageSchema,
 	z.object({
 		action: z.literal("getExtensionState"),
 	}),
