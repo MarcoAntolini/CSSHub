@@ -1,5 +1,7 @@
 import { elementDimensionsSchema, type ElementDimensions } from "../shared/contracts";
 
+export const PREVIEW_FRAME_CAPTURE_INJECT_FILE = "previewFrameCaptureInject.js";
+
 const toBase64 = (bytes: Uint8Array): string => {
 	let output = "";
 	for (const value of bytes) {
@@ -37,28 +39,116 @@ const cropImageDataUrl = async (
 	return `data:image/png;base64,${toBase64(bytes)}`;
 };
 
-export const captureElement = async (
-	dimensions: ElementDimensions
+/** Serialized into child frames after previewFrameCaptureInject.js loads. */
+const invokeInjectedPreviewCapture = (): Promise<string | null> =>
+	(
+		globalThis as unknown as {
+			__csshubCapturePreviewInFrame?: () => Promise<string | null>;
+		}
+	).__csshubCapturePreviewInFrame?.() ?? Promise.resolve(null);
+
+export const capturePreviewFromAllTabFrames = async (
+	tabId: number
+): Promise<string | null> => {
+	await chrome.scripting.executeScript({
+		target: { tabId, allFrames: true },
+		files: [PREVIEW_FRAME_CAPTURE_INJECT_FILE],
+	});
+
+	const results = await chrome.scripting.executeScript({
+		target: { tabId, allFrames: true },
+		func: invokeInjectedPreviewCapture,
+	});
+
+	for (const result of results) {
+		const value = result.result;
+		if (typeof value === "string" && value.startsWith("data:image/")) {
+			return value;
+		}
+	}
+	return null;
+};
+
+type CaptureTabFn = (
+	tabId: number,
+	options: { format: "png" },
+	callback?: (dataUrl: string | undefined) => void
+) => Promise<string> | void;
+
+const captureViaCallback = (
+	capture: (callback: (dataUrl: string | undefined) => void) => void
 ): Promise<string> =>
 	new Promise((resolve, reject) => {
-		chrome.tabs.captureVisibleTab({ format: "png" }, async (dataUrl) => {
-			try {
-				const lastError = chrome.runtime.lastError;
-				if (lastError) {
-					reject(new Error(lastError.message));
-					return;
-				}
-				if (!dataUrl) {
-					reject(new Error("Capture failed"));
-					return;
-				}
-				const croppedDataUrl = await cropImageDataUrl(dataUrl, dimensions);
-				resolve(croppedDataUrl);
-			} catch (error) {
-				reject(error);
+		capture((dataUrl) => {
+			const lastError = chrome.runtime.lastError;
+			if (lastError) {
+				reject(new Error(lastError.message));
+				return;
 			}
+			if (!dataUrl) {
+				reject(new Error("Capture failed"));
+				return;
+			}
+			resolve(dataUrl);
 		});
 	});
+
+const getTabById = async (tabId: number): Promise<chrome.tabs.Tab> =>
+	new Promise((resolve, reject) => {
+		chrome.tabs.get(tabId, (tab) => {
+			const lastError = chrome.runtime.lastError;
+			if (lastError) {
+				reject(new Error(lastError.message));
+				return;
+			}
+			resolve(tab);
+		});
+	});
+
+export const captureTabPng = async (tabId: number): Promise<string> => {
+	const tab = await getTabById(tabId);
+	if (!isCssBattlePlayUrl(tab.url)) {
+		throw new Error("Capture tab URL is not a CSSBattle play page");
+	}
+
+	await chrome.tabs.update(tabId, { active: true });
+	await new Promise((resolve) => setTimeout(resolve, 100));
+
+	const tabsApi = chrome.tabs as typeof chrome.tabs & {
+		captureTab?: CaptureTabFn;
+	};
+
+	if (typeof tabsApi.captureTab === "function") {
+		try {
+			const maybePromise = tabsApi.captureTab(tabId, { format: "png" });
+			if (maybePromise instanceof Promise) {
+				return await maybePromise;
+			}
+		} catch (_error) {
+			// fall through to callback form
+		}
+
+		return captureViaCallback((callback) => {
+			tabsApi.captureTab!(tabId, { format: "png" }, callback);
+		});
+	}
+
+	if (typeof tab.windowId !== "number") {
+		throw new Error("Tab has no window");
+	}
+
+	return captureViaCallback((callback) => {
+		chrome.tabs.captureVisibleTab(tab.windowId, { format: "png" }, callback);
+	});
+};
+
+export const captureElement = async (
+	dimensions: ElementDimensions,
+	tabId: number
+): Promise<string> => {
+	const dataUrl = await captureTabPng(tabId);
+	return cropImageDataUrl(dataUrl, dimensions);
+};
 
 export const CONTENT_SCRIPT_FILE = "contentScript.js";
 export const RECEIVING_END_MISSING = "Receiving end does not exist";

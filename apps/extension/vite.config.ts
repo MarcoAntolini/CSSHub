@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { build as esbuild } from "esbuild";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -96,13 +97,33 @@ const manifestHostPlugin = (
 	},
 });
 
+const previewFrameCaptureInjectPlugin = (): Plugin => ({
+	name: "preview-frame-capture-inject-iife",
+	apply: "build",
+	async closeBundle() {
+		await esbuild({
+			entryPoints: [resolve(__dirname, "src/previewFrameCaptureInject.ts")],
+			outfile: resolve(__dirname, "dist/previewFrameCaptureInject.js"),
+			bundle: true,
+			format: "iife",
+			platform: "browser",
+			target: "chrome109",
+			logLevel: "silent",
+		});
+	},
+});
+
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, __dirname, "");
 	const backendBaseUrl = getBackendBaseUrl(mode, env);
 	// Chrome Web Store rejects manifest.key; use EXTENSION_MANIFEST_KEY only for dev/staging/preview unpacked builds.
 	const manifestKey = mode === "production" ? null : getManifestKey(env);
 	return {
-		plugins: [react(), manifestHostPlugin(mode, backendBaseUrl, manifestKey)],
+		plugins: [
+			react(),
+			previewFrameCaptureInjectPlugin(),
+			manifestHostPlugin(mode, backendBaseUrl, manifestKey),
+		],
 		build: {
 			emptyOutDir: true,
 			outDir: "dist",
