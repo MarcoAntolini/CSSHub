@@ -2,14 +2,20 @@ import { detectChallengeContext } from "./contentScriptChallengeContext";
 import {
 	CLICKABLE_SELECTOR,
 	extractCodeFromCmLines,
-	findTargetImage,
+	fetchTargetImagePayload,
+	findPreviewIframe,
 	getChallengeIdFromPathname,
 	getChallengeNameFromTitle,
 	getElementDimensions,
-	PREVIEW_SELECTOR,
+	getElementDimensionsFromElement,
 	isSubmitControlText,
+	waitForPreviewIframeReady,
 	type ElementDimensions,
 } from "./contentScriptDom";
+import {
+	capturePreviewFromDocument,
+	capturePreviewFromDocumentAsync,
+} from "./previewDocumentCapture";
 import type { SubmissionPayload } from "./shared/contracts";
 import {
 	didStatsChange,
@@ -100,27 +106,92 @@ const extractStats = (): SubmissionStats => extractStatsFromDocument(document);
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => window.setTimeout(resolve, ms));
 
-const capturePreviewImage = async (): Promise<string | null> => {
+const PREVIEW_IFRAME_CAPTURE_MAX_ATTEMPTS = 8;
+const PREVIEW_IFRAME_CAPTURE_RETRY_MS = 400;
+
+const capturePreviewViaBackground = async (
+	dimensions: ElementDimensions | null
+): Promise<string | null> => {
 	const message = {
-		action: "captureElement",
-		selector: PREVIEW_SELECTOR,
+		action: "capturePreview" as const,
+		...(dimensions ? { dimensions } : {}),
 	};
 
+	const response = (await chrome.runtime.sendMessage(message)) as {
+		ok?: boolean;
+		data?: { croppedDataUrl?: string };
+		error?: string;
+	};
+	if (!response?.ok || typeof response?.data?.croppedDataUrl !== "string") {
+		if (response?.error) {
+			console.warn("[CssHub] Background preview capture failed:", response.error);
+		}
+		return null;
+	}
+
+	return response.data.croppedDataUrl;
+};
+
+const capturePreviewFromIframeLocally = async (
+	iframe: HTMLIFrameElement
+): Promise<string | null> => {
 	try {
-		const response = await chrome.runtime.sendMessage(message);
-		if (!response?.ok || typeof response?.data?.croppedDataUrl !== "string") {
+		const doc = iframe.contentDocument;
+		if (!doc) {
 			return null;
 		}
+		return capturePreviewFromDocument(doc) ?? (await capturePreviewFromDocumentAsync(doc));
+	} catch (_error) {
+		return null;
+	}
+};
 
-		return response.data.croppedDataUrl;
+const capturePreviewImage = async (): Promise<string | null> => {
+	await sleep(POST_SUBMIT_SETTLE_DELAY_MS);
+
+	const devicePixelRatio = window.devicePixelRatio || 1;
+	const iframe = await waitForPreviewIframeReady(document);
+	const previewIframe = iframe ?? findPreviewIframe(document);
+	const dimensions = previewIframe
+		? getElementDimensionsFromElement(previewIframe, devicePixelRatio)
+		: null;
+
+	try {
+		const fromScreenshot = await capturePreviewViaBackground(dimensions);
+		if (fromScreenshot) {
+			return fromScreenshot;
+		}
 	} catch (error) {
 		if (isExtensionContextInvalidated(error)) {
 			throw error;
 		}
-
-		console.warn("[CssHub] Preview capture failed; continuing without image", error);
-		return null;
+		console.warn("[CssHub] Tab screenshot preview capture failed", error);
 	}
+
+	for (let attempt = 0; attempt < PREVIEW_IFRAME_CAPTURE_MAX_ATTEMPTS; attempt++) {
+		try {
+			const currentIframe = previewIframe ?? findPreviewIframe(document);
+			if (currentIframe) {
+				const localCapture = await capturePreviewFromIframeLocally(currentIframe);
+				if (localCapture) {
+					return localCapture;
+				}
+			}
+		} catch (error) {
+			if (isExtensionContextInvalidated(error)) {
+				throw error;
+			}
+
+			console.warn("[CssHub] Preview iframe capture attempt failed", error);
+		}
+
+		if (attempt < PREVIEW_IFRAME_CAPTURE_MAX_ATTEMPTS - 1) {
+			await sleep(PREVIEW_IFRAME_CAPTURE_RETRY_MS);
+		}
+	}
+
+	console.warn("[CssHub] Preview capture failed after retries; continuing without image");
+	return null;
 };
 
 const waitForPostSubmitStats = async (initial: SubmissionStats): Promise<SubmissionStats> => {
@@ -165,9 +236,11 @@ const processSubmission = async (): Promise<void> => {
 		}
 
 		const initialStats = extractStats();
-		const [postSubmitStats, resultImageDataUrl] = await Promise.all([
+		const previewCapturePromise = capturePreviewImage();
+		const [postSubmitStats, resultImageDataUrl, targetImage] = await Promise.all([
 			waitForPostSubmitStats(initialStats),
-			capturePreviewImage(),
+			previewCapturePromise,
+			fetchTargetImagePayload(document, window.location.href, getChallengeId()),
 		]);
 		const challengeName =
 			challengeContext.mode === "daily"
@@ -185,7 +258,7 @@ const processSubmission = async (): Promise<void> => {
 			score: postSubmitStats.score,
 			matchPct: postSubmitStats.matchPct,
 			code: await extractCode(),
-			targetImage: findTargetImage(document),
+			targetImage,
 			resultImageDataUrl,
 		};
 

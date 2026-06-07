@@ -51,9 +51,13 @@ Listener: capture phase on `document` (`contentScript.ts`), only on paths starti
 
 ## Preview capture (`contentScriptDom.ts`)
 
-| Constant | Selector | Purpose |
-|----------|----------|---------|
-| `PREVIEW_SELECTOR` | `iframe[title*='Preview' i]` | Crop screenshot via background `captureElement` |
+| Constant / helper | Selector / behavior | Purpose |
+|-------------------|---------------------|---------|
+| `PREVIEW_IFRAME_SELECTORS` | `.preview-iframe`, `[class*='preview-iframe']`, `title="Preview"`, then `PREVIEW_SELECTOR` | Resolve preview iframe (CSSBattle markup changes) |
+| `findPreviewIframe` | Falls back to largest visible `allow-same-origin` iframe | Last-resort preview detection |
+| `capturePreviewFromIframeDocument` | Reads `canvas` / `img` / `svg` inside same-origin iframe | Preferred capture (no tab screenshot race) |
+| `waitForPreviewIframeReady` | Polls until preview iframe has painted content | Daily / slow post-submit renders |
+| `capturePreview` (background) | Child-frame injection once, then one `captureTab` crop | Avoids `captureVisibleTab` rate limits / `activeTab` expiry |
 
 ## Editor code fallback (`contentScriptDom.ts`)
 
@@ -67,16 +71,26 @@ Primary path: background `extractCssbattleEditorCode` (Monaco). DOM lines are fa
 
 | Heuristic | Condition | Purpose |
 |-----------|-----------|---------|
-| `isTargetImageElement` | `alt` contains `target` or `battle` | Pick challenge target `<img>` |
-| | `class` contains `target` | |
-| | `src` starts with `/targets/` | |
-| (fallback) | first `canvas` | `toDataURL('image/png')` when no matching img |
+| `scoreTargetImageCandidate` | Asset id matches `/play/{id}` from URL (+1000) | Beats sidebar thumbnails for other targets |
+| | `src` / `currentSrc` matches `/targets/….(png\|jpg\|…)` | Strong signal (+100) |
+| | `img.levelpage__target` queried first | Main challenge pane |
+| | Numeric id fallback | `https://cssbattle.dev/targets/{id}.png` when DOM is stale |
+| | Daily / opaque id | `meta[property="og:image"]` or ImageKit `og/target?id={id}` |
+| | Footer exclusion | `.footer__deco` thumbs are never the challenge target |
+| `waitForTargetImage` | Poll until DOM/meta sources are available | Client-rendered daily pages |
+| | `class` includes `levelpage__target` or `__target` | BEM-style target pane |
+| | `alt` contains `target` or `battle` | Legacy markup |
+| | width ≥ 200px | Prefer full-size challenge target |
+| `findTargetImage` | Highest-scoring `<img>` (not first in DOM) | Avoid decoy avatars/icons |
+| `fetchTargetImagePayload` | Inlines target via background `fetchRemoteImage` | Bypasses CORS for Firebase/ImageKit URLs |
+| `fetchRemoteImage` (background) | `host_permissions` fetch → data URL | `firebasestorage.googleapis.com`, `ik.imagekit.io` |
+| (fallback) | `canvas` with target/levelpage class only | Avoid unrelated editor canvases |
 
-**Helper:** `findTargetImage`
+**Helpers:** `findTargetImage`, `fetchTargetImagePayload`, `resolveCssBattleImageUrl` (background fetch fallback)
 
 ## Fixture and CI
 
-- **Fixture:** `apps/extension/tests/fixtures/cssbattle-play-minimal.html` — minimal play-page fragments (stats box, submit, preview iframe, target img, CodeMirror lines).
+- **Fixtures:** `cssbattle-play-minimal.html`, `cssbattle-play-current.html` (levelpage target + preview-iframe markup).
 - **Unit tests:** `contentScriptStats.test.ts`, `contentScript.dom.test.ts` (jsdom; no live cssbattle.dev).
 - **Run:** `npm run test` from repo root.
 
