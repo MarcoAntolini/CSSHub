@@ -2,6 +2,16 @@ import type { SubmissionIngestionResponse, SyncEvent } from "./contracts";
 
 export type StatusTone = "success" | "warn" | "error" | "neutral";
 
+export const statusTextFromTone = (
+	tone: StatusTone,
+	neutralLabel = "info"
+): string => {
+	if (tone === "success") return "committed";
+	if (tone === "error") return "failed";
+	if (tone === "warn") return "skipped";
+	return neutralLabel;
+};
+
 const WARN_CODES = new Set([
 	"SYNC_SKIPPED_NOT_IMPROVED",
 	"SYNC_SKIPPED_THRESHOLD",

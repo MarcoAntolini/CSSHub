@@ -1,12 +1,10 @@
 import type { SyncEvent } from "../shared/contracts";
-import { BRANCH_NAME_PATTERN, EVENT_BADGE_LABELS } from "./constants";
+import { getSyncEventTone, statusTextFromTone } from "../shared/eventTone";
+import { BRANCH_NAME_PATTERN } from "./constants";
 
 export const getEventBadgeLabel = (event: SyncEvent): string => {
 	if (event.code) {
-		return (
-			EVENT_BADGE_LABELS[event.code] ??
-			event.code.toLowerCase().replace(/_/g, " ")
-		);
+		return statusTextFromTone(getSyncEventTone(event));
 	}
 	return event.level === "info" ? "info" : event.level;
 };
