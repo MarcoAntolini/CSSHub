@@ -54,6 +54,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Prepare monorepo for typecheck
+        run: |
+          npm run build --workspace @csshub/shared
+          npm run vercel:prepare --workspace @csshub/backend
+
       - name: Typecheck
         run: npm run typecheck
 
