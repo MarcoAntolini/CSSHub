@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
 	capturePreviewFromDocument,
 	isLikelyPreviewFrameDocument,
-} from "../../src/previewDocumentCapture";
+} from "@/previewDocumentCapture";
 
 describe("isLikelyPreviewFrameDocument", () => {
 	beforeEach(() => {

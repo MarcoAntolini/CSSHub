@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
-import type { SubmissionPayload } from "../../src/shared/contracts";
+import type { SubmissionPayload } from "@/shared/contracts";
 import {
 	buildSubmissionFiles,
 	challengeFolderPath,
 	formatChallengeTitle,
 	listBestSubmissionMetadataPaths,
-} from "../../src/submission/submissionFiles";
+} from "@/submission/submissionFiles";
 
-vi.mock("../../src/remoteImageFetch", () => ({
+vi.mock("@/remoteImageFetch", () => ({
 	fetchRemoteImageAsDataUrl: vi.fn(),
 }));
 
-import { fetchRemoteImageAsDataUrl } from "../../src/remoteImageFetch";
+import { fetchRemoteImageAsDataUrl } from "@/remoteImageFetch";
 
 const battlePayload = (): SubmissionPayload => ({
 	challengeMode: "battle",

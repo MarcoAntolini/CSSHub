@@ -5,7 +5,7 @@ import {
 	isBackgroundResponse,
 	parseBackgroundOk,
 	parseBackgroundOkVoid,
-} from "../../src/shared/messaging";
+} from "@/shared/messaging";
 import { z } from "zod";
 
 describe("isBackgroundResponse", () => {

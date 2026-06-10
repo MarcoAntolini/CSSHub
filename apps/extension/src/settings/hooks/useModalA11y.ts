@@ -1,6 +1,6 @@
 import type { KeyboardEvent as ReactKeyboardEvent, RefObject } from "react";
 import { useCallback, useEffect, useRef } from "react";
-import { MODAL_FOCUSABLE_SELECTOR } from "../constants";
+import { MODAL_FOCUSABLE_SELECTOR } from "@/settings/constants";
 
 type UseModalA11yOptions = {
 	createOpen: boolean;

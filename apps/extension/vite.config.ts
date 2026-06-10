@@ -97,6 +97,11 @@ const manifestHostPlugin = (
 	},
 });
 
+const extensionSrcAlias = {
+	"@": resolve(__dirname, "src"),
+	"@csshub/shared": resolve(__dirname, "../../packages/shared/src/index.ts"),
+};
+
 const previewFrameCaptureInjectPlugin = (): Plugin => ({
 	name: "preview-frame-capture-inject-iife",
 	apply: "build",
@@ -113,15 +118,37 @@ const previewFrameCaptureInjectPlugin = (): Plugin => ({
 	},
 });
 
+/** Content scripts are classic scripts — bundle as IIFE (no top-level import). */
+const contentScriptBundlePlugin = (): Plugin => ({
+	name: "content-script-iife",
+	apply: "build",
+	async closeBundle() {
+		await esbuild({
+			entryPoints: [resolve(__dirname, "src/contentScript.ts")],
+			outfile: resolve(__dirname, "dist/contentScript.js"),
+			bundle: true,
+			format: "iife",
+			platform: "browser",
+			target: "chrome109",
+			alias: extensionSrcAlias,
+			logLevel: "silent",
+		});
+	},
+});
+
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, __dirname, "");
 	const backendBaseUrl = getBackendBaseUrl(mode, env);
 	// Chrome Web Store rejects manifest.key; use EXTENSION_MANIFEST_KEY only for dev/staging/preview unpacked builds.
 	const manifestKey = mode === "production" ? null : getManifestKey(env);
 	return {
+		resolve: {
+			alias: extensionSrcAlias,
+		},
 		plugins: [
 			react(),
 			previewFrameCaptureInjectPlugin(),
+			contentScriptBundlePlugin(),
 			manifestHostPlugin(mode, backendBaseUrl, manifestKey),
 		],
 		build: {
@@ -132,7 +159,6 @@ export default defineConfig(({ mode }) => {
 					popup: resolve(__dirname, "popup.html"),
 					settings: resolve(__dirname, "settings.html"),
 					background: resolve(__dirname, "src/background.ts"),
-					contentScript: resolve(__dirname, "src/contentScript.ts"),
 				},
 				output: {
 					entryFileNames: "[name].js",

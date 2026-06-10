@@ -1,5 +1,5 @@
-import type { PopupToBackgroundMessage } from "../../shared/contracts";
-import { getStoredState } from "../../storage";
+import type { PopupToBackgroundMessage } from "@/shared/contracts";
+import { getStoredState } from "@/storage";
 
 export type MessageResponse = { ok: boolean; data?: unknown; error?: string };
 export type SendResponse = (response: MessageResponse) => void;

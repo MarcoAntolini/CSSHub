@@ -1,78 +1,22 @@
-import type { SubmissionPayload } from "../shared/contracts";
-import { fetchRemoteImageAsDataUrl } from "../remoteImageFetch";
+import type { SubmissionPayload } from "@/shared/contracts";
+import { fetchRemoteImageAsDataUrl } from "@/remoteImageFetch";
 import { resolveCssBattleImageUrl } from "./cssBattleAssets";
 import {
 	getSavedSubmissionMetrics,
 	type CommitFile,
 	type SavedSubmissionMetrics,
-} from "../githubClient";
+} from "@/githubClient";
+import {
+	challengeFolderPath,
+	formatChallengeTitle,
+	listBestSubmissionMetadataPaths,
+} from "./challengeModel";
 
-const slugify = (value: string): string =>
-	value
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "")
-		.slice(0, 80);
-
-export const challengeStorageKey = (payload: SubmissionPayload): string => {
-	if (payload.challengeMode === "daily" && payload.dailyDateIso) {
-		return payload.dailyDateIso;
-	}
-
-	if (payload.challengeMode === "battle" && payload.battleGroup && payload.challengeLabel) {
-		return `${payload.battleGroup}/${payload.challengeLabel}`;
-	}
-
-	const rawId = payload.challengeId.trim().toLowerCase();
-	if (/^\d+$/.test(rawId)) {
-		return rawId;
-	}
-	if (rawId && rawId !== "unknown") {
-		const normalized = rawId
-			.replace(/[^a-z0-9_-]+/g, "-")
-			.replace(/^-+|-+$/g, "");
-		if (normalized) {
-			return normalized;
-		}
-	}
-	const fallback = slugify(payload.challengeName);
-	return fallback ? `unknown-${fallback}` : "unknown";
-};
-
-export const challengeFolderPath = (payload: SubmissionPayload): string => {
-	if (payload.challengeMode === "daily" && payload.dailyDateIso) {
-		return `Daily Targets/${payload.dailyDateIso}`;
-	}
-	if (payload.challengeMode === "battle" && payload.battleGroup && payload.challengeLabel) {
-		return `Battles/${payload.battleGroup}/${payload.challengeLabel}`;
-	}
-	return `challenges/${challengeStorageKey(payload)}`;
-};
-
-const submissionMetadataPath = (folder: string): string => `${folder}/submission.json`;
-
-const legacyNumericSubmissionPath = (payload: SubmissionPayload): string | null => {
-	const rawId = payload.challengeId.trim();
-	if (/^\d+$/.test(rawId)) {
-		return submissionMetadataPath(`challenges/${rawId}`);
-	}
-	return null;
-};
-
-const legacySlugSubmissionPath = (payload: SubmissionPayload): string => {
-	const legacySlug = slugify(`${payload.challengeId}-${payload.challengeName}`);
-	return submissionMetadataPath(`challenges/${legacySlug}`);
-};
-
-export const listBestSubmissionMetadataPaths = (payload: SubmissionPayload): string[] => {
-	const paths = [submissionMetadataPath(challengeFolderPath(payload))];
-	const legacyNumeric = legacyNumericSubmissionPath(payload);
-	if (legacyNumeric) {
-		paths.push(legacyNumeric);
-	}
-	paths.push(legacySlugSubmissionPath(payload));
-	return paths;
-};
+export {
+	challengeFolderPath,
+	formatChallengeTitle,
+	listBestSubmissionMetadataPaths,
+} from "./challengeModel";
 
 export const readBestSubmissionMetrics = async (
 	token: string,
@@ -89,14 +33,6 @@ export const readBestSubmissionMetrics = async (
 	return null;
 };
 
-const toBase64 = (bytes: Uint8Array): string => {
-	let output = "";
-	for (const value of bytes) {
-		output += String.fromCharCode(value);
-	}
-	return btoa(output);
-};
-
 const getBase64FromDataUrl = (dataUrl: string): string => {
 	const base64 = dataUrl.split(",")[1];
 	if (!base64) {
@@ -111,19 +47,6 @@ const getMarkdownFence = (content: string): string => {
 		fence += "`";
 	}
 	return fence;
-};
-
-export const formatChallengeTitle = (payload: SubmissionPayload): string => {
-	if (payload.challengeMode === "daily" && payload.dailyDateLabel) {
-		return `Daily Target — ${payload.dailyDateLabel}`;
-	}
-	if (payload.challengeMode === "battle" && payload.challengeLabel) {
-		return payload.challengeLabel;
-	}
-	if (payload.challengeId === "unknown") {
-		return payload.challengeName;
-	}
-	return `Target ${payload.challengeId}: ${payload.challengeName}`;
 };
 
 const getChallengeUrl = (payload: SubmissionPayload): string =>

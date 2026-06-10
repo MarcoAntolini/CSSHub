@@ -50,12 +50,9 @@ export const MONACO_LINE_SELECTOR = ".monaco-editor .view-line";
 export const CHALLENGE_ID_PATH_REGEX = /^\/play\/([^/]+)/;
 export const CHALLENGE_TITLE_REGEX = /Target\s*#?\d+\s*:\s*(.+)$/i;
 
-export type ElementDimensions = {
-	x: number;
-	y: number;
-	width: number;
-	height: number;
-};
+import type { ElementDimensions } from "./shared/contracts";
+
+export type { ElementDimensions };
 
 export const resolveDocumentUrl = (url: string, baseUrl: string): string => {
 	try {

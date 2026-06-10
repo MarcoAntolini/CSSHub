@@ -1,34 +1,7 @@
-export type SyncEventCode =
-	| "SYNC_COMMITTED"
-	| "SYNC_SKIPPED_DUPLICATE"
-	| "SYNC_SKIPPED_THRESHOLD"
-	| "SYNC_SKIPPED_NOT_IMPROVED"
-	| "SYNC_SKIPPED_INVALID_SCORE"
-	| "SYNC_SKIPPED_PREVIEW_UNAVAILABLE"
-	| "SYNC_AUTH_REQUIRED"
-	| "SYNC_REPO_REQUIRED"
-	| "AUTH_STATE_MISMATCH"
-	| "AUTH_SESSION_EXPIRED"
-	| "AUTH_REDIRECT_INVALID"
-	| "AUTH_BACKEND_REQUEST_INVALID"
-	| "AUTH_OAUTH_EXCHANGE_FAILED"
-	| "AUTH_OAUTH_CODE_MISSING"
-	| "AUTH_GITHUB_UNAUTHORIZED"
-	| "GITHUB_NOT_FOUND"
-	| "GITHUB_CONFLICT"
-	| "GITHUB_RATE_LIMIT"
-	| "GITHUB_UNAVAILABLE"
-	| "NETWORK_ERROR"
-	| "UNEXPECTED_ERROR";
+import type { BackgroundEventCode } from "@/shared/contracts";
+import { GithubApiError, getGithubErrorStatus } from "@/github/githubError";
 
-const parseGithubStatus = (message: string): number | null => {
-	const matched = message.match(/GitHub request failed \((\d{3})\)/);
-	if (!matched) {
-		return null;
-	}
-	const status = Number(matched[1]);
-	return Number.isFinite(status) ? status : null;
-};
+export type SyncEventCode = BackgroundEventCode;
 
 const parseGithubErrorDetail = (message: string): string | null => {
 	const jsonStart = message.indexOf("{");
@@ -53,14 +26,25 @@ const parseGithubErrorDetail = (message: string): string | null => {
 	}
 };
 
-const getRawErrorMessage = (error: unknown): string =>
-	error instanceof Error ? error.message : "Unexpected background failure";
+const getRawErrorMessage = (error: unknown): string => {
+	if (error instanceof GithubApiError) {
+		return error.message;
+	}
+	return error instanceof Error ? error.message : "Unexpected background failure";
+};
+
+const getGithubDetail = (error: unknown, rawMessage: string): string | null => {
+	if (error instanceof GithubApiError) {
+		return parseGithubErrorDetail(error.detail);
+	}
+	return parseGithubErrorDetail(rawMessage);
+};
 
 export const toUserSafeError = (
 	error: unknown
 ): { message: string; code: SyncEventCode } => {
 	const rawMessage = getRawErrorMessage(error);
-	const githubStatus = parseGithubStatus(rawMessage);
+	const githubStatus = getGithubErrorStatus(error);
 
 	if (rawMessage.includes("OAuth state mismatch")) {
 		return {
@@ -114,7 +98,7 @@ export const toUserSafeError = (
 		};
 	}
 	if (githubStatus === 409 || githubStatus === 422) {
-		const detail = parseGithubErrorDetail(rawMessage);
+		const detail = getGithubDetail(error, rawMessage);
 		const isFastForward =
 			detail?.toLowerCase().includes("not a fast forward") ?? false;
 		if (isFastForward) {

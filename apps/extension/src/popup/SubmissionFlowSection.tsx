@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
-import type { ExtensionSettings } from "../shared/contracts";
-import { openSettingsPage } from "../openSettingsPage";
+import type { ExtensionSettings } from "@/shared/contracts";
+import { openSettingsPage } from "@/openSettingsPage";
 import { THRESHOLD_MAX, THRESHOLD_MIN } from "./constants";
 import { clampThreshold } from "./utils";
 

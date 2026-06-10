@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { backgroundEventCodeSchema, syncIngestionEventCodeSchema } from "./syncEventCodes.js";
 
 export const contentScriptTabMessageSchema = z.discriminatedUnion("action", [
 	z.object({
@@ -140,7 +141,7 @@ export const syncEventSchema = z.object({
 	id: z.string(),
 	timestamp: z.string(),
 	level: z.enum(["info", "warn", "error"]),
-	code: z.string().min(1).optional(),
+	code: backgroundEventCodeSchema.optional(),
 	message: z.string(),
 	commitUrl: z.string().url().nullable(),
 });
@@ -153,6 +154,7 @@ export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
 	fetchRemoteImageMessageSchema,
 	z.object({
 		action: z.literal("getExtensionState"),
+		refreshRepos: z.boolean().optional(),
 	}),
 	z.object({
 		action: z.literal("saveSettings"),
@@ -232,10 +234,19 @@ export const submissionIngestionResponseSchema = z.object({
 	accepted: z.boolean(),
 	threshold: z.number().min(0).max(100),
 	reason: z.string(),
-	code: z.string().min(1).optional(),
+	code: syncIngestionEventCodeSchema.or(backgroundEventCodeSchema).optional(),
 	committed: z.boolean(),
 	commitUrl: z.string().url().nullable(),
 });
+
+export {
+	backgroundEventCodeSchema,
+	syncIngestionEventCodeSchema,
+	toneFromSyncEventCode,
+	type BackgroundEventCode,
+	type StatusTone,
+	type SyncIngestionEventCode,
+} from "./syncEventCodes.js";
 
 export type SubmissionIngestionResponse = z.infer<
 	typeof submissionIngestionResponseSchema

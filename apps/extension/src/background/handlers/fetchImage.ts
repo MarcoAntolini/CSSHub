@@ -1,4 +1,4 @@
-import { fetchRemoteImageAsDataUrl } from "../../remoteImageFetch";
+import { fetchRemoteImageAsDataUrl } from "@/remoteImageFetch";
 import type { Handler } from "./types";
 
 export const handleFetchRemoteImage: Handler<"fetchRemoteImage"> = async (

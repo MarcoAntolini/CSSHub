@@ -1,141 +1,53 @@
 import {
-	extensionSettingsSchema,
 	submissionPayloadSchema,
 	submissionIngestionResponseSchema,
 	syncEventSchema,
 	type AuthStatus,
-	type ExtensionSettings,
-	type PopupToBackgroundMessage,
-	type SubmissionIngestionResponse,
-	type SyncEvent,
 } from "./shared/contracts";
+import {
+	parseAuthFromLocal,
+	reconcileAuthWithSession,
+} from "./storage/authSession";
+import {
+	clearSessionToken,
+	readPersistedState,
+	writePersistedState,
+} from "./storage/persistence";
+import { defaultSettings, parseStoredSettings } from "./storage/settingsMigration";
+import type { StoredState } from "./storage/types";
 
-export type StoredState = {
-	githubToken: string | null;
-	auth: AuthStatus;
-	settings: ExtensionSettings;
-	lastSubmission: Extract<PopupToBackgroundMessage, { action: "cssbattleSubmission" }>["payload"] | null;
-	lastSubmissionAccepted: boolean | null;
-	lastIngestion: SubmissionIngestionResponse | null;
-	recentEvents: SyncEvent[];
-	lastSubmissionFingerprint: string | null;
-};
+export type { StoredState } from "./storage/types";
 
-const STORAGE_KEY = "csshub_state_v1";
-const TOKEN_KEY = "csshub_github_token_v1";
-
-const defaultState: StoredState = {
-	githubToken: null,
+const buildDefaultState = (sessionToken: string | null): StoredState => ({
+	githubToken: sessionToken,
 	auth: {
 		isAuthenticated: false,
 		username: null,
 		method: null,
 	},
-	settings: {
-		threshold: 95,
-		selectedRepoFullName: null,
-		selectedBranch: null,
-		systemNotificationsEnabled: true,
-		repositoryReadmeMode: "managed-section",
-	},
+	settings: defaultSettings(),
 	lastSubmission: null,
 	lastSubmissionAccepted: null,
 	lastIngestion: null,
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
-};
-
-const normalizeSettings = (value: unknown): ExtensionSettings => {
-	const parsed = extensionSettingsSchema.safeParse(value);
-	if (parsed.success) {
-		return parsed.data;
-	}
-
-	const candidate =
-		typeof value === "object" && value !== null
-			? (value as Partial<ExtensionSettings>)
-			: {};
-
-	const thresholdCandidate = candidate.threshold;
-	const threshold =
-		typeof thresholdCandidate === "number" &&
-		Number.isFinite(thresholdCandidate) &&
-		thresholdCandidate >= 0 &&
-		thresholdCandidate <= 100
-			? thresholdCandidate
-			: defaultState.settings.threshold;
-
-	const readmeModeCandidate = candidate.repositoryReadmeMode;
-	const repositoryReadmeMode =
-		readmeModeCandidate === "off" ||
-		readmeModeCandidate === "managed-section" ||
-		readmeModeCandidate === "full"
-			? readmeModeCandidate
-			: defaultState.settings.repositoryReadmeMode;
-
-	return {
-		threshold,
-		selectedRepoFullName:
-			typeof candidate.selectedRepoFullName === "string" ||
-			candidate.selectedRepoFullName === null
-				? candidate.selectedRepoFullName
-				: defaultState.settings.selectedRepoFullName,
-		selectedBranch:
-			typeof candidate.selectedBranch === "string" ||
-			candidate.selectedBranch === null
-				? candidate.selectedBranch
-				: defaultState.settings.selectedBranch,
-		systemNotificationsEnabled:
-			typeof candidate.systemNotificationsEnabled === "boolean"
-				? candidate.systemNotificationsEnabled
-				: defaultState.settings.systemNotificationsEnabled,
-		repositoryReadmeMode,
-	};
-};
+});
 
 export const getStoredState = async (): Promise<StoredState> => {
-	const payload = await chrome.storage.local.get(STORAGE_KEY);
-	const tokenPayload = await chrome.storage.session.get(TOKEN_KEY);
-	const state = payload[STORAGE_KEY] as Partial<StoredState> | undefined;
-	const sessionToken =
-		typeof tokenPayload[TOKEN_KEY] === "string"
-			? (tokenPayload[TOKEN_KEY] as string)
-			: defaultState.githubToken;
+	const { local: state, sessionToken } = await readPersistedState();
 
 	if (!state) {
-		return {
-			...defaultState,
-			githubToken: sessionToken,
-		};
+		return buildDefaultState(sessionToken);
 	}
 
-	const settings = normalizeSettings(state.settings);
+	const settings = parseStoredSettings(state.settings);
 	const lastSubmission = submissionPayloadSchema.safeParse(state.lastSubmission);
 	const lastIngestion = submissionIngestionResponseSchema.safeParse(state.lastIngestion);
 	const recentEvents = syncEventSchema.array().safeParse(state.recentEvents);
 
 	const hasSessionToken = Boolean(sessionToken);
-	const authFromLocal: AuthStatus = {
-		isAuthenticated: Boolean(state.auth?.isAuthenticated),
-		username:
-			typeof state.auth?.username === "string" ? state.auth.username : null,
-		method:
-			state.auth?.method === "device" ||
-			state.auth?.method === "web" ||
-			state.auth?.method === "pat"
-				? state.auth.method
-				: null,
-	};
-	// Token lives in session storage; auth flags live in local. If the session was cleared
-	// (browser restart, profile reset) but local still says signed in, treat as logged out
-	// and heal local so UI and API handlers stay aligned.
-	const auth: AuthStatus = hasSessionToken
-		? authFromLocal
-		: {
-				isAuthenticated: false,
-				username: null,
-				method: null,
-			};
+	const authFromLocal = parseAuthFromLocal(state.auth);
+	const auth: AuthStatus = reconcileAuthWithSession(authFromLocal, hasSessionToken);
 
 	const next: StoredState = {
 		githubToken: sessionToken,
@@ -164,18 +76,7 @@ export const getStoredState = async (): Promise<StoredState> => {
 };
 
 export const saveStoredState = async (state: StoredState): Promise<void> => {
-	await chrome.storage.session.set({
-		[TOKEN_KEY]: state.githubToken,
-	});
-
-	const persistableState: StoredState = {
-		...state,
-		githubToken: null,
-	};
-
-	await chrome.storage.local.set({
-		[STORAGE_KEY]: persistableState,
-	});
+	await writePersistedState(state);
 };
 
 export const clearAuthState = async (): Promise<StoredState> => {
@@ -190,7 +91,7 @@ export const clearAuthState = async (): Promise<StoredState> => {
 		},
 	};
 	await saveStoredState(next);
-	await chrome.storage.session.remove(TOKEN_KEY);
+	await clearSessionToken();
 	return next;
 };
 

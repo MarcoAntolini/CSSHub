@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { openSettingsPage } from "../openSettingsPage";
+import { openSettingsPage } from "@/openSettingsPage";
 
 export const AuthPrompt = (): ReactElement => (
 	<section className="card">

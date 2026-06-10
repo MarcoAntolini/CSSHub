@@ -1,15 +1,15 @@
-import { extensionStateResponseSchema, type Repo } from "../../shared/contracts";
-import { listUserRepos } from "../../githubClient";
-import { clearRecentEvents, getStoredState, saveStoredState } from "../../storage";
+import { extensionStateResponseSchema, type Repo } from "@/shared/contracts";
+import { listUserRepos } from "@/githubClient";
+import { clearRecentEvents, getStoredState, saveStoredState } from "@/storage";
 import type { Handler } from "./types";
 
 export const handleGetExtensionState: Handler<"getExtensionState"> = async (
-	_data,
+	data,
 	sendResponse
 ) => {
 	const state = await getStoredState();
 	let repos: Repo[] = [];
-	if (state.githubToken) {
+	if (data.refreshRepos && state.githubToken) {
 		try {
 			repos = await listUserRepos(state.githubToken);
 		} catch (_error) {

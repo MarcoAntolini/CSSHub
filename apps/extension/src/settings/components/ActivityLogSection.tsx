@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
-import type { SyncEvent } from "../../shared/contracts";
-import { getSyncEventTone } from "../../shared/eventTone";
-import { formatActivityTimestamp, getEventBadgeLabel } from "../utils";
+import type { SyncEvent } from "@/shared/contracts";
+import { getSyncEventTone } from "@/shared/eventTone";
+import { formatActivityTimestamp, getEventBadgeLabel } from "@/settings/utils";
 
 type ActivityLogSectionProps = {
 	recentEvents: SyncEvent[];

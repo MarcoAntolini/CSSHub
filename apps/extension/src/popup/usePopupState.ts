@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	extensionSettingsSchema,
 	extensionStateResponseSchema,
-} from "../shared/contracts";
+} from "@/shared/contracts";
 import {
 	BackgroundError,
 	parseBackgroundOk,
 	parseBackgroundOkVoid,
 	sendBackgroundMessage,
-} from "../shared/messaging";
+} from "@/shared/messaging";
 import { POPUP_ERRORS, THRESHOLD_SAVE_DEBOUNCE_MS } from "./constants";
 import type { PopupState } from "./types";
 import { clampThreshold } from "./utils";

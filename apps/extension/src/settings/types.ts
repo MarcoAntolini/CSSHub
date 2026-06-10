@@ -5,7 +5,7 @@ import type {
 	SubmissionIngestionResponse,
 	SubmissionPayload,
 	SyncEvent,
-} from "../shared/contracts";
+} from "@/shared/contracts";
 
 export type LoadedState = {
 	auth: AuthStatus;

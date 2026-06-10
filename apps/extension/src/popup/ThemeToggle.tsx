@@ -6,7 +6,7 @@ import {
 	loadPopupTheme,
 	savePopupTheme,
 	type PopupTheme,
-} from "../popupTheme";
+} from "@/popupTheme";
 
 const SunIcon = (props: SVGProps<SVGSVGElement>): ReactElement => (
 	<svg

@@ -11,39 +11,25 @@ import {
 	getElementDimensionsFromElement,
 	isSubmitControlText,
 	waitForPreviewIframeReady,
-	type ElementDimensions,
 } from "./contentScriptDom";
+import {
+	parseContentScriptTabMessage,
+	sendBackgroundAction,
+	sendCapturePreviewMessage,
+	sendCssbattleSubmissionMessage,
+} from "./contentScriptMessaging";
 import {
 	capturePreviewFromDocument,
 	capturePreviewFromDocumentAsync,
 } from "./previewDocumentCapture";
-import type { SubmissionPayload } from "./shared/contracts";
+import { executePreviewCaptureStrategy } from "./preview/previewCaptureStrategy";
+import type { ElementDimensions, SubmissionPayload } from "./shared/contracts";
 import {
 	extractStatsFromDocument,
 	type SubmissionStats,
 	waitForPostSubmitStats,
 } from "./contentScriptStats";
 
-const parseContentScriptTabMessage = (
-	request: unknown
-): { action: "getElementPositionAndDimensions"; selector: string } | null => {
-	if (typeof request !== "object" || request === null) {
-		return null;
-	}
-	const candidate = request as { action?: unknown; selector?: unknown };
-	if (candidate.action !== "getElementPositionAndDimensions") {
-		return null;
-	}
-	if (typeof candidate.selector !== "string" || candidate.selector.length === 0) {
-		return null;
-	}
-	return {
-		action: candidate.action,
-		selector: candidate.selector,
-	};
-};
-
-const POST_SUBMIT_SETTLE_DELAY_MS = 750;
 const EXTENSION_CONTEXT_INVALIDATED = "Extension context invalidated";
 
 const isExtensionContextInvalidated = (error: unknown): boolean =>
@@ -105,32 +91,6 @@ const extractStats = (): SubmissionStats => extractStatsFromDocument(document);
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => window.setTimeout(resolve, ms));
 
-const PREVIEW_IFRAME_CAPTURE_MAX_ATTEMPTS = 8;
-const PREVIEW_IFRAME_CAPTURE_RETRY_MS = 400;
-
-const capturePreviewViaBackground = async (
-	dimensions: ElementDimensions | null
-): Promise<string | null> => {
-	const message = {
-		action: "capturePreview" as const,
-		...(dimensions ? { dimensions } : {}),
-	};
-
-	const response = (await chrome.runtime.sendMessage(message)) as {
-		ok?: boolean;
-		data?: { croppedDataUrl?: string };
-		error?: string;
-	};
-	if (!response?.ok || typeof response?.data?.croppedDataUrl !== "string") {
-		if (response?.error) {
-			console.warn("[CssHub] Background preview capture failed:", response.error);
-		}
-		return null;
-	}
-
-	return asImageDataUrlOrNull(response.data.croppedDataUrl);
-};
-
 const capturePreviewFromIframeLocally = async (
 	iframe: HTMLIFrameElement
 ): Promise<string | null> => {
@@ -148,69 +108,39 @@ const capturePreviewFromIframeLocally = async (
 };
 
 const capturePreviewImage = async (): Promise<string | null> => {
-	await sleep(POST_SUBMIT_SETTLE_DELAY_MS);
-
 	const devicePixelRatio = window.devicePixelRatio || 1;
-	const iframe = await waitForPreviewIframeReady(document);
-	const previewIframe = iframe ?? findPreviewIframe(document);
-	const dimensions = previewIframe
-		? getElementDimensionsFromElement(previewIframe, devicePixelRatio)
-		: null;
-
-	try {
-		const fromScreenshot = await capturePreviewViaBackground(dimensions);
-		if (fromScreenshot) {
-			return fromScreenshot;
-		}
-	} catch (error) {
-		if (isExtensionContextInvalidated(error)) {
-			throw error;
-		}
-		console.warn("[CssHub] Tab screenshot preview capture failed", error);
-	}
-
-	for (let attempt = 0; attempt < PREVIEW_IFRAME_CAPTURE_MAX_ATTEMPTS; attempt++) {
-		try {
-			const currentIframe = previewIframe ?? findPreviewIframe(document);
-			if (currentIframe) {
-				const localCapture = await capturePreviewFromIframeLocally(currentIframe);
-				if (localCapture) {
-					return localCapture;
-				}
-			}
-		} catch (error) {
-			if (isExtensionContextInvalidated(error)) {
-				throw error;
-			}
-
+	return executePreviewCaptureStrategy({
+		sleep,
+		waitForPreviewIframe: () => waitForPreviewIframeReady(document),
+		findPreviewIframe: () => findPreviewIframe(document),
+		getIframeDimensions: (iframe) =>
+			getElementDimensionsFromElement(iframe, devicePixelRatio),
+		captureViaBackground: async (dimensions) => {
+			const dataUrl = await sendCapturePreviewMessage(dimensions ?? undefined);
+			return dataUrl ? asImageDataUrlOrNull(dataUrl) : null;
+		},
+		captureFromIframe: capturePreviewFromIframeLocally,
+		isExtensionContextInvalidated,
+		onBackgroundFailure: (error) => {
+			console.warn("[CssHub] Tab screenshot preview capture failed", error);
+		},
+		onIframeFailure: (error) => {
 			console.warn("[CssHub] Preview iframe capture attempt failed", error);
-		}
-
-		if (attempt < PREVIEW_IFRAME_CAPTURE_MAX_ATTEMPTS - 1) {
-			await sleep(PREVIEW_IFRAME_CAPTURE_RETRY_MS);
-		}
-	}
-
-	console.warn("[CssHub] Preview capture failed after retries; continuing without image");
-	return null;
+		},
+		onExhausted: () => {
+			console.warn("[CssHub] Preview capture failed after retries; continuing without image");
+		},
+	});
 };
 
 let isProcessingSubmission = false;
 
 const notifySubmissionProcessingStarted = (): void => {
-	try {
-		void chrome.runtime.sendMessage({ action: "submissionProcessingStarted" });
-	} catch (_error) {
-		// Extension context invalidated — badge update is best-effort.
-	}
+	void sendBackgroundAction("submissionProcessingStarted");
 };
 
 const clearSubmissionBadge = (): void => {
-	try {
-		void chrome.runtime.sendMessage({ action: "clearActionBadge" });
-	} catch (_error) {
-		// Extension context invalidated — badge update is best-effort.
-	}
+	void sendBackgroundAction("clearActionBadge");
 };
 
 const processSubmission = async (): Promise<void> => {
@@ -268,30 +198,16 @@ const processSubmission = async (): Promise<void> => {
 			resultImageDataUrl,
 		};
 
-		const message = {
-			action: "cssbattleSubmission",
-			payload,
-		};
-		const response = await chrome.runtime.sendMessage(message);
+		const response = await sendCssbattleSubmissionMessage(payload);
 		sentToBackground = true;
-		if (!response?.ok) {
-			const error =
-				typeof response?.error === "string"
-					? ` ${response.error}`
-					: " No error details returned.";
+		if (!response.ok) {
 			console.warn(
-				`[CssHub] Submission rejected by extension background logic.${error}`
+				`[CssHub] Submission rejected by extension background logic. ${response.error}`
 			);
 			return;
 		}
-		const ingestion = response.data as
-			| { committed?: unknown; reason?: unknown }
-			| undefined;
-		const reason =
-			typeof ingestion?.reason === "string"
-				? ingestion.reason
-				: "Submission processed";
-		if (ingestion?.committed === true) {
+		const { reason, committed } = response.data;
+		if (committed) {
 			console.info("[CssHub] Submission committed", { reason });
 			return;
 		}

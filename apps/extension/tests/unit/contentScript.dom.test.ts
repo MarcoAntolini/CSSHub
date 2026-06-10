@@ -22,7 +22,7 @@ import {
 	isTargetImageElement,
 	PREVIEW_SELECTOR,
 	scoreTargetImageCandidate,
-} from "../../src/contentScriptDom";
+} from "@/contentScriptDom";
 
 const FIXTURE_DIR = join(dirname(fileURLToPath(import.meta.url)), "../fixtures");
 

@@ -12,9 +12,9 @@ import {
 	type Branch,
 	type ExtensionSettings,
 	type Repo,
-} from "../../shared/contracts";
-import type { LoadedState, UiNotice } from "../types";
-import { validateBranchName } from "../utils";
+} from "@/shared/contracts";
+import type { LoadedState, UiNotice } from "@/settings/types";
+import { validateBranchName } from "@/settings/utils";
 
 type UseRepoPickerOptions = {
 	data: LoadedState | null;

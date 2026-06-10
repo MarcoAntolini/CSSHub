@@ -1,23 +1,16 @@
-import type { SubmissionPayload, SyncEvent } from "../shared/contracts";
-import { buildRootReadmeContent } from "../rootReadme";
-import type { CommitFile, CommitResult, SavedSubmissionMetrics } from "../githubClient";
-import type { StoredState } from "../storage";
+import type { SubmissionPayload, SyncEvent, SyncIngestionEventCode } from "@/shared/contracts";
+import { buildRootReadmeContent } from "@/rootReadme";
+import type { CommitFile, CommitResult, SavedSubmissionMetrics } from "@/githubClient";
+import type { StoredState } from "@/storage";
+import { challengeIdentityKey } from "./challengeModel";
+import { pushSyncEvent } from "./recentEvents";
 
 export const DUPLICATE_WINDOW_MS = 45 * 1000;
 const DUPLICATE_WINDOW_SECONDS = Math.floor(DUPLICATE_WINDOW_MS / 1000);
-const MAX_EVENTS = 15;
 const MAX_REASONABLE_SCORE = 100_000;
 export const SKIP_FAST_PATH_BUDGET_MS = 500;
 
-export type SyncEventCode =
-	| "SYNC_COMMITTED"
-	| "SYNC_SKIPPED_DUPLICATE"
-	| "SYNC_SKIPPED_THRESHOLD"
-	| "SYNC_SKIPPED_NOT_IMPROVED"
-	| "SYNC_SKIPPED_INVALID_SCORE"
-	| "SYNC_SKIPPED_PREVIEW_UNAVAILABLE"
-	| "SYNC_AUTH_REQUIRED"
-	| "SYNC_REPO_REQUIRED";
+export type SyncEventCode = SyncIngestionEventCode;
 
 export type SyncSubmissionDeps = {
 	readBestSubmissionMetrics: (
@@ -64,23 +57,9 @@ export type SyncSubmissionResult = {
 	shouldAdvanceDuplicateBaseline: boolean;
 };
 
-const submissionIdentityKey = (payload: SubmissionPayload): string => {
-	if (payload.challengeMode === "daily" && payload.dailyDateIso) {
-		return `daily:${payload.dailyDateIso}`;
-	}
-	if (
-		payload.challengeMode === "battle" &&
-		payload.battleGroup &&
-		payload.challengeLabel
-	) {
-		return `battle:${payload.battleGroup}:${payload.challengeLabel}`;
-	}
-	return `id:${payload.challengeId}`;
-};
-
 export const fingerprintSubmission = (payload: SubmissionPayload): string => {
 	const compact = JSON.stringify({
-		identity: submissionIdentityKey(payload),
+		identity: challengeIdentityKey(payload),
 		challengeMode: payload.challengeMode,
 		score: payload.score,
 		matchPct: payload.matchPct,
@@ -154,24 +133,6 @@ export const hasPositiveLastScore = (payload: SubmissionPayload): boolean =>
 	Number.isFinite(payload.matchPct) &&
 	payload.matchPct > 0;
 
-const pushEvent = (
-	events: SyncEvent[],
-	level: SyncEvent["level"],
-	message: string,
-	commitUrl: string | null = null,
-	code?: SyncEventCode
-): SyncEvent[] => {
-	const next: SyncEvent = {
-		id: crypto.randomUUID(),
-		timestamp: new Date().toISOString(),
-		level,
-		code,
-		message,
-		commitUrl,
-	};
-	return [next, ...events].slice(0, MAX_EVENTS);
-};
-
 export const processCssbattleSubmission = async (
 	payload: SubmissionPayload,
 	state: StoredState,
@@ -204,21 +165,21 @@ export const processCssbattleSubmission = async (
 	if (duplicate) {
 		reason = duplicateReasonMessage();
 		eventCode = "SYNC_SKIPPED_DUPLICATE";
-		recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
+		recentEvents = pushSyncEvent(recentEvents, "warn", reason, null, eventCode);
 	} else if (accepted) {
 		if (!state.githubToken) {
 			reason = "Submission accepted but GitHub is not authenticated";
 			eventCode = "SYNC_AUTH_REQUIRED";
-			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
+			recentEvents = pushSyncEvent(recentEvents, "warn", reason, null, eventCode);
 		} else if (!state.settings.selectedRepoFullName) {
 			reason = "Submission accepted but no repository selected";
 			eventCode = "SYNC_REPO_REQUIRED";
-			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
+			recentEvents = pushSyncEvent(recentEvents, "warn", reason, null, eventCode);
 		} else if (!payload.resultImageDataUrl) {
 			reason =
 				"Submission accepted but preview capture was unavailable. Retry from the CSSBattle tab so CssHub can include user.png.";
 			eventCode = "SYNC_SKIPPED_PREVIEW_UNAVAILABLE";
-			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
+			recentEvents = pushSyncEvent(recentEvents, "warn", reason, null, eventCode);
 		} else {
 			const branch = state.settings.selectedBranch?.trim() || "main";
 			const repoFullName = state.settings.selectedRepoFullName;
@@ -236,7 +197,7 @@ export const processCssbattleSubmission = async (
 				skippedNotImproved = true;
 				reason = notImprovedReasonMessage(currentMetrics, previousMetrics);
 				eventCode = "SYNC_SKIPPED_NOT_IMPROVED";
-				recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
+				recentEvents = pushSyncEvent(recentEvents, "warn", reason, null, eventCode);
 			} else {
 				const files = await deps.buildSubmissionFiles(payload);
 				const readmeMode = state.settings.repositoryReadmeMode ?? "managed-section";
@@ -281,11 +242,11 @@ export const processCssbattleSubmission = async (
 				commitUrl = commitResult.commitUrl;
 				reason = "Submission committed to GitHub";
 				eventCode = "SYNC_COMMITTED";
-				recentEvents = pushEvent(recentEvents, "info", reason, commitUrl, eventCode);
+				recentEvents = pushSyncEvent(recentEvents, "info", reason, commitUrl, eventCode);
 			}
 		}
 	} else {
-		recentEvents = pushEvent(recentEvents, "info", reason, null, eventCode);
+		recentEvents = pushSyncEvent(recentEvents, "info", reason, null, eventCode);
 	}
 
 	const shouldAdvanceDuplicateBaseline = !duplicate;

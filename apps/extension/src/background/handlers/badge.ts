@@ -1,4 +1,4 @@
-import { clearActionBadge, setLoadingBadge } from "../feedback";
+import { clearActionBadge, setLoadingBadge } from "@/background/feedback";
 import type { Handler } from "./types";
 
 export const handleSubmissionProcessingStarted: Handler<

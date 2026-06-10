@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { useRef } from "react";
 import { createPortal } from "react-dom";
 import { Toaster } from "sonner";
-import { popupToBackgroundMessageSchema } from "../shared/contracts";
+import { popupToBackgroundMessageSchema } from "@/shared/contracts";
 import { ActivityLogSection } from "./components/ActivityLogSection";
 import { AuthSection } from "./components/AuthSection";
 import { CreateRepoModal } from "./components/CreateRepoModal";

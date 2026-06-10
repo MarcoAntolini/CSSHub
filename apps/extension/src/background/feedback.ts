@@ -1,7 +1,7 @@
-import { openSettingsPage } from "../openSettingsPage";
-import type { SyncEvent } from "../shared/contracts";
+import { openSettingsPage } from "@/openSettingsPage";
+import { MAX_RECENT_EVENTS, pushSyncEvent } from "@/submission/recentEvents";
 
-export const MAX_EVENTS = 15;
+export const MAX_EVENTS = MAX_RECENT_EVENTS;
 const BADGE_CLEAR_TIMEOUT_MS = 10_000;
 
 export type FeedbackLevel = "success" | "warn" | "error" | "loading";
@@ -134,20 +134,4 @@ export const showBrowserNotification = (
 	});
 };
 
-export const pushEvent = (
-	events: SyncEvent[],
-	level: SyncEvent["level"],
-	message: string,
-	commitUrl: string | null = null,
-	code?: string
-): SyncEvent[] => {
-	const next: SyncEvent = {
-		id: crypto.randomUUID(),
-		timestamp: new Date().toISOString(),
-		level,
-		code,
-		message,
-		commitUrl,
-	};
-	return [next, ...events].slice(0, MAX_EVENTS);
-};
+export const pushEvent = pushSyncEvent;

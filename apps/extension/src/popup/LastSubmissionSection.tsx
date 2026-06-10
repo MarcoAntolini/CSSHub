@@ -2,8 +2,8 @@ import type { ReactElement } from "react";
 import type {
 	SubmissionIngestionResponse,
 	SubmissionPayload,
-} from "../shared/contracts";
-import { getIngestionTone, statusTextFromTone } from "../shared/eventTone";
+} from "@/shared/contracts";
+import { getIngestionTone, statusTextFromTone } from "@/shared/eventTone";
 import { SubmissionCard } from "./SubmissionCard";
 import { relativeTime } from "./utils";
 

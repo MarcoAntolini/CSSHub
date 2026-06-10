@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { Branch, ExtensionSettings, Repo } from "../../shared/contracts";
+import type { Branch, ExtensionSettings, Repo } from "@/shared/contracts";
 
 type RepositorySectionProps = {
 	settings: ExtensionSettings;

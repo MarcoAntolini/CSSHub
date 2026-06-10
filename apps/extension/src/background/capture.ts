@@ -1,4 +1,4 @@
-import { elementDimensionsSchema, type ElementDimensions } from "../shared/contracts";
+import { elementDimensionsSchema, type ElementDimensions } from "@/shared/contracts";
 
 export const PREVIEW_FRAME_CAPTURE_INJECT_FILE = "previewFrameCaptureInject.js";
 

@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import type { SubmissionPayload } from "../../src/shared/contracts";
-import type { StoredState } from "../../src/storage";
+import type { SubmissionPayload } from "@/shared/contracts";
+import type { StoredState } from "@/storage";
 import {
 	SKIP_FAST_PATH_BUDGET_MS,
 	fingerprintSubmission,
 	hasPositiveLastScore,
 	isDuplicateSubmission,
 	processCssbattleSubmission,
-} from "../../src/submission/syncSubmission";
+} from "@/submission/syncSubmission";
 
 const basePayload = (): SubmissionPayload => ({
 	challengeMode: "battle",

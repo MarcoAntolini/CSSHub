@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	deviceFlowStartResponseSchema,
 	popupToBackgroundMessageSchema,
-} from "../../shared/contracts";
-import type { UiNotice } from "../types";
+} from "@/shared/contracts";
+import type { UiNotice } from "@/settings/types";
 
 type UseDeviceFlowOptions = {
 	setBusy: (busy: boolean) => void;

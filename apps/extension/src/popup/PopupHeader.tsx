@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
-import type { PopupTheme } from "../popupTheme";
-import { openSettingsPage } from "../openSettingsPage";
+import type { PopupTheme } from "@/popupTheme";
+import { openSettingsPage } from "@/openSettingsPage";
 import { ThemeToggle } from "./ThemeToggle";
 
 export const PopupHeader = ({

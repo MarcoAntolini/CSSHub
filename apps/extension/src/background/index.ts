@@ -1,5 +1,5 @@
-import { popupToBackgroundMessageSchema, type PopupToBackgroundMessage } from "../shared/contracts";
-import { getStoredState, saveStoredState } from "../storage";
+import { popupToBackgroundMessageSchema, type PopupToBackgroundMessage } from "@/shared/contracts";
+import { getStoredState, saveStoredState } from "@/storage";
 import { toUserSafeError } from "./errors";
 import {
 	pushEvent,

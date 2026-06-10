@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchRemoteImageAsDataUrl } from "../../src/remoteImageFetch";
+import { fetchRemoteImageAsDataUrl } from "@/remoteImageFetch";
 
 describe("fetchRemoteImageAsDataUrl", () => {
 	afterEach(() => {

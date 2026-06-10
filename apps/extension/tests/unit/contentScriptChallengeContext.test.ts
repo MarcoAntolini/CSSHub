@@ -8,7 +8,7 @@ import {
 	collectBreadcrumbTexts,
 	detectChallengeContext,
 	parseDailyDateLabelToIso,
-} from "../../src/contentScriptChallengeContext";
+} from "@/contentScriptChallengeContext";
 
 const FIXTURE_DIR = join(dirname(fileURLToPath(import.meta.url)), "../fixtures");
 

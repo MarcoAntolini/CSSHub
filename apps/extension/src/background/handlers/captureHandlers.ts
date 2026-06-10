@@ -1,4 +1,4 @@
-import type { ElementDimensions } from "../../shared/contracts";
+import type { ElementDimensions } from "@/shared/contracts";
 import {
 	captureElement,
 	capturePreviewFromAllTabFrames,
@@ -7,7 +7,7 @@ import {
 	isCssBattlePlayUrl,
 	queryActiveTab,
 	RECEIVING_END_MISSING,
-} from "../capture";
+} from "@/background/capture";
 import type { Handler } from "./types";
 
 /** Serialized into the page MAIN world; must stay self-contained for `executeScript`. */

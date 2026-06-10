@@ -1,5 +1,5 @@
-import { createUserRepo, createBranch, listBranches, listUserRepos } from "../../githubClient";
-import { saveStoredState } from "../../storage";
+import { createUserRepo, createBranch, listBranches, listUserRepos } from "@/githubClient";
+import { saveStoredState } from "@/storage";
 import { getAuthenticatedState, type Handler } from "./types";
 
 export const handleListRepos: Handler<"listRepos"> = async (_data, sendResponse) => {

@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { backendEnv } from "../../../lib/env.js";
-import { runOAuthPostRoute } from "../../../lib/oauthPostHandler.js";
-import { issueOAuthState } from "../../../lib/oauthState.js";
+import { backendEnv } from "@/lib/env.js";
+import { runOAuthPostRoute } from "@/lib/oauthPostHandler.js";
+import { issueOAuthState } from "@/lib/oauthState.js";
 
 const STATE_RATE_LIMIT = {
 	keyPrefix: "oauth-state",

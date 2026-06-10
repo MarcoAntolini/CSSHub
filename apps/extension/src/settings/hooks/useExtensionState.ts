@@ -8,14 +8,14 @@ import {
 	type ExtensionSettings,
 	type Branch,
 	type Repo,
-} from "../../shared/contracts";
+} from "@/shared/contracts";
 import {
 	BackgroundError,
 	parseBackgroundOk,
 	parseBackgroundOkVoid,
 	sendBackgroundMessage,
-} from "../../shared/messaging";
-import type { LoadedState, UiNotice } from "../types";
+} from "@/shared/messaging";
+import type { LoadedState, UiNotice } from "@/settings/types";
 
 export const useExtensionState = () => {
 	const [data, setData] = useState<LoadedState | null>(null);
@@ -39,6 +39,7 @@ export const useExtensionState = () => {
 		try {
 			const response = await sendBackgroundMessage({
 				action: "getExtensionState",
+				refreshRepos: true,
 			});
 			const parsed = parseBackgroundOk(
 				response,

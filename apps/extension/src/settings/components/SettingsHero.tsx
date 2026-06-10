@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import {
 	SETTINGS_HERO_TAGLINE,
 	SETTINGS_PAGE_ICON_SRC,
-} from "../constants";
+} from "@/settings/constants";
 
 export const SettingsHero = (): ReactElement => (
 	<header className="settings-hero">

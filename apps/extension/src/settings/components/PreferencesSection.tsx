@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type { ExtensionSettings } from "../../shared/contracts";
+import type { ExtensionSettings } from "@/shared/contracts";
 
 type PreferencesSectionProps = {
 	settings: ExtensionSettings;

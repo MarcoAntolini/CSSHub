@@ -4,9 +4,9 @@ import {
 	requestWebOAuthState,
 	startDeviceFlow,
 	pollDeviceFlow,
-} from "../../githubAuth";
-import { fetchAuthenticatedUser } from "../../githubClient";
-import { clearAuthState, getStoredState, saveStoredState } from "../../storage";
+} from "@/githubAuth";
+import { fetchAuthenticatedUser } from "@/githubClient";
+import { clearAuthState, getStoredState, saveStoredState } from "@/storage";
 import type { Handler } from "./types";
 
 const runLaunchWebAuthFlow = async (url: string): Promise<string> =>

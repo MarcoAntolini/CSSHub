@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
-import type { AuthStatus } from "../../shared/contracts";
-import type { UiNotice } from "../types";
+import type { AuthStatus } from "@/shared/contracts";
+import type { UiNotice } from "@/settings/types";
 
 type DeviceFlowState = {
 	deviceCode: string;

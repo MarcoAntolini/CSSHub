@@ -4,7 +4,7 @@ import {
 	resolveNotificationAction,
 	setActionBadge,
 	setLoadingBadge,
-} from "../../src/background/feedback";
+} from "@/background/feedback";
 
 describe("action badge feedback", () => {
 	beforeEach(() => {

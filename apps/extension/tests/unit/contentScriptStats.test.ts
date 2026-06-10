@@ -9,7 +9,7 @@ import {
 	hasDisplayableScore,
 	parseScoreFromText,
 	waitForPostSubmitStats,
-} from "../../src/contentScriptStats";
+} from "@/contentScriptStats";
 
 const FIXTURE_PATH = join(
 	dirname(fileURLToPath(import.meta.url)),

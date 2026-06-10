@@ -1,5 +1,5 @@
 import type { KeyboardEvent as ReactKeyboardEvent, ReactElement, RefObject } from "react";
-import type { Repo } from "../../shared/contracts";
+import type { Repo } from "@/shared/contracts";
 
 type PickRepoModalProps = {
 	pickModalRef: RefObject<HTMLDivElement | null>;

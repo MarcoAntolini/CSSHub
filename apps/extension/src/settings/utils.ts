@@ -1,5 +1,5 @@
-import type { SyncEvent } from "../shared/contracts";
-import { getSyncEventTone, statusTextFromTone } from "../shared/eventTone";
+import type { SyncEvent } from "@/shared/contracts";
+import { getSyncEventTone, statusTextFromTone } from "@/shared/eventTone";
 import { BRANCH_NAME_PATTERN } from "./constants";
 
 export const getEventBadgeLabel = (event: SyncEvent): string => {

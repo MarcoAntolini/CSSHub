@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toUserSafeError } from "../../src/background/errors";
-import { shouldStoreAttemptedSubmission } from "../../src/background/handlers/submission";
+import { toUserSafeError } from "@/background/errors";
 
 describe("toUserSafeError", () => {
 	it("maps expired backend OAuth state failures", () => {
@@ -55,19 +54,5 @@ describe("toUserSafeError", () => {
 			message: "GitHub rejected the commit: GitRPC::BadObjectState",
 			code: "GITHUB_CONFLICT",
 		});
-	});
-});
-
-describe("submission storage decisions", () => {
-	it("stores failed attempts for popup status without advancing duplicate baseline", () => {
-		expect(shouldStoreAttemptedSubmission(true, false)).toBe(true);
-	});
-
-	it("stores successful non-duplicate attempts", () => {
-		expect(shouldStoreAttemptedSubmission(false, true)).toBe(true);
-	});
-
-	it("keeps the previous display for duplicate submissions", () => {
-		expect(shouldStoreAttemptedSubmission(false, false)).toBe(false);
 	});
 });

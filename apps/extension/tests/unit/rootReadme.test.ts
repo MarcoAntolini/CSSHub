@@ -25,7 +25,7 @@ import {
 
 	parseExistingReadmeLabels,
 
-} from "../../src/rootReadme";
+} from "@/rootReadme";
 
 
 

@@ -1,12 +1,8 @@
 import type { RepositoryReadmeMode } from "./shared/contracts";
+import { folderFromSubmissionJsonPath } from "./submission/challengeModel";
 
 export const CSSHUB_README_START = "<!-- CSSHUB:README-START -->";
 export const CSSHUB_README_END = "<!-- CSSHUB:README-END -->";
-
-const BATTLE_SUBMISSION_JSON =
-	/^Battles\/([^/]+)\/([^/]+)\/submission\.json$/;
-const DAILY_SUBMISSION_JSON = /^Daily Targets\/([^/]+)\/submission\.json$/;
-const LEGACY_SUBMISSION_JSON = /^challenges\/([^/]+)\/submission\.json$/;
 
 const humanizeSlug = (slug: string): string =>
 	slug
@@ -182,23 +178,19 @@ export const collectChallengeIndexBuckets = (
 	};
 
 	for (const path of paths) {
-		const battleMatch = path.match(BATTLE_SUBMISSION_JSON);
-		if (battleMatch) {
-			const folder = `Battles/${battleMatch[1]}/${battleMatch[2]}`;
-			upsert(battles, folder, `${battleMatch[2]}`);
+		const parsed = folderFromSubmissionJsonPath(path);
+		if (!parsed) {
 			continue;
 		}
-		const dailyMatch = path.match(DAILY_SUBMISSION_JSON);
-		if (dailyMatch) {
-			const folder = `Daily Targets/${dailyMatch[1]}`;
-			upsert(daily, folder, formatDailyDateLabelFromIso(dailyMatch[1]));
+		if (parsed.kind === "battle") {
+			upsert(battles, parsed.folder, parsed.label);
 			continue;
 		}
-		const legacyMatch = path.match(LEGACY_SUBMISSION_JSON);
-		if (legacyMatch) {
-			const folder = `challenges/${legacyMatch[1]}`;
-			upsert(legacy, folder, deriveLabelFromLegacyKey(legacyMatch[1]));
+		if (parsed.kind === "daily") {
+			upsert(daily, parsed.folder, formatDailyDateLabelFromIso(parsed.label));
+			continue;
 		}
+		upsert(legacy, parsed.folder, deriveLabelFromLegacyKey(parsed.label));
 	}
 
 	if (currentFolder.startsWith("Battles/")) {
@@ -247,7 +239,7 @@ export const formatSummaryHtml = (title: string, count: number): string => {
 	return `<summary><strong>${label}</strong></summary>`;
 };
 
-/** Markdown ### headings — reliable on GitHub (SVG foreignObject leaks raw &lt;style&gt; text). */
+/** Markdown ### headings � reliable on GitHub (SVG foreignObject leaks raw &lt;style&gt; text). */
 const formatTopLevelHeading = (title: string, count: number): string =>
 	`### ${title} (${count})`;
 

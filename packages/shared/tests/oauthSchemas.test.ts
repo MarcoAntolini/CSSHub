@@ -3,7 +3,7 @@ import {
 	oauthExchangeRequestSchema,
 	oauthExchangeResponseSchema,
 	oauthStateResponseSchema,
-} from "../src/oauth/schemas";
+} from "@/oauth/schemas";
 
 describe("oauthExchangeRequestSchema", () => {
 	it("accepts a valid exchange payload", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCssBattleImageUrl } from "../../src/submission/cssBattleAssets";
+import { resolveCssBattleImageUrl } from "@/submission/cssBattleAssets";
 
 describe("resolveCssBattleImageUrl", () => {
 	it("resolves relative target paths against the challenge page", () => {

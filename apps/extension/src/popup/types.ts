@@ -3,8 +3,8 @@ import type {
 	ExtensionSettings,
 	SubmissionIngestionResponse,
 	SubmissionPayload,
-} from "../shared/contracts";
-import type { StatusTone } from "../shared/eventTone";
+} from "@/shared/contracts";
+import type { StatusTone } from "@/shared/eventTone";
 
 export type SubmissionCardView = {
 	title: string;
