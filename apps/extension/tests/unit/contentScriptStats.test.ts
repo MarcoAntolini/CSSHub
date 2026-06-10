@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
 	didStatsChange,
 	extractStatsFromDocument,
+	hasDisplayableScore,
 	parseScoreFromText,
 	waitForPostSubmitStats,
 } from "../../src/contentScriptStats";
@@ -131,8 +132,26 @@ describe("waitForPostSubmitStats", () => {
 		expect(stats.matchPct).toBe(88);
 	});
 
-	it("returns null stats on timeout when the leaderboard never updates", async () => {
+	it("returns existing page stats on timeout when the leaderboard never updates", async () => {
 		const initial = extractStatsFromDocument(document);
+		const stats = await waitForPostSubmitStats(document, initial, {
+			settleDelayMs: 10,
+			pollIntervalMs: 20,
+			timeoutMs: 120,
+		});
+		expect(stats).toEqual({ score: 640, matchPct: 99.2 });
+	});
+
+	it("returns null stats on timeout when no score was on the page", async () => {
+		document.body.innerHTML = `
+			<div class="leaderboard-stats-box">
+				<span>-</span>
+				<span>Last score</span>
+			</div>
+		`;
+		const initial = extractStatsFromDocument(document);
+		expect(hasDisplayableScore(initial)).toBe(false);
+
 		const stats = await waitForPostSubmitStats(document, initial, {
 			settleDelayMs: 10,
 			pollIntervalMs: 20,

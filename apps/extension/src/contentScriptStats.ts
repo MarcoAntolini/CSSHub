@@ -156,6 +156,10 @@ export const didStatsChange = (
 	return scoreChanged || matchChanged || becameAvailable;
 };
 
+/** True when the page already shows a scored result (not dash / unavailable). */
+export const hasDisplayableScore = (stats: SubmissionStats): boolean =>
+	typeof stats.score === "number" && Number.isFinite(stats.score) && stats.score > 0;
+
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => window.setTimeout(resolve, ms));
 
@@ -249,7 +253,17 @@ export const waitForPostSubmitStats = async (
 		pollId = setInterval(() => {
 			if (Date.now() >= deadline) {
 				if (!statsMutated && !didStatsChange(latest, initial)) {
-					settle({ score: null, matchPct: null });
+					// Resubmit while a last score is already visible: CSSBattle may not
+					// re-render the box. Still process with on-page stats so threshold,
+					// duplicate, and not-improved checks can decide the outcome.
+					const current = extractStatsFromDocument(root);
+					settle(
+						hasDisplayableScore(current)
+							? current
+							: hasDisplayableScore(initial)
+								? initial
+								: { score: null, matchPct: null }
+					);
 					return;
 				}
 				settle(extractStatsFromDocument(root));
