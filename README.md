@@ -7,7 +7,7 @@
 **Automatically sync your [CSSBattle](https://cssbattle.dev) submissions to GitHub.**
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white&style=for-the-badge)](https://chromewebstore.google.com/detail/csshub/oakkijoinjkdhcgnpnmnpjkmpdekajid)
-[![release](https://img.shields.io/badge/release-v1.0.1-blue?style=for-the-badge)](https://github.com/MarcoAntolini/CSSHub/releases)
+[![release](https://img.shields.io/badge/release-v1.1.0-blue?style=for-the-badge)](https://github.com/MarcoAntolini/CSSHub/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
 </div>

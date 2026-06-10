@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-10
+
+Battles and Daily Targets sync, target-image previews, and a large extension/backend refactor since v1.0.1.
+
+### Added
+
+- Battles and Daily Targets sync with managed README index
+- CSSBattle target image capture (DOM scrape and service-worker fetch) for commit previews
+- Shared preview capture injection into child frames; preview capture and remote image messaging schemas in `@csshub/shared`
+- Sync event codes and expanded extension contracts in `@csshub/shared`
+- Challenge model, ingest pipeline, and modular GitHub client (`commit`, `contents`, `repos`, `transport`)
+- Popup split into focused modules (`App`, `SubmissionFlowSection`, `usePopupState`, status demo cases)
+- Backend shared OAuth POST route middleware (`oauthPostHandler`)
+- Fallow config (`.fallowrc.json`) and PR audit CI gate
+- `AGENTS.md` with Cursor Cloud development instructions
+- E2E fixtures for CSSBattle play page variants (battle, daily, multi-target)
+
+### Changed
+
+- Monorepo refactor: modularize extension (`background/handlers`, `storage/`, `submission/`, `settings/`) and centralize shared contracts
+- Content script rewrite with challenge context, DOM helpers, messaging, and expanded stats scraping
+- README overhauls (root and package READMEs), updated screenshots, and ops runbook updates
+- Settings repository section layout; activity log polish with GitHub-linked labels
+- Chrome Web Store packaging script strips `manifest.key` from dist before zipping
+
+### Fixed
+
+- OAuth state handling on Vercel
+- CSSBattle submission sync stability (resubmits when last score is already visible)
+- GitHub sync hardened against fast-forward conflicts
+- Chrome Web Store production builds omit `manifest.key` from the packaged manifest
+
 ## [1.0.1] - 2026-05-20
 
 Documentation and maintainer ops polish after the v1.0.0 prepare commit.
