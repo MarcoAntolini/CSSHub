@@ -33,6 +33,29 @@ describe("toUserSafeError", () => {
 			code: "AUTH_OAUTH_EXCHANGE_FAILED",
 		});
 	});
+
+	it("maps GitHub fast-forward conflicts", () => {
+		expect(
+			toUserSafeError(new Error('GitHub request failed (409): {"message":"Update is not a fast forward"}'))
+		).toEqual({
+			message:
+				"Another commit landed on the sync branch before this one finished. CssHub retried automatically; submit once more if needed.",
+			code: "GITHUB_CONFLICT",
+		});
+	});
+
+	it("maps GitHub commit validation failures with API detail", () => {
+		expect(
+			toUserSafeError(
+				new Error(
+					'GitHub request failed (422): {"message":"GitRPC::BadObjectState"}'
+				)
+			)
+		).toEqual({
+			message: "GitHub rejected the commit: GitRPC::BadObjectState",
+			code: "GITHUB_CONFLICT",
+		});
+	});
 });
 
 describe("submission storage decisions", () => {

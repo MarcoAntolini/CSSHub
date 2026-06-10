@@ -43,8 +43,7 @@ export type SyncSubmissionDeps = {
 		repoFullName: string,
 		branch: string,
 		message: string,
-		files: CommitFile[],
-		options?: { existingPaths?: Set<string> }
+		files: CommitFile[]
 	) => Promise<CommitResult>;
 	challengeFolderPath: (payload: SubmissionPayload) => string;
 	formatChallengeTitle: (payload: SubmissionPayload) => string;
@@ -221,7 +220,7 @@ export const processCssbattleSubmission = async (
 			eventCode = "SYNC_SKIPPED_PREVIEW_UNAVAILABLE";
 			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
 		} else {
-			const branch = state.settings.selectedBranch ?? "main";
+			const branch = state.settings.selectedBranch?.trim() || "main";
 			const repoFullName = state.settings.selectedRepoFullName;
 			const currentMetrics: SavedSubmissionMetrics = {
 				score: payload.score ?? 0,
@@ -241,7 +240,6 @@ export const processCssbattleSubmission = async (
 			} else {
 				const files = await deps.buildSubmissionFiles(payload);
 				const readmeMode = state.settings.repositoryReadmeMode ?? "managed-section";
-				let branchExistingPaths: Set<string> | undefined;
 				if (readmeMode !== "off") {
 					try {
 						const [existingPaths, existingReadme] = await Promise.all([
@@ -253,7 +251,6 @@ export const processCssbattleSubmission = async (
 								"README.md"
 							),
 						]);
-						branchExistingPaths = existingPaths;
 						const rootReadme = buildRootReadmeContent({
 							mode: readmeMode,
 							existingReadme,
@@ -278,8 +275,7 @@ export const processCssbattleSubmission = async (
 					repoFullName,
 					branch,
 					commitMessage,
-					files,
-					branchExistingPaths ? { existingPaths: branchExistingPaths } : undefined
+					files
 				);
 				committed = true;
 				commitUrl = commitResult.commitUrl;

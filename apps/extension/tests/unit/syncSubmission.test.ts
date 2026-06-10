@@ -132,7 +132,7 @@ describe("processCssbattleSubmission", () => {
 		expect(deps.commitFilesToRepo).not.toHaveBeenCalled();
 	});
 
-	it("passes existingPaths when README mode updates index", async () => {
+	it("fetches branch paths for README index before committing", async () => {
 		const deps = noopDeps();
 		const paths = new Set(["challenges/1/submission.json"]);
 		deps.listBranchBlobPaths.mockResolvedValue(paths);
@@ -154,8 +154,7 @@ describe("processCssbattleSubmission", () => {
 			expect.any(String),
 			expect.any(String),
 			expect.any(String),
-			expect.any(Array),
-			{ existingPaths: paths }
+			expect.any(Array)
 		);
 	});
 

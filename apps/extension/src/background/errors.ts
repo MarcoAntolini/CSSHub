@@ -30,6 +30,29 @@ const parseGithubStatus = (message: string): number | null => {
 	return Number.isFinite(status) ? status : null;
 };
 
+const parseGithubErrorDetail = (message: string): string | null => {
+	const jsonStart = message.indexOf("{");
+	if (jsonStart === -1) {
+		return null;
+	}
+	try {
+		const payload = JSON.parse(message.slice(jsonStart)) as {
+			message?: unknown;
+			errors?: Array<{ message?: unknown }>;
+		};
+		if (typeof payload.message === "string" && payload.message.trim()) {
+			return payload.message.trim();
+		}
+		const nested = payload.errors
+			?.map((entry) => (typeof entry.message === "string" ? entry.message.trim() : ""))
+			.filter(Boolean)
+			.join("; ");
+		return nested || null;
+	} catch (_error) {
+		return null;
+	}
+};
+
 const getRawErrorMessage = (error: unknown): string =>
 	error instanceof Error ? error.message : "Unexpected background failure";
 
@@ -91,8 +114,20 @@ export const toUserSafeError = (
 		};
 	}
 	if (githubStatus === 409 || githubStatus === 422) {
+		const detail = parseGithubErrorDetail(rawMessage);
+		const isFastForward =
+			detail?.toLowerCase().includes("not a fast forward") ?? false;
+		if (isFastForward) {
+			return {
+				message:
+					"Another commit landed on the sync branch before this one finished. CssHub retried automatically; submit once more if needed.",
+				code: "GITHUB_CONFLICT",
+			};
+		}
 		return {
-			message: "GitHub rejected this operation. Check repository and branch.",
+			message: detail
+				? `GitHub rejected the commit: ${detail}`
+				: "GitHub rejected the commit. Wait a few seconds and submit again.",
 			code: "GITHUB_CONFLICT",
 		};
 	}

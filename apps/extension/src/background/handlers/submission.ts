@@ -34,13 +34,25 @@ export const shouldStoreAttemptedSubmission = (
 	shouldAdvanceDuplicateBaseline: boolean
 ): boolean => errorOccurred || shouldAdvanceDuplicateBaseline;
 
+let submissionQueue: Promise<unknown> = Promise.resolve();
+
+const runSerializedSubmission = <T>(task: () => Promise<T>): Promise<T> => {
+	const next = submissionQueue.then(task, task);
+	submissionQueue = next.then(
+		() => undefined,
+		() => undefined
+	);
+	return next;
+};
+
 export const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 	data,
 	sendResponse
 ) => {
-	setLoadingBadge();
+	await runSerializedSubmission(async () => {
+		setLoadingBadge();
 
-	const state = await getStoredState();
+		const state = await getStoredState();
 	const threshold = state.settings.threshold;
 	const matchPct = data.payload.matchPct ?? -1;
 	const hasScoredResult =
@@ -179,5 +191,6 @@ export const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 	sendResponse({
 		ok: true,
 		data: responsePayload,
+	});
 	});
 };
