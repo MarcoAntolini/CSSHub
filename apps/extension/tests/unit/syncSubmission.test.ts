@@ -21,7 +21,7 @@ const basePayload = (): SubmissionPayload => ({
 	matchPct: 99,
 	code: "<div></div>",
 	targetImage: null,
-	resultImageDataUrl: null,
+	resultImageDataUrl: "data:image/png;base64,USER",
 });
 
 const baseState = (overrides: Partial<StoredState> = {}): StoredState => ({
@@ -108,6 +108,28 @@ describe("processCssbattleSubmission", () => {
 		expect(result.eventCode).toBe("SYNC_COMMITTED");
 		expect(result.committed).toBe(true);
 		expect(deps.commitFilesToRepo).toHaveBeenCalledTimes(1);
+	});
+
+	it("skips accepted submissions when preview capture is unavailable", async () => {
+		const deps = noopDeps();
+		const result = await processCssbattleSubmission(
+			{
+				...basePayload(),
+				resultImageDataUrl: null,
+			},
+			baseState({
+				settings: {
+					...baseState().settings,
+					threshold: 0,
+				},
+			}),
+			deps
+		);
+
+		expect(result.eventCode).toBe("SYNC_SKIPPED_PREVIEW_UNAVAILABLE");
+		expect(result.committed).toBe(false);
+		expect(deps.buildSubmissionFiles).not.toHaveBeenCalled();
+		expect(deps.commitFilesToRepo).not.toHaveBeenCalled();
 	});
 
 	it("passes existingPaths when README mode updates index", async () => {

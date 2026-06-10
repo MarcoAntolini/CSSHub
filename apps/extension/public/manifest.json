@@ -25,7 +25,8 @@
 		"https://cssbattle.dev/*",
 		"https://www.cssbattle.dev/*",
 		"https://ik.imagekit.io/*",
-		"https://firebasestorage.googleapis.com/*"
+		"https://firebasestorage.googleapis.com/*",
+		"<all_urls>"
 	],
 	"content_scripts": [
 		{

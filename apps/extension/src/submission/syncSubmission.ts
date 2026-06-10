@@ -15,6 +15,7 @@ export type SyncEventCode =
 	| "SYNC_SKIPPED_THRESHOLD"
 	| "SYNC_SKIPPED_NOT_IMPROVED"
 	| "SYNC_SKIPPED_INVALID_SCORE"
+	| "SYNC_SKIPPED_PREVIEW_UNAVAILABLE"
 	| "SYNC_AUTH_REQUIRED"
 	| "SYNC_REPO_REQUIRED";
 
@@ -213,6 +214,11 @@ export const processCssbattleSubmission = async (
 		} else if (!state.settings.selectedRepoFullName) {
 			reason = "Submission accepted but no repository selected";
 			eventCode = "SYNC_REPO_REQUIRED";
+			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
+		} else if (!payload.resultImageDataUrl) {
+			reason =
+				"Submission accepted but preview capture was unavailable. Retry from the CSSBattle tab so CssHub can include user.png.";
+			eventCode = "SYNC_SKIPPED_PREVIEW_UNAVAILABLE";
 			recentEvents = pushEvent(recentEvents, "warn", reason, null, eventCode);
 		} else {
 			const branch = state.settings.selectedBranch ?? "main";

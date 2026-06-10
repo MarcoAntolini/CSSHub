@@ -1,10 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { SubmissionPayload } from "../../src/shared/contracts";
 import {
+	buildSubmissionFiles,
 	challengeFolderPath,
 	formatChallengeTitle,
 	listBestSubmissionMetadataPaths,
 } from "../../src/submission/submissionFiles";
+
+vi.mock("../../src/remoteImageFetch", () => ({
+	fetchRemoteImageAsDataUrl: vi.fn(),
+}));
+
+import { fetchRemoteImageAsDataUrl } from "../../src/remoteImageFetch";
 
 const battlePayload = (): SubmissionPayload => ({
 	challengeMode: "battle",
@@ -72,5 +79,62 @@ describe("listBestSubmissionMetadataPaths", () => {
 			"Daily Targets/2026-06-04/submission.json",
 			"challenges/17bc6kiuasiqgqp65mob-jun-4-2026/submission.json",
 		]);
+	});
+});
+
+describe("buildSubmissionFiles", () => {
+	it("writes metadata, readme, and deletes legacy files", async () => {
+		const files = await buildSubmissionFiles(battlePayload());
+		const paths = files.map((file) => file.path);
+
+		expect(paths).toContain("Battles/Battle #39/#254. Unfitting/README.md");
+		expect(paths).toContain("Battles/Battle #39/#254. Unfitting/submission.json");
+		expect(paths).toContain("Battles/Battle #39/#254. Unfitting/solution.html");
+		expect(files.find((file) => file.path.endsWith("solution.html"))).toMatchObject({
+			delete: true,
+		});
+
+		const readme = files.find((file) => file.path.endsWith("README.md"));
+		expect(readme && "content" in readme ? readme.content : "").toContain("Not available");
+	});
+
+	it("embeds user and target images from data URLs", async () => {
+		const files = await buildSubmissionFiles({
+			...battlePayload(),
+			code: "<div>hi</div>",
+			resultImageDataUrl: "data:image/png;base64,USER",
+			targetImage: { type: "dataUrl", value: "data:image/png;base64,TARGET" },
+		});
+
+		const user = files.find((file) => file.path.endsWith("/user.png"));
+		const target = files.find((file) => file.path.endsWith("/target.png"));
+		const readme = files.find((file) => file.path.endsWith("/README.md"));
+
+		expect(user).toMatchObject({ encoding: "base64", content: "USER" });
+		expect(target).toMatchObject({ encoding: "base64", content: "TARGET" });
+		expect(readme && "content" in readme ? readme.content : "").toContain("./user.png");
+		expect(readme && "content" in readme ? readme.content : "").toContain("./target.png");
+	});
+
+	it("fetches URL targets during file assembly", async () => {
+		vi.mocked(fetchRemoteImageAsDataUrl).mockResolvedValue(
+			"data:image/png;base64,REMOTE"
+		);
+
+		const files = await buildSubmissionFiles({
+			...battlePayload(),
+			targetImage: {
+				type: "url",
+				value: "https://cssbattle.dev/targets/254.png",
+			},
+		});
+
+		expect(fetchRemoteImageAsDataUrl).toHaveBeenCalledWith(
+			"https://cssbattle.dev/targets/254.png"
+		);
+		expect(files.find((file) => file.path.endsWith("/target.png"))).toMatchObject({
+			encoding: "base64",
+			content: "REMOTE",
+		});
 	});
 });

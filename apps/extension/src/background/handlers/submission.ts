@@ -20,14 +20,26 @@ import {
 	processCssbattleSubmission,
 } from "../../submission/syncSubmission";
 import type { SyncEventCode } from "../errors";
-import { pushEvent, setActionBadge, showBrowserNotification } from "../feedback";
+import {
+	pushEvent,
+	setActionBadge,
+	setLoadingBadge,
+	showBrowserNotification,
+} from "../feedback";
 import { toUserSafeError } from "../errors";
 import type { Handler } from "./types";
+
+export const shouldStoreAttemptedSubmission = (
+	errorOccurred: boolean,
+	shouldAdvanceDuplicateBaseline: boolean
+): boolean => errorOccurred || shouldAdvanceDuplicateBaseline;
 
 export const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 	data,
 	sendResponse
 ) => {
+	setLoadingBadge();
+
 	const state = await getStoredState();
 	const threshold = state.settings.threshold;
 	const matchPct = data.payload.matchPct ?? -1;
@@ -91,9 +103,14 @@ export const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 			commitUrl,
 		});
 
+	const shouldStoreLastSubmission = shouldStoreAttemptedSubmission(
+		errorOccurred,
+		shouldAdvanceDuplicateBaseline
+	);
+
 	await saveStoredState({
 		...state,
-		lastSubmission: shouldAdvanceDuplicateBaseline
+		lastSubmission: shouldStoreLastSubmission
 			? data.payload
 			: state.lastSubmission,
 		lastSubmissionAccepted: accepted,

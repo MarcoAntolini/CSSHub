@@ -200,6 +200,12 @@ export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
 		action: z.literal("extractCssbattleEditorCode"),
 	}),
 	z.object({
+		action: z.literal("submissionProcessingStarted"),
+	}),
+	z.object({
+		action: z.literal("clearActionBadge"),
+	}),
+	z.object({
 		action: z.literal("cssbattleSubmission"),
 		payload: submissionPayloadSchema,
 	}),

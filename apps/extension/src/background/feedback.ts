@@ -4,7 +4,7 @@ import type { SyncEvent } from "../shared/contracts";
 export const MAX_EVENTS = 15;
 const BADGE_CLEAR_TIMEOUT_MS = 10_000;
 
-export type FeedbackLevel = "success" | "warn" | "error";
+export type FeedbackLevel = "success" | "warn" | "error" | "loading";
 
 type NotificationAction = "open-commit" | "open-settings";
 
@@ -55,13 +55,49 @@ export const registerNotificationHandlers = (): void => {
 	});
 };
 
+let badgeClearTimer: ReturnType<typeof setTimeout> | null = null;
+
+const resolveBadgeBackgroundColor = (level: FeedbackLevel): string => {
+	if (level === "success") {
+		return "#15803d";
+	}
+	if (level === "warn") {
+		return "#b45309";
+	}
+	if (level === "loading") {
+		return "#2563eb";
+	}
+	return "#b91c1c";
+};
+
+export const clearActionBadge = (): void => {
+	if (badgeClearTimer) {
+		clearTimeout(badgeClearTimer);
+		badgeClearTimer = null;
+	}
+	chrome.action.setBadgeText({ text: "" });
+};
+
+export const setLoadingBadge = (): void => {
+	setActionBadge("loading", "...");
+};
+
 export const setActionBadge = (level: FeedbackLevel, text: string): void => {
-	const bg =
-		level === "success" ? "#15803d" : level === "warn" ? "#b45309" : "#b91c1c";
-	chrome.action.setBadgeBackgroundColor({ color: bg });
+	if (badgeClearTimer) {
+		clearTimeout(badgeClearTimer);
+		badgeClearTimer = null;
+	}
+
+	chrome.action.setBadgeBackgroundColor({ color: resolveBadgeBackgroundColor(level) });
 	chrome.action.setBadgeText({ text });
-	setTimeout(() => {
+
+	if (level === "loading") {
+		return;
+	}
+
+	badgeClearTimer = setTimeout(() => {
 		chrome.action.setBadgeText({ text: "" });
+		badgeClearTimer = null;
 	}, BADGE_CLEAR_TIMEOUT_MS);
 };
 

@@ -26,6 +26,10 @@ import {
 	handleListBranches,
 	handleListRepos,
 } from "./handlers/github";
+import {
+	handleClearActionBadge,
+	handleSubmissionProcessingStarted,
+} from "./handlers/badge";
 import { handleCssbattleSubmission } from "./handlers/submission";
 import {
 	handleClearRecentEvents,
@@ -55,6 +59,8 @@ const actionHandlers: {
 	createRepo: handleCreateRepo,
 	createBranch: handleCreateBranch,
 	extractCssbattleEditorCode: handleExtractCssbattleEditorCode,
+	submissionProcessingStarted: handleSubmissionProcessingStarted,
+	clearActionBadge: handleClearActionBadge,
 	cssbattleSubmission: handleCssbattleSubmission,
 };
 

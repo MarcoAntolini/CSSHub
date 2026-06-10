@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
 	buildCanonicalDailyTargetUrl,
 	CLICKABLE_SELECTOR,
+	asImageDataUrlOrNull,
 	extractCodeFromCmLines,
 	findOgTargetImageUrl,
 	findPreviewIframe,
@@ -69,6 +70,15 @@ describe("isSubmitControlText", () => {
 	});
 });
 
+describe("asImageDataUrlOrNull", () => {
+	it("keeps image data URLs and drops empty canvas placeholders", () => {
+		expect(asImageDataUrlOrNull("data:image/png;base64,abc")).toBe(
+			"data:image/png;base64,abc"
+		);
+		expect(asImageDataUrlOrNull("data:,")).toBeNull();
+	});
+});
+
 describe("fixture DOM helpers (minimal)", () => {
 	beforeEach(() => {
 		loadFixture("cssbattle-play-minimal.html");
@@ -85,6 +95,16 @@ describe("fixture DOM helpers (minimal)", () => {
 	});
 
 	it("extracts CodeMirror lines", () => {
+		expect(extractCodeFromCmLines(document)).toBe("body{\nmargin:0;");
+	});
+
+	it("falls back to Monaco view-line markup", () => {
+		document.body.innerHTML = `
+			<div class="monaco-editor">
+				<div class="view-line">body{</div>
+				<div class="view-line">margin:0;</div>
+			</div>
+		`;
 		expect(extractCodeFromCmLines(document)).toBe("body{\nmargin:0;");
 	});
 
@@ -190,6 +210,24 @@ describe("multiple /targets/ images on page", () => {
 			"254"
 		);
 		expect(target?.value).toBe("https://cssbattle.dev/targets/254.png");
+	});
+});
+
+describe("daily fixture target resolution", () => {
+	beforeEach(() => {
+		loadFixture("cssbattle-play-daily.html");
+	});
+
+	it("prefers canonical ImageKit URL over generic daily.png placeholder", () => {
+		const challengeId = "17Bc6kIuAsiQgqP65moB";
+		const target = findTargetImage(
+			document,
+			`https://cssbattle.dev/play/${challengeId}`,
+			challengeId
+		);
+		expect(target?.value).toBe(
+			`https://ik.imagekit.io/cssbattle/og/target?id=${challengeId}`
+		);
 	});
 });
 

@@ -1,6 +1,7 @@
 import { detectChallengeContext } from "./contentScriptChallengeContext";
 import {
 	CLICKABLE_SELECTOR,
+	asImageDataUrlOrNull,
 	extractCodeFromCmLines,
 	fetchTargetImagePayload,
 	findPreviewIframe,
@@ -18,9 +19,9 @@ import {
 } from "./previewDocumentCapture";
 import type { SubmissionPayload } from "./shared/contracts";
 import {
-	didStatsChange,
 	extractStatsFromDocument,
 	type SubmissionStats,
+	waitForPostSubmitStats,
 } from "./contentScriptStats";
 
 const parseContentScriptTabMessage = (
@@ -43,8 +44,6 @@ const parseContentScriptTabMessage = (
 };
 
 const POST_SUBMIT_SETTLE_DELAY_MS = 750;
-const POST_SUBMIT_WAIT_TIMEOUT_MS = 20_000;
-const POST_SUBMIT_POLL_INTERVAL_MS = 300;
 const EXTENSION_CONTEXT_INVALIDATED = "Extension context invalidated";
 
 const isExtensionContextInvalidated = (error: unknown): boolean =>
@@ -129,7 +128,7 @@ const capturePreviewViaBackground = async (
 		return null;
 	}
 
-	return response.data.croppedDataUrl;
+	return asImageDataUrlOrNull(response.data.croppedDataUrl);
 };
 
 const capturePreviewFromIframeLocally = async (
@@ -140,7 +139,9 @@ const capturePreviewFromIframeLocally = async (
 		if (!doc) {
 			return null;
 		}
-		return capturePreviewFromDocument(doc) ?? (await capturePreviewFromDocumentAsync(doc));
+		return asImageDataUrlOrNull(
+			capturePreviewFromDocument(doc) ?? (await capturePreviewFromDocumentAsync(doc))
+		);
 	} catch (_error) {
 		return null;
 	}
@@ -194,23 +195,23 @@ const capturePreviewImage = async (): Promise<string | null> => {
 	return null;
 };
 
-const waitForPostSubmitStats = async (initial: SubmissionStats): Promise<SubmissionStats> => {
-	await sleep(POST_SUBMIT_SETTLE_DELAY_MS);
+let isProcessingSubmission = false;
 
-	const deadline = Date.now() + POST_SUBMIT_WAIT_TIMEOUT_MS;
-	let latest = extractStats();
-	while (Date.now() < deadline) {
-		if (didStatsChange(latest, initial)) {
-			return latest;
-		}
-		await sleep(POST_SUBMIT_POLL_INTERVAL_MS);
-		latest = extractStats();
+const notifySubmissionProcessingStarted = (): void => {
+	try {
+		void chrome.runtime.sendMessage({ action: "submissionProcessingStarted" });
+	} catch (_error) {
+		// Extension context invalidated — badge update is best-effort.
 	}
-
-	return latest;
 };
 
-let isProcessingSubmission = false;
+const clearSubmissionBadge = (): void => {
+	try {
+		void chrome.runtime.sendMessage({ action: "clearActionBadge" });
+	} catch (_error) {
+		// Extension context invalidated — badge update is best-effort.
+	}
+};
 
 const processSubmission = async (): Promise<void> => {
 	if (isProcessingSubmission) {
@@ -220,6 +221,9 @@ const processSubmission = async (): Promise<void> => {
 		return;
 	}
 	isProcessingSubmission = true;
+	let sentToBackground = false;
+
+	notifySubmissionProcessingStarted();
 
 	try {
 		const challengeContext = detectChallengeContext(document);
@@ -236,11 +240,13 @@ const processSubmission = async (): Promise<void> => {
 		}
 
 		const initialStats = extractStats();
+		const codePromise = extractCode();
 		const previewCapturePromise = capturePreviewImage();
-		const [postSubmitStats, resultImageDataUrl, targetImage] = await Promise.all([
-			waitForPostSubmitStats(initialStats),
+		const [postSubmitStats, resultImageDataUrl, targetImage, code] = await Promise.all([
+			waitForPostSubmitStats(document, initialStats),
 			previewCapturePromise,
 			fetchTargetImagePayload(document, window.location.href, getChallengeId()),
+			codePromise,
 		]);
 		const challengeName =
 			challengeContext.mode === "daily"
@@ -257,7 +263,7 @@ const processSubmission = async (): Promise<void> => {
 			submittedAt: new Date().toISOString(),
 			score: postSubmitStats.score,
 			matchPct: postSubmitStats.matchPct,
-			code: await extractCode(),
+			code,
 			targetImage,
 			resultImageDataUrl,
 		};
@@ -267,9 +273,14 @@ const processSubmission = async (): Promise<void> => {
 			payload,
 		};
 		const response = await chrome.runtime.sendMessage(message);
+		sentToBackground = true;
 		if (!response?.ok) {
+			const error =
+				typeof response?.error === "string"
+					? ` ${response.error}`
+					: " No error details returned.";
 			console.warn(
-				"[CssHub] Submission rejected by extension background logic."
+				`[CssHub] Submission rejected by extension background logic.${error}`
 			);
 			return;
 		}
@@ -295,6 +306,9 @@ const processSubmission = async (): Promise<void> => {
 
 		console.error("[CssHub] Submission processing failed unexpectedly", error);
 	} finally {
+		if (!sentToBackground) {
+			clearSubmissionBadge();
+		}
 		isProcessingSubmission = false;
 	}
 };

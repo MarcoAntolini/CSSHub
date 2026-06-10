@@ -7,6 +7,7 @@ import {
 	didStatsChange,
 	extractStatsFromDocument,
 	parseScoreFromText,
+	waitForPostSubmitStats,
 } from "../../src/contentScriptStats";
 
 const FIXTURE_PATH = join(
@@ -25,6 +26,18 @@ describe("parseScoreFromText", () => {
 		const parsed = parseScoreFromText("- Last score");
 		expect(parsed.score).toBe(0);
 		expect(parsed.matchPct).toBe(0);
+	});
+
+	it("returns null match when score exists but percent is missing", () => {
+		const parsed = parseScoreFromText("640 Last score");
+		expect(parsed.score).toBe(640);
+		expect(parsed.matchPct).toBeNull();
+	});
+
+	it("parses score when CSSBattle renders the value after the label", () => {
+		const parsed = parseScoreFromText("Last score 648.85 (225)");
+		expect(parsed.score).toBe(648.85);
+		expect(parsed.matchPct).toBeNull();
 	});
 });
 
@@ -48,6 +61,24 @@ describe("extractStatsFromDocument", () => {
 		expect(stats.score).toBe(640);
 		expect(stats.matchPct).toBe(99.2);
 	});
+
+	it("reads stats from the current CSSBattle label-before-value DOM", () => {
+		document.body.innerHTML = `
+			<div class="leaderboard-stats-box">
+				<span>Last score</span>
+				<strong>648.85</strong>
+				<span>(225)</span>
+				<span>High score</span>
+				<strong>648.85</strong>
+				<span>(225)</span>
+			</div>
+			<div>New highscore! You scored 648.85 with 100% match</div>
+		`;
+
+		const stats = extractStatsFromDocument(document);
+		expect(stats.score).toBe(648.85);
+		expect(stats.matchPct).toBe(100);
+	});
 });
 
 describe("didStatsChange", () => {
@@ -64,5 +95,71 @@ describe("didStatsChange", () => {
 		expect(didStatsChange({ score: 10, matchPct: 80 }, { score: null, matchPct: null })).toBe(
 			true
 		);
+	});
+});
+
+describe("waitForPostSubmitStats", () => {
+	beforeEach(() => {
+		loadFixture();
+	});
+
+	it("returns updated stats when the leaderboard box mutates", async () => {
+		const initial = extractStatsFromDocument(document);
+		const promise = waitForPostSubmitStats(document, initial, {
+			settleDelayMs: 10,
+			pollIntervalMs: 20,
+			mutationSettleMs: 20,
+			timeoutMs: 2_000,
+		});
+
+		window.setTimeout(() => {
+			const box = document.querySelector(".leaderboard-stats-box");
+			if (!box) {
+				return;
+			}
+			const spans = Array.from(box.querySelectorAll("span"));
+			if (spans[0]) {
+				spans[0].textContent = "700";
+			}
+			if (spans[1]) {
+				spans[1].textContent = "88% match";
+			}
+		}, 80);
+
+		const stats = await promise;
+		expect(stats.score).toBe(700);
+		expect(stats.matchPct).toBe(88);
+	});
+
+	it("returns null stats on timeout when the leaderboard never updates", async () => {
+		const initial = extractStatsFromDocument(document);
+		const stats = await waitForPostSubmitStats(document, initial, {
+			settleDelayMs: 10,
+			pollIntervalMs: 20,
+			timeoutMs: 120,
+		});
+		expect(stats).toEqual({ score: null, matchPct: null });
+	});
+
+	it("accepts unchanged stats after a leaderboard mutation", async () => {
+		const initial = extractStatsFromDocument(document);
+		const promise = waitForPostSubmitStats(document, initial, {
+			settleDelayMs: 10,
+			pollIntervalMs: 20,
+			mutationSettleMs: 20,
+			timeoutMs: 2_000,
+		});
+
+		window.setTimeout(() => {
+			const box = document.querySelector(".leaderboard-stats-box");
+			if (!box) {
+				return;
+			}
+			box.append(document.createElement("span"));
+		}, 80);
+
+		const stats = await promise;
+		expect(stats.score).toBe(640);
+		expect(stats.matchPct).toBe(99.2);
 	});
 });

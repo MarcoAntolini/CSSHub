@@ -46,6 +46,7 @@ export const SUBMIT_LABEL = /submit/i;
 export const CLICKABLE_SELECTOR =
 	"button, [role='button'], input[type='submit'], a";
 export const CM_LINE_SELECTOR = ".cm-line";
+export const MONACO_LINE_SELECTOR = ".monaco-editor .view-line";
 export const CHALLENGE_ID_PATH_REGEX = /^\/play\/([^/]+)/;
 export const CHALLENGE_TITLE_REGEX = /Target\s*#?\d+\s*:\s*(.+)$/i;
 
@@ -63,6 +64,9 @@ export const resolveDocumentUrl = (url: string, baseUrl: string): string => {
 		return url;
 	}
 };
+
+export const asImageDataUrlOrNull = (value: string | null | undefined): string | null =>
+	typeof value === "string" && value.startsWith("data:image/") ? value : null;
 
 export const getChallengeIdFromPathname = (pathname: string): string => {
 	const match = pathname.match(CHALLENGE_ID_PATH_REGEX);
@@ -272,7 +276,7 @@ export const targetAssetMatchesChallengeId = (
 	if (imageReferencesChallengeId(url, challengeId)) {
 		return true;
 	}
-	return extractTargetAssetId(url) === "daily";
+	return false;
 };
 
 export const scoreTargetImageCandidate = (
@@ -339,6 +343,15 @@ export const scoreTargetImageCandidate = (
 	}
 	if (width > 0 && width < 128) {
 		score -= 50;
+	}
+
+	if (
+		challengeId &&
+		challengeId !== "unknown" &&
+		!isNumericChallengeId(challengeId) &&
+		(extractTargetAssetId(src) === "daily" || extractTargetAssetId(currentSrc) === "daily")
+	) {
+		score -= 500;
 	}
 
 	return score;
@@ -648,11 +661,19 @@ export const fetchTargetImagePayload = async (
 	return dataUrl ? { type: "dataUrl", value: dataUrl } : found;
 };
 
-export const extractCodeFromCmLines = (root: Document | Element): string => {
-	const lines = Array.from(root.querySelectorAll(CM_LINE_SELECTOR)).map((line) =>
+const extractCodeFromLineElements = (root: Document | Element, selector: string): string => {
+	const lines = Array.from(root.querySelectorAll(selector)).map((line) =>
 		Array.from(line.childNodes)
 			.map((node) => node.textContent ?? "")
 			.join("")
 	);
 	return lines.join("\n").trim();
+};
+
+export const extractCodeFromCmLines = (root: Document | Element): string => {
+	const fromCodeMirror = extractCodeFromLineElements(root, CM_LINE_SELECTOR);
+	if (fromCodeMirror) {
+		return fromCodeMirror;
+	}
+	return extractCodeFromLineElements(root, MONACO_LINE_SELECTOR);
 };

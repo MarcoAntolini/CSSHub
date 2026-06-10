@@ -8,11 +8,15 @@ CssHub’s content script scrapes CSSBattle’s play page DOM. Selectors are bri
 |----------|-------------------|---------|--------|
 | `LAST_SCORE_LABEL` | `/last\s*score/i` | Detect “Last score” label in text blobs | `contentScriptStats.ts` |
 | `LAST_SCORE_LABEL_GLOBAL` | `/last\s*score/gi` | Global variant for `parseScoreFromText` | `contentScriptStats.ts` |
-| `MATCH_REGEX` | `/(\d+(?:[.,]\d+)?)\s*%\s*(?:match)?/gi` | Parse match % before label | `contentScriptStats.ts` |
+| `MATCH_REGEX` | `/(\d+(?:[.,]\d+)?)\s*%\s*(?:match)?/gi` | Parse match % in legacy score text before the label | `contentScriptStats.ts` |
+| `EXPLICIT_MATCH_REGEX` | `/(\d+(?:[.,]\d+)?)\s*%\s*match/gi` | Parse explicit result text such as “100% match” without confusing threshold percentages for match results | `contentScriptStats.ts` |
 | `NUMBER_REGEX` | `/\d+(?:[.,]\d+)?(?:e[+-]?\d+)?/gi` | Parse numeric score | `contentScriptStats.ts` |
 | `LEADERBOARD_STATS_BOX_SELECTOR` | `.leaderboard-stats-box` | Preferred stats container | `contentScriptStats.ts` |
 | (implicit) | `body *` with text `^last\s*score$` | Find label elements | `getLastScoreLabelElements` |
 | (implicit) | `section, div, article, main` | Fallback roots containing “Last score” | `extractStatsFromDocument` |
+
+| `parseScoreFromText` | Text around the final “Last score” label | Supports legacy “score match Last score” and current “Last score score” ordering |
+| `waitForPostSubmitStats` | Poll + `MutationObserver` on `.leaderboard-stats-box` | Detect post-submit updates; null stats on timeout without DOM activity |
 
 **Tests:** `apps/extension/tests/unit/contentScriptStats.test.ts` + `tests/fixtures/cssbattle-play-minimal.html`
 
@@ -63,9 +67,10 @@ Listener: capture phase on `document` (`contentScript.ts`), only on paths starti
 
 | Constant | Selector | Purpose |
 |----------|----------|---------|
-| `CM_LINE_SELECTOR` | `.cm-line` | Visible CodeMirror lines when Monaco hook unavailable |
+| `CM_LINE_SELECTOR` | `.cm-line` | Visible CodeMirror lines |
+| `MONACO_LINE_SELECTOR` | `.monaco-editor .view-line` | Monaco editor DOM fallback |
 
-Primary path: background `extractCssbattleEditorCode` (Monaco). DOM lines are fallback.
+Primary path: background `extractCssbattleEditorCode` (CodeMirror 6 `cmTile` hook). DOM lines are fallback (CodeMirror, then Monaco).
 
 ## Target reference image (`contentScriptDom.ts`)
 
@@ -76,6 +81,7 @@ Primary path: background `extractCssbattleEditorCode` (Monaco). DOM lines are fa
 | | `img.levelpage__target` queried first | Main challenge pane |
 | | Numeric id fallback | `https://cssbattle.dev/targets/{id}.png` when DOM is stale |
 | | Daily / opaque id | `meta[property="og:image"]` or ImageKit `og/target?id={id}` |
+| | Generic `/targets/daily.png` | Excluded for opaque daily ids (site-wide placeholder) |
 | | Footer exclusion | `.footer__deco` thumbs are never the challenge target |
 | `waitForTargetImage` | Poll until DOM/meta sources are available | Client-rendered daily pages |
 | | `class` includes `levelpage__target` or `__target` | BEM-style target pane |
