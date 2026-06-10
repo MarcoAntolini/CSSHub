@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (must match manifest.json, e.g. 1.1.0)"
+        required: true
+        type: string
+      ref:
+        description: "Branch or commit SHA to build and tag"
+        required: false
+        default: main
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: version
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid SemVer version: $VERSION (expected MAJOR.MINOR.PATCH)"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate manifest version matches input
+        run: |
+          MANIFEST_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('apps/extension/public/manifest.json','utf8')).version")
+          if [ "$MANIFEST_VERSION" != "${{ steps.version.outputs.version }}" ]; then
+            echo "Input version (${{ steps.version.outputs.version }}) does not match manifest ($MANIFEST_VERSION)"
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Validate production backend URL variable
+        run: |
+          if [ -z "${{ vars.EXTENSION_PRODUCTION_BACKEND_URL }}" ]; then
+            echo "Missing repository variable EXTENSION_PRODUCTION_BACKEND_URL"
+            exit 1
+          fi
+
+      - name: Build extension (production)
+        env:
+          VITE_OAUTH_BACKEND_BASE_URL: ${{ vars.EXTENSION_PRODUCTION_BACKEND_URL }}
+        run: npm run build:extension:prod
+
+      - name: Package Chrome Web Store zip
+        run: npm run package:extension:store
+
+      - name: Extract changelog notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          awk -v ver="$VERSION" '
+            BEGIN { found=0 }
+            /^## \[/ {
+              if (found) exit
+              if (index($0, "## [" ver "]") == 1) { found=1; next }
+            }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "No changelog section found for version $VERSION"
+            exit 1
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: CssHub ${{ steps.version.outputs.version }}
+          body_path: release-notes.md
+          files: release/csshub-*.zip
+          draft: false
+          prerelease: false
+          make_latest: true
