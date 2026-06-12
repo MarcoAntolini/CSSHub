@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
 	githubOAuthTokenRawSchema,
 	oauthExchangeRequestSchema,
-} from "../../../lib/shared-dist/oauth/schemas.js";
+} from "../../../lib/oauth/schemas.js";
 import { backendEnv } from "../../../lib/env.js";
 import { runOAuthPostRoute } from "../../../lib/oauthPostHandler.js";
 import { consumeOAuthState } from "../../../lib/oauthState.js";

@@ -2,10 +2,10 @@
 	"$schema": "https://openapi.vercel.sh/vercel.json",
 	"framework": null,
 	"buildCommand": null,
-	"installCommand": "npm ci && npm run build --workspace @csshub/shared && npm run vercel:prepare --workspace @csshub/backend",
+	"installCommand": "npm ci",
 	"functions": {
 		"apps/backend/api/**/*.ts": {
-			"includeFiles": "apps/backend/lib/**"
+			"includeFiles": "{apps/backend/lib/**,packages/shared/src/**}"
 		}
 	}
 }

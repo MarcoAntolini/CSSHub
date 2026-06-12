@@ -5,10 +5,9 @@
 	"type": "module",
 	"scripts": {
 		"dev": "npm run serve",
-		"serve": "npm run vercel:prepare && vercel dev --listen 3000 --yes",
+		"serve": "vercel dev --listen 3000 --yes",
 		"dev:all": "npm run dev",
-		"vercel:prepare": "node scripts/sync-shared-dist.mjs",
-		"pretypecheck": "npm run build --workspace @csshub/shared && npm run vercel:prepare",
+		"pretypecheck": "npm run build --workspace @csshub/shared",
 		"typecheck": "tsc --build",
 		"typecheck:all": "npm run typecheck"
 	},

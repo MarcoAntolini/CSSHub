@@ -58,7 +58,7 @@ Use **one** of these layouts (both are supported via `vercel.json` in the repo):
 
 1. Vercel project **Root Directory** → **`apps/backend`**
 2. Enable **Include source files outside of the Root Directory** (for `@csshub/shared`)
-3. [`apps/backend/vercel.json`](vercel.json) runs `npm ci` from the monorepo root, builds `@csshub/shared`, then **`npm run vercel:prepare`** (copies `packages/shared/dist` → `lib/shared-dist/` inside this app). API routes import only from `lib/**` so Vercel’s `includeFiles: lib/**` bundles everything. Do **not** import `@csshub/shared` or `packages/shared/...` from `api/` — CI enforces this (`npm run check:backend-vercel`).
+3. [`apps/backend/vercel.json`](vercel.json) runs `npm ci` from the monorepo root. OAuth Zod schemas live in `packages/shared/src` (committed source); `lib/oauth/schemas.ts` re-exports them for API routes. Vercel’s `includeFiles` bundles `lib/**` and `packages/shared/src/**`. Do **not** import `@csshub/shared` or `packages/shared/...` directly from `api/` — CI enforces this (`npm run check:backend-vercel`).
 4. Add env vars; set extension `VITE_OAUTH_BACKEND_BASE_URL` to this deployment URL
 
 ### Option B: Root Directory = repository root

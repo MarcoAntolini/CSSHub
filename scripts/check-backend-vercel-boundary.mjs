@@ -20,11 +20,11 @@ const forbidden = [
 	},
 	{
 		pattern: /from\s+["']@csshub\/shared["']/,
-		message: "use lib/shared-dist (npm run vercel:prepare -w @csshub/backend), not workspace/monorepo imports",
+		message: "import shared code via lib/ shims (e.g. lib/oauth/schemas.js), not workspace package names in API routes",
 	},
 	{
 		pattern: /from\s+["'][^"']*packages\/shared/,
-		message: "use lib/shared-dist (npm run vercel:prepare -w @csshub/backend), not workspace/monorepo imports",
+		message: "import shared code via lib/ shims (e.g. lib/oauth/schemas.js), not packages/shared paths in API routes",
 	},
 ];
 
@@ -33,23 +33,21 @@ const violations = [];
 const requiredVercelConfigs = [
 	{
 		configPath: resolve(repoRoot, "vercel.json"),
-		installCommand:
-			"npm ci && npm run build --workspace @csshub/shared && npm run vercel:prepare --workspace @csshub/backend",
+		installCommand: "npm ci",
 		functions: [
 			{
 				pattern: "apps/backend/api/**/*.ts",
-				includeFiles: "apps/backend/lib/**",
+				includeFiles: "{apps/backend/lib/**,packages/shared/src/**}",
 			},
 		],
 	},
 	{
 		configPath: resolve(repoRoot, "apps/backend/vercel.json"),
-		installCommand:
-			"cd ../.. && npm ci && npm run build --workspace @csshub/shared && npm run vercel:prepare --workspace @csshub/backend",
+		installCommand: "cd ../.. && npm ci",
 		functions: [
 			{
 				pattern: "api/**/*.ts",
-				includeFiles: "lib/**",
+				includeFiles: "{lib/**,../../packages/shared/src/**}",
 			},
 		],
 	},
@@ -87,7 +85,7 @@ for (const config of requiredVercelConfigs) {
 
 	if (vercelConfig.installCommand !== config.installCommand) {
 		violations.push(
-			`${config.configPath}: installCommand must run shared build and vercel:prepare`
+			`${config.configPath}: installCommand must be npm ci (monorepo root when using apps/backend root)`
 		);
 	}
 
