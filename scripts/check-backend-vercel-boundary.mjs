@@ -10,8 +10,22 @@ const apiRoot = resolve(
 
 /** Imports that break Vercel serverless (workspace packages / monorepo paths outside lib/). */
 const forbidden = [
-	/from\s+["']@csshub\/shared["']/,
-	/from\s+["'][^"']*packages\/shared/,
+	{
+		pattern: /from\s+["']@\//,
+		message: "use relative imports instead of the TypeScript @/ alias in Vercel API routes",
+	},
+	{
+		pattern: /import\s*\(\s*["']@\//,
+		message: "use relative imports instead of the TypeScript @/ alias in Vercel API routes",
+	},
+	{
+		pattern: /from\s+["']@csshub\/shared["']/,
+		message: "use lib/shared-dist (npm run vercel:prepare -w @csshub/backend), not workspace/monorepo imports",
+	},
+	{
+		pattern: /from\s+["'][^"']*packages\/shared/,
+		message: "use lib/shared-dist (npm run vercel:prepare -w @csshub/backend), not workspace/monorepo imports",
+	},
 ];
 
 const violations = [];
@@ -27,11 +41,9 @@ const walk = (dir) => {
 			continue;
 		}
 		const source = readFileSync(path, "utf8");
-		for (const pattern of forbidden) {
-			if (pattern.test(source)) {
-				violations.push(
-					`${path}: use lib/shared-dist (npm run vercel:prepare -w @csshub/backend), not workspace/monorepo imports`
-				);
+		for (const rule of forbidden) {
+			if (rule.pattern.test(source)) {
+				violations.push(`${path}: ${rule.message}`);
 			}
 		}
 	}

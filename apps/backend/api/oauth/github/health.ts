@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { handleCorsPreflight, setCorsHeaders } from "@/lib/cors.js";
-import { rejectMethod } from "@/lib/http.js";
-import { ensureBackendEnvLoaded } from "@/lib/loadEnv.js";
+import { handleCorsPreflight, setCorsHeaders } from "../../../lib/cors.js";
+import { rejectMethod } from "../../../lib/http.js";
+import { ensureBackendEnvLoaded } from "../../../lib/loadEnv.js";
 
 const REQUIRED_ENV_NAMES = ["GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"] as const;
 const OPTIONAL_ENV_NAMES = [

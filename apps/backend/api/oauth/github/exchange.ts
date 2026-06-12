@@ -2,11 +2,11 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
 	githubOAuthTokenRawSchema,
 	oauthExchangeRequestSchema,
-} from "@/lib/shared-dist/oauth/schemas.js";
-import { backendEnv } from "@/lib/env.js";
-import { runOAuthPostRoute } from "@/lib/oauthPostHandler.js";
-import { consumeOAuthState } from "@/lib/oauthState.js";
-import { isAllowedRedirectUri } from "@/lib/oauth.js";
+} from "../../../lib/shared-dist/oauth/schemas.js";
+import { backendEnv } from "../../../lib/env.js";
+import { runOAuthPostRoute } from "../../../lib/oauthPostHandler.js";
+import { consumeOAuthState } from "../../../lib/oauthState.js";
+import { isAllowedRedirectUri } from "../../../lib/oauth.js";
 
 const EXCHANGE_RATE_LIMIT = {
 	keyPrefix: "oauth-exchange",
