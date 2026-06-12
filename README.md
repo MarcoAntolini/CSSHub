@@ -4,28 +4,40 @@
 
 <br />
 
-**Automatically sync your [CSSBattle](https://cssbattle.dev) submissions to GitHub.**
+**Save your [CSSBattle](https://cssbattle.dev) solutions to GitHub without copy-paste.**
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-4285F4?logo=googlechrome&logoColor=white&style=for-the-badge)](https://chromewebstore.google.com/detail/csshub/oakkijoinjkdhcgnpnmnpjkmpdekajid)
 [![release](https://img.shields.io/badge/release-v1.1.0-blue?style=for-the-badge)](https://github.com/MarcoAntolini/CSSHub/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
 
+[Install CssHub](https://chromewebstore.google.com/detail/csshub/oakkijoinjkdhcgnpnmnpjkmpdekajid) · [Privacy Policy](https://marcoantolini.github.io/CSSHub/privacy-policy.html) · [Report an Issue](https://github.com/MarcoAntolini/CSSHub/issues/new?template=bug_report.yml)
+
 </div>
 
 ---
 
-## What is CssHub?
+## CssHub in One Minute
 
-CssHub is a **Chrome extension** that pushes your CSSBattle solutions into a **GitHub repository** you choose—so every pass becomes a commit you can browse, diff, and share like normal code.
+CssHub is a Chrome extension for CSSBattle players. It takes the solutions you already write on CSSBattle and syncs them to a GitHub repository you choose, so your battles become a searchable, shareable progress log.
 
-No copy-paste, no drag-and-drop zip files: you play on CSSBattle, CssHub keeps your repo up to date.
+You keep solving. CssHub keeps the repo updated.
 
-## Why CssHub?
+## Why Install It?
 
-- **One place for your battles** — Challenges and submissions live in a repo structure you control.
-- **Git history as your progress log** — See how your solutions evolved over time.
-- **Backup & portfolio** — Your work stays on GitHub even if you clear browser data (once synced).
-- **Built for CSSBattle** — Works on the official play experience you already use.
+- **No copy-paste routine** — send solutions to GitHub from the browser.
+- **A clean battle archive** — keep Battles and Daily Targets in one repo.
+- **Progress you can look back on** — commits show how your solutions changed over time.
+- **Portfolio-friendly history** — your CSSBattle work is easier to browse, share, and preserve.
+- **Your repo, your control** — choose the repository and branch CssHub writes to.
+
+## Get Started
+
+1. [Install CssHub from the Chrome Web Store](https://chromewebstore.google.com/detail/csshub/oakkijoinjkdhcgnpnmnpjkmpdekajid).
+2. Pin CssHub in Chrome if you want quick access.
+3. Open the extension settings, sign in with GitHub, and choose where to save your solutions.
+4. Open a CSSBattle play page and solve as usual.
+
+CssHub works in Google Chrome and Chromium browsers with Manifest V3 support.
 
 ## Screenshots
 
@@ -42,100 +54,60 @@ No copy-paste, no drag-and-drop zip files: you play on CSSBattle, CssHub keeps y
   <img src="docs/screenshots/github.png" alt="GitHub commit created by CssHub" width="720" />
 </p>
 
-## Quick Start
+## Privacy
 
-### Use CssHub (players)
+CssHub is built for one job: syncing your CSSBattle solutions to your GitHub repo.
 
-1. **[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/csshub/oakkijoinjkdhcgnpnmnpjkmpdekajid)** — updates install automatically.
-2. Pin **CssHub** from the puzzle menu if you want quick access.
-3. Open **Settings** → **Sign in with GitHub** → choose your **repository** (and branch if needed).
-4. Open a **CSSBattle** play page and solve as usual—CssHub syncs your submission when you use the extension flow on that challenge.
+It does not run analytics, create a CssHub cloud account, or store your battle library on a CssHub server. For the full data handling details, read the hosted [CssHub Privacy Policy](https://marcoantolini.github.io/CSSHub/privacy-policy.html).
 
-Use **Google Chrome** (or another Chromium browser with Manifest V3 support). Supported hosts: `cssbattle.dev` and `www.cssbattle.dev`.
+## For Developers
 
-### Develop from source (maintainers)
-
-```bash
-git clone https://github.com/MarcoAntolini/CSSHub.git
-cd CSSHub
-npm ci
-```
-
-Copy env examples and fill in values:
-
-```bash
-cp apps/backend/.env.example apps/backend/.env.local
-cp apps/extension/.env.development.example apps/extension/.env.development.local
-```
-
-Start the OAuth backend and extension watch build:
-
-```bash
-npm run dev
-```
-
-Load the unpacked extension from `apps/extension/dist`. Full env, OAuth callback, and CI notes: **[`apps/extension/README.md`](apps/extension/README.md)** and **[`apps/backend/README.md`](apps/backend/README.md)**.
-
-## Project structure
+### Project Structure
 
 ```
 .
 ├── apps/
-│   ├── backend/          # Vercel OAuth API (GitHub web OAuth only)
-│   └── extension/        # Chrome extension (content scripts, popup, settings)
-├── docs/                 # Privacy policy, ops runbook, screenshots
+│   ├── backend/          # OAuth service for GitHub sign-in
+│   └── extension/        # Chrome extension source
+├── docs/                 # Privacy page, maintainer docs, screenshots
 ├── packages/
-│   └── shared/           # Shared TypeScript contracts and OAuth schemas
-├── scripts/              # OAuth doctor, store packaging, CI helpers
+│   └── shared/           # Shared contracts used by the app packages
+├── scripts/              # Maintainer and release helpers
 ├── CHANGELOG.md
 ├── LICENSE
 └── package.json
 ```
 
-## Architecture
+### More Documentation
 
-```mermaid
-graph TD
-    Player[CSSBattle play page] --> Extension[Chrome extension]
-    Extension --> GitHubAPI[GitHub API]
-    Extension --> OAuthBackend[OAuth backend on Vercel]
-    OAuthBackend --> GitHubOAuth[GitHub OAuth]
-    Extension --> Shared["@csshub/shared"]
-    OAuthBackend --> Shared
-```
-
-The extension reads submission data on CSSBattle, syncs commits via the GitHub API, and uses the backend only for **web OAuth** (client secret stays on the server). Device flow and PAT sign-in bypass the backend.
-
-## Documentation
+Need implementation details? Start here:
 
 | Resource | Description |
 |----------|-------------|
-| [`apps/extension/README.md`](apps/extension/README.md) | Extension scripts, env vars, CI artifacts, store packaging |
-| [`apps/backend/README.md`](apps/backend/README.md) | OAuth API routes, Vercel deploy, health check |
-| [`docs/privacy-policy.md`](docs/privacy-policy.md) | Privacy policy (published at [marcoantolini.github.io/CSSHub](https://marcoantolini.github.io/CSSHub/privacy-policy.html)) |
-| [`docs/privacy-data-map.md`](docs/privacy-data-map.md) | Data inventory: storage, hosts, retention |
-| [`docs/ops-runbook.md`](docs/ops-runbook.md) | Maintainer ops: OAuth failures, Redis, rollback |
+| [`apps/extension/README.md`](apps/extension/README.md) | Build, run, package, and configure the Chrome extension |
+| [`apps/backend/README.md`](apps/backend/README.md) | OAuth backend setup and deployment |
+| [`docs/ops-runbook.md`](docs/ops-runbook.md) | Maintainer troubleshooting and rollback notes |
 | [`CHANGELOG.md`](CHANGELOG.md) | Release history |
-
-## Privacy in plain English
-
-- CssHub needs **GitHub access** only to write to **your** chosen repo (and related metadata like branches).
-- Your **GitHub token is kept in session-only extension storage** on your device (cleared on sign-out); settings and an activity log (up to **15** events) stay in local extension storage—not on a CssHub account in the cloud.
-- CssHub only runs on **CSSBattle** play pages, plus **GitHub** and the **OAuth backend** for sign-in and sync.
-- **No CssHub analytics** — no first-party tracking or advertising SDK.
-- **Privacy policy:** <https://marcoantolini.github.io/CSSHub/privacy-policy.html> (source in [`docs/privacy-policy.md`](docs/privacy-policy.md)).
-- Technical inventory: [`docs/privacy-data-map.md`](docs/privacy-data-map.md). Extension and backend details: [`apps/extension/README.md`](apps/extension/README.md), [`apps/backend/README.md`](apps/backend/README.md).
-- Chrome Web Store listing draft (maintainer, local): `docs/internal/chrome-web-store-listing.md` (gitignored).
 
 ## Support
 
-Using CssHub? Install or update from the [Chrome Web Store](https://chromewebstore.google.com/detail/csshub/oakkijoinjkdhcgnpnmnpjkmpdekajid). If something breaks or you want a feature, open a [GitHub issue](https://github.com/MarcoAntolini/CSSHub/issues)—the [bug report](https://github.com/MarcoAntolini/CSSHub/issues/new?template=bug_report.yml) and [feature request](https://github.com/MarcoAntolini/CSSHub/issues/new?template=feature_request.yml) templates include the fields we need (CSSBattle URL, extension version, steps to reproduce).
+Install or update CssHub from the [Chrome Web Store](https://chromewebstore.google.com/detail/csshub/oakkijoinjkdhcgnpnmnpjkmpdekajid).
+
+If something does not work, open a [bug report](https://github.com/MarcoAntolini/CSSHub/issues/new?template=bug_report.yml) with the CSSBattle URL, extension version, browser, and steps to reproduce. If you have an idea for the extension, open a [feature request](https://github.com/MarcoAntolini/CSSHub/issues/new?template=feature_request.yml).
 
 ## Contributing
 
-Pull requests are welcome. GitHub applies the [PR template](https://github.com/MarcoAntolini/CSSHub/blob/main/.github/pull_request_template.md) automatically; for larger changes, start with an issue so we can align on scope. Maintainer ops (OAuth, rollback): [`docs/ops-runbook.md`](docs/ops-runbook.md).
+Pull requests are welcome. For small fixes, open a PR directly. For larger changes, start with an issue so the scope is clear before implementation.
 
-If CssHub saves you time, **star** this repo—it helps other CSSBattle players find it.
+Useful places to start:
+
+- Extension work: [`apps/extension/README.md`](apps/extension/README.md)
+- OAuth/backend work: [`apps/backend/README.md`](apps/backend/README.md)
+- Maintainer troubleshooting: [`docs/ops-runbook.md`](docs/ops-runbook.md)
+
+GitHub applies the [pull request template](https://github.com/MarcoAntolini/CSSHub/blob/main/.github/pull_request_template.md) automatically.
+
+If CssHub saves you time, star this repo. It helps other CSSBattle players find the extension.
 
 <a href="https://github.com/MarcoAntolini/CSSHub/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=MarcoAntolini/CSSHub" alt="Contributors" />
