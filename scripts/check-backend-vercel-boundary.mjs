@@ -33,7 +33,8 @@ const violations = [];
 const requiredVercelConfigs = [
 	{
 		configPath: resolve(repoRoot, "vercel.json"),
-		buildCommand: "npm run vercel:prepare --workspace @csshub/backend",
+		installCommand:
+			"npm ci && npm run build --workspace @csshub/shared && npm run vercel:prepare --workspace @csshub/backend",
 		functions: [
 			{
 				pattern: "apps/backend/api/**/*.ts",
@@ -43,7 +44,8 @@ const requiredVercelConfigs = [
 	},
 	{
 		configPath: resolve(repoRoot, "apps/backend/vercel.json"),
-		buildCommand: "npm run vercel:prepare",
+		installCommand:
+			"cd ../.. && npm ci && npm run build --workspace @csshub/shared && npm run vercel:prepare --workspace @csshub/backend",
 		functions: [
 			{
 				pattern: "api/**/*.ts",
@@ -77,9 +79,15 @@ walk(apiRoot);
 for (const config of requiredVercelConfigs) {
 	const vercelConfig = JSON.parse(readFileSync(config.configPath, "utf8"));
 
-	if (vercelConfig.buildCommand !== config.buildCommand) {
+	if (vercelConfig.buildCommand != null) {
 		violations.push(
-			`${config.configPath}: buildCommand must be "${config.buildCommand}"`
+			`${config.configPath}: buildCommand must be null for serverless-only API deploys`
+		);
+	}
+
+	if (vercelConfig.installCommand !== config.installCommand) {
+		violations.push(
+			`${config.configPath}: installCommand must run shared build and vercel:prepare`
 		);
 	}
 
