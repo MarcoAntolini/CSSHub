@@ -6,6 +6,9 @@
 	"functions": {
 		"apps/backend/api/**/*.ts": {
 			"includeFiles": "apps/backend/lib/**"
+		},
+		"apps/backend/api/**/*.js": {
+			"includeFiles": "apps/backend/lib/**"
 		}
 	}
 }

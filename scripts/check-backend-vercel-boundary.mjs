@@ -2,9 +2,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const apiRoot = resolve(
-	dirname(fileURLToPath(import.meta.url)),
-	"..",
+	repoRoot,
 	"apps/backend/api"
 );
 
@@ -30,6 +30,35 @@ const forbidden = [
 
 const violations = [];
 
+const requiredVercelFunctionIncludes = [
+	{
+		configPath: resolve(repoRoot, "vercel.json"),
+		functions: [
+			{
+				pattern: "apps/backend/api/**/*.ts",
+				includeFiles: "apps/backend/lib/**",
+			},
+			{
+				pattern: "apps/backend/api/**/*.js",
+				includeFiles: "apps/backend/lib/**",
+			},
+		],
+	},
+	{
+		configPath: resolve(repoRoot, "apps/backend/vercel.json"),
+		functions: [
+			{
+				pattern: "api/**/*.ts",
+				includeFiles: "lib/**",
+			},
+			{
+				pattern: "api/**/*.js",
+				includeFiles: "lib/**",
+			},
+		],
+	},
+];
+
 const walk = (dir) => {
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		const path = join(dir, entry.name);
@@ -50,6 +79,18 @@ const walk = (dir) => {
 };
 
 walk(apiRoot);
+
+for (const config of requiredVercelFunctionIncludes) {
+	const vercelConfig = JSON.parse(readFileSync(config.configPath, "utf8"));
+	for (const requiredFunction of config.functions) {
+		const functionConfig = vercelConfig.functions?.[requiredFunction.pattern];
+		if (functionConfig?.includeFiles !== requiredFunction.includeFiles) {
+			violations.push(
+				`${config.configPath}: ${requiredFunction.pattern} must include ${requiredFunction.includeFiles}`
+			);
+		}
+	}
+}
 
 if (violations.length > 0) {
 	console.error("check-backend-vercel-boundary: failed\n" + violations.join("\n"));
