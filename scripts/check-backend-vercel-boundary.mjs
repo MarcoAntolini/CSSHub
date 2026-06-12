@@ -30,29 +30,23 @@ const forbidden = [
 
 const violations = [];
 
-const requiredVercelFunctionIncludes = [
+const requiredVercelConfigs = [
 	{
 		configPath: resolve(repoRoot, "vercel.json"),
+		buildCommand: "npm run vercel:prepare --workspace @csshub/backend",
 		functions: [
 			{
 				pattern: "apps/backend/api/**/*.ts",
-				includeFiles: "apps/backend/lib/**",
-			},
-			{
-				pattern: "apps/backend/api/**/*.js",
 				includeFiles: "apps/backend/lib/**",
 			},
 		],
 	},
 	{
 		configPath: resolve(repoRoot, "apps/backend/vercel.json"),
+		buildCommand: "npm run vercel:prepare",
 		functions: [
 			{
 				pattern: "api/**/*.ts",
-				includeFiles: "lib/**",
-			},
-			{
-				pattern: "api/**/*.js",
 				includeFiles: "lib/**",
 			},
 		],
@@ -80,8 +74,23 @@ const walk = (dir) => {
 
 walk(apiRoot);
 
-for (const config of requiredVercelFunctionIncludes) {
+for (const config of requiredVercelConfigs) {
 	const vercelConfig = JSON.parse(readFileSync(config.configPath, "utf8"));
+
+	if (vercelConfig.buildCommand !== config.buildCommand) {
+		violations.push(
+			`${config.configPath}: buildCommand must be "${config.buildCommand}"`
+		);
+	}
+
+	for (const [pattern] of Object.entries(vercelConfig.functions ?? {})) {
+		if (pattern.endsWith(".js")) {
+			violations.push(
+				`${config.configPath}: ${pattern} is invalid — Vercel function patterns must match .ts API sources`
+			);
+		}
+	}
+
 	for (const requiredFunction of config.functions) {
 		const functionConfig = vercelConfig.functions?.[requiredFunction.pattern];
 		if (functionConfig?.includeFiles !== requiredFunction.includeFiles) {
