@@ -163,6 +163,24 @@ describe("groupBattleEntriesByGroup", () => {
 
 	});
 
+	it("sorts challenges numerically within a battle group", () => {
+		const entries = [
+			{ folder: "Battles/Battle #1/#10. Cloaked Spirits", label: "#10. Cloaked Spirits" },
+			{ folder: "Battles/Battle #1/#2. Carrom", label: "#2. Carrom" },
+			{ folder: "Battles/Battle #1/#1. Simply Square", label: "#1. Simply Square" },
+			{ folder: "Battles/Battle #1/#11. Eye of Sauron", label: "#11. Eye of Sauron" },
+			{ folder: "Battles/Battle #1/#9. Tesseract", label: "#9. Tesseract" },
+		];
+		const sorted = groupBattleEntriesByGroup(entries)[0].entries.map((e) => e.label);
+		expect(sorted).toEqual([
+			"#1. Simply Square",
+			"#2. Carrom",
+			"#9. Tesseract",
+			"#10. Cloaked Spirits",
+			"#11. Eye of Sauron",
+		]);
+	});
+
 });
 
 

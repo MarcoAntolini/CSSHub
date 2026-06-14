@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- README battle index sorts challenges by number within each battle group (e.g. #10 after #9, not before #2)
+
 ## [1.1.0] - 2026-06-10
 
 Battles and Daily Targets sync, target-image previews, and a large extension/backend refactor since v1.0.1.

@@ -28,6 +28,11 @@ export const encodeRepoPathForMarkdownLink = (folder: string): string =>
 		.map((segment) => encodeURIComponent(segment))
 		.join("/");
 
+export const extractBattleChallengeNumber = (folder: string): number | null => {
+	const match = folder.match(/^Battles\/[^/]+\/#(\d+)\./);
+	return match ? parseInt(match[1], 10) : null;
+};
+
 export const compareBattleEntries = (a: ChallengeIndexEntry, b: ChallengeIndexEntry): number => {
 	const battleA = a.folder.match(/^Battles\/Battle #(\d+)\//)?.[1];
 	const battleB = b.folder.match(/^Battles\/Battle #(\d+)\//)?.[1];
@@ -37,7 +42,12 @@ export const compareBattleEntries = (a: ChallengeIndexEntry, b: ChallengeIndexEn
 			return cmp;
 		}
 	}
-	return a.label.localeCompare(b.label);
+	const challengeA = extractBattleChallengeNumber(a.folder);
+	const challengeB = extractBattleChallengeNumber(b.folder);
+	if (challengeA !== null && challengeB !== null) {
+		return challengeA - challengeB;
+	}
+	return a.folder.localeCompare(b.folder);
 };
 
 export const compareDailyEntries = (a: ChallengeIndexEntry, b: ChallengeIndexEntry): number => {
