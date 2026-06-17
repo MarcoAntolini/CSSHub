@@ -85,13 +85,31 @@ export const getChallengeNameFromTitle = (
 export const isSubmitControlText = (text: string): boolean => SUBMIT_LABEL.test(text);
 
 export const isCssBattleSubmitShortcut = (
-	event: Pick<KeyboardEvent, "altKey" | "ctrlKey" | "key" | "metaKey" | "repeat" | "shiftKey">
+	event: Pick<
+		KeyboardEvent,
+		"altKey" | "code" | "ctrlKey" | "key" | "metaKey" | "repeat" | "shiftKey"
+	>
 ): boolean =>
-	event.key === "Enter" &&
+	(event.key === "Enter" || event.code === "Enter" || event.code === "NumpadEnter") &&
 	(event.metaKey || event.ctrlKey) &&
 	!event.altKey &&
 	!event.shiftKey &&
 	!event.repeat;
+
+export const addCssBattleSubmitShortcutListener = (
+	target: EventTarget,
+	onSubmit: () => void
+): void => {
+	const handleShortcut = (event: Event): void => {
+		if (!isCssBattleSubmitShortcut(event as KeyboardEvent)) {
+			return;
+		}
+		onSubmit();
+	};
+
+	target.addEventListener("keydown", handleShortcut, true);
+	target.addEventListener("keyup", handleShortcut, true);
+};
 
 export const dimensionsFromRect = (
 	rect: DOMRect,
