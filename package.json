@@ -25,7 +25,7 @@
 		"build:staging": "npm run build:extension:staging",
 		"build:preview": "npm run build:extension:preview",
 		"build:dev": "npm run build:extension:dev",
-		"test": "npm run test --workspaces --if-present",
+		"test": "node --test scripts/test-security.test.mjs && npm run test --workspaces --if-present",
 		"test:e2e": "npm run test:e2e --workspaces --if-present",
 		"lint": "eslint \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" \"scripts/**/*.mjs\"",
 		"lint:fix": "npm run lint -- --fix",
