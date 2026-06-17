@@ -17,6 +17,7 @@ import {
 	getElementDimensionsFromElement,
 	getTargetImageUrl,
 	isCssBattleHostedTargetUrl,
+	isCssBattleSubmitShortcut,
 	isFooterDecorativeImage,
 	isSubmitControlText,
 	isTargetImageElement,
@@ -67,6 +68,34 @@ describe("isSubmitControlText", () => {
 		expect(isSubmitControlText("Submit")).toBe(true);
 		expect(isSubmitControlText("SUBMIT SCORE")).toBe(true);
 		expect(isSubmitControlText("Save")).toBe(false);
+	});
+});
+
+describe("isCssBattleSubmitShortcut", () => {
+	it("matches CSSBattle keyboard submit shortcuts", () => {
+		expect(
+			isCssBattleSubmitShortcut(
+				new KeyboardEvent("keydown", { key: "Enter", metaKey: true })
+			)
+		).toBe(true);
+		expect(
+			isCssBattleSubmitShortcut(
+				new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true })
+			)
+		).toBe(true);
+		expect(isCssBattleSubmitShortcut(new KeyboardEvent("keydown", { key: "Enter" }))).toBe(
+			false
+		);
+		expect(
+			isCssBattleSubmitShortcut(
+				new KeyboardEvent("keydown", { key: "Enter", shiftKey: true })
+			)
+		).toBe(false);
+		expect(
+			isCssBattleSubmitShortcut(
+				new KeyboardEvent("keydown", { key: "s", metaKey: true })
+			)
+		).toBe(false);
 	});
 });
 

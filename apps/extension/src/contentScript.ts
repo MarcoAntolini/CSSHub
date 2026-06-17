@@ -10,6 +10,7 @@ import {
 	getElementDimensions,
 	getElementDimensionsFromElement,
 	isSubmitControlText,
+	isCssBattleSubmitShortcut,
 	waitForPreviewIframeReady,
 } from "./contentScriptDom";
 import {
@@ -247,6 +248,16 @@ const installSubmitListeners = (): void => {
 					? clickable.value
 					: clickable.textContent?.trim() ?? "";
 			if (!isSubmitControlText(text)) {
+				return;
+			}
+			void processSubmission();
+		},
+		true
+	);
+	document.addEventListener(
+		"keydown",
+		(event) => {
+			if (!isCssBattleSubmitShortcut(event)) {
 				return;
 			}
 			void processSubmission();
