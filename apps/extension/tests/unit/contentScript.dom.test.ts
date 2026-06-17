@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+	addCssBattleSubmitShortcutListener,
 	buildCanonicalDailyTargetUrl,
 	CLICKABLE_SELECTOR,
 	asImageDataUrlOrNull,
@@ -17,6 +18,7 @@ import {
 	getElementDimensionsFromElement,
 	getTargetImageUrl,
 	isCssBattleHostedTargetUrl,
+	isCssBattleSubmitShortcut,
 	isFooterDecorativeImage,
 	isSubmitControlText,
 	isTargetImageElement,
@@ -67,6 +69,91 @@ describe("isSubmitControlText", () => {
 		expect(isSubmitControlText("Submit")).toBe(true);
 		expect(isSubmitControlText("SUBMIT SCORE")).toBe(true);
 		expect(isSubmitControlText("Save")).toBe(false);
+	});
+});
+
+describe("isCssBattleSubmitShortcut", () => {
+	it("matches CSSBattle keyboard submit shortcuts", () => {
+		expect(
+			isCssBattleSubmitShortcut(
+				new KeyboardEvent("keydown", { key: "Enter", metaKey: true })
+			)
+		).toBe(true);
+		expect(
+			isCssBattleSubmitShortcut(
+				new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true })
+			)
+		).toBe(true);
+		expect(
+			isCssBattleSubmitShortcut(
+				new KeyboardEvent("keydown", { code: "NumpadEnter", ctrlKey: true })
+			)
+		).toBe(true);
+		expect(isCssBattleSubmitShortcut(new KeyboardEvent("keydown", { key: "Enter" }))).toBe(
+			false
+		);
+		expect(
+			isCssBattleSubmitShortcut(
+				new KeyboardEvent("keydown", { key: "Enter", shiftKey: true })
+			)
+		).toBe(false);
+		expect(
+			isCssBattleSubmitShortcut(
+				new KeyboardEvent("keydown", { key: "s", metaKey: true })
+			)
+		).toBe(false);
+	});
+
+	it("captures shortcuts before document-level propagation can be stopped", () => {
+		let shortcutSubmissions = 0;
+		let documentListenersReached = 0;
+
+		addCssBattleSubmitShortcutListener(window, () => {
+			shortcutSubmissions += 1;
+		});
+		window.addEventListener(
+			"keydown",
+			(event) => {
+				event.stopImmediatePropagation();
+			},
+			true
+		);
+		document.addEventListener(
+			"keydown",
+			() => {
+				documentListenersReached += 1;
+			},
+			true
+		);
+
+		document.dispatchEvent(
+			new KeyboardEvent("keydown", {
+				key: "Enter",
+				ctrlKey: true,
+				bubbles: true,
+			})
+		);
+
+		expect(shortcutSubmissions).toBe(1);
+		expect(documentListenersReached).toBe(0);
+	});
+
+	it("also captures shortcut keyup as a fallback", () => {
+		let shortcutSubmissions = 0;
+
+		addCssBattleSubmitShortcutListener(window, () => {
+			shortcutSubmissions += 1;
+		});
+
+		document.dispatchEvent(
+			new KeyboardEvent("keyup", {
+				key: "Enter",
+				ctrlKey: true,
+				bubbles: true,
+			})
+		);
+
+		expect(shortcutSubmissions).toBe(1);
 	});
 });
 

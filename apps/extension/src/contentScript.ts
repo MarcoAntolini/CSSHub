@@ -1,6 +1,7 @@
 import { detectChallengeContext } from "./contentScriptChallengeContext";
 import {
 	CLICKABLE_SELECTOR,
+	addCssBattleSubmitShortcutListener,
 	asImageDataUrlOrNull,
 	extractCodeFromCmLines,
 	fetchTargetImagePayload,
@@ -31,6 +32,9 @@ import {
 } from "./contentScriptStats";
 
 const EXTENSION_CONTEXT_INVALIDATED = "Extension context invalidated";
+const CSSHUB_SUBMIT_SHORTCUT_MESSAGE_TYPE = "CSSHUB_SUBMIT_SHORTCUT";
+const CSSHUB_MESSAGE_SOURCE = "csshub-shortcut-bridge";
+const KEYBOARD_SUBMISSION_DEBOUNCE_MS = 750;
 
 const isExtensionContextInvalidated = (error: unknown): boolean =>
 	error instanceof Error && error.message.includes(EXTENSION_CONTEXT_INVALIDATED);
@@ -134,6 +138,7 @@ const capturePreviewImage = async (): Promise<string | null> => {
 };
 
 let isProcessingSubmission = false;
+let lastKeyboardSubmissionAt = 0;
 
 const notifySubmissionProcessingStarted = (): void => {
 	void sendBackgroundAction("submissionProcessingStarted");
@@ -229,6 +234,15 @@ const processSubmission = async (): Promise<void> => {
 	}
 };
 
+const processKeyboardSubmission = (): void => {
+	const now = Date.now();
+	if (now - lastKeyboardSubmissionAt < KEYBOARD_SUBMISSION_DEBOUNCE_MS) {
+		return;
+	}
+	lastKeyboardSubmissionAt = now;
+	void processSubmission();
+};
+
 const installSubmitListeners = (): void => {
 	// Main ingestion path: capture and submit are automatic on CSSBattle submit clicks.
 	document.addEventListener(
@@ -250,6 +264,24 @@ const installSubmitListeners = (): void => {
 				return;
 			}
 			void processSubmission();
+		},
+		true
+	);
+	addCssBattleSubmitShortcutListener(window, processKeyboardSubmission);
+	window.addEventListener(
+		"message",
+		(event) => {
+			if (event.source !== window || event.origin !== window.location.origin) {
+				return;
+			}
+			const data = event.data as { source?: unknown; type?: unknown } | null;
+			if (
+				data?.source !== CSSHUB_MESSAGE_SOURCE ||
+				data.type !== CSSHUB_SUBMIT_SHORTCUT_MESSAGE_TYPE
+			) {
+				return;
+			}
+			processKeyboardSubmission();
 		},
 		true
 	);

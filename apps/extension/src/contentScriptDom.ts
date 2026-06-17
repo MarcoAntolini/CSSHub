@@ -45,6 +45,7 @@ export const isNumericChallengeId = (challengeId: string): boolean =>
 export const SUBMIT_LABEL = /submit/i;
 export const CLICKABLE_SELECTOR =
 	"button, [role='button'], input[type='submit'], a";
+export const ENTER_SHORTCUT_VALUES = new Set(["Enter", "NumpadEnter"]);
 export const CM_LINE_SELECTOR = ".cm-line";
 export const MONACO_LINE_SELECTOR = ".monaco-editor .view-line";
 export const CHALLENGE_ID_PATH_REGEX = /^\/play\/([^/]+)/;
@@ -83,6 +84,33 @@ export const getChallengeNameFromTitle = (
 };
 
 export const isSubmitControlText = (text: string): boolean => SUBMIT_LABEL.test(text);
+
+export const isCssBattleSubmitShortcut = (
+	event: Pick<
+		KeyboardEvent,
+		"altKey" | "code" | "ctrlKey" | "key" | "metaKey" | "repeat" | "shiftKey"
+	>
+): boolean =>
+	[
+		[event.key, event.code].some((value) => ENTER_SHORTCUT_VALUES.has(value)),
+		[event.metaKey, event.ctrlKey].some(Boolean),
+		![event.altKey, event.shiftKey, event.repeat].some(Boolean),
+	].every(Boolean);
+
+export const addCssBattleSubmitShortcutListener = (
+	target: EventTarget,
+	onSubmit: () => void
+): void => {
+	const handleShortcut = (event: Event): void => {
+		if (!isCssBattleSubmitShortcut(event as KeyboardEvent)) {
+			return;
+		}
+		onSubmit();
+	};
+
+	target.addEventListener("keydown", handleShortcut, true);
+	target.addEventListener("keyup", handleShortcut, true);
+};
 
 export const dimensionsFromRect = (
 	rect: DOMRect,

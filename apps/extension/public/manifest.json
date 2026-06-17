@@ -34,6 +34,15 @@
 				"https://cssbattle.dev/play/*",
 				"https://www.cssbattle.dev/play/*"
 			],
+			"js": ["shortcutBridge.js"],
+			"run_at": "document_start",
+			"world": "MAIN"
+		},
+		{
+			"matches": [
+				"https://cssbattle.dev/play/*",
+				"https://www.cssbattle.dev/play/*"
+			],
 			"js": ["contentScript.js"],
 			"run_at": "document_start"
 		}

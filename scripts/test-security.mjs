@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const SECRET_PATTERNS = [
 	"ghp_[A-Za-z0-9]{36}",
@@ -9,16 +10,21 @@ const SECRET_PATTERNS = [
 	"xox[baprs]-[0-9A-Za-z-]{10,}",
 ];
 
-const run = (command, args) => {
+const NPM_SPAWN_OPTIONS = process.platform === "win32" ? { shell: true } : {};
+
+export const normalizeRunResult = (result) => ({
+	status: result.status ?? 1,
+	stdout: result.stdout ?? "",
+	stderr: result.stderr ?? "",
+});
+
+const run = (command, args, options = {}) => {
 	const result = spawnSync(command, args, {
 		encoding: "utf8",
 		stdio: ["ignore", "pipe", "pipe"],
+		...options,
 	});
-	return {
-		status: result.status ?? 1,
-		stdout: result.stdout ?? "",
-		stderr: result.stderr ?? "",
-	};
+	return normalizeRunResult(result);
 };
 
 const isStrictMode = process.argv.includes("--strict");
@@ -35,7 +41,7 @@ const log = (message) => {
 
 const runAudit = () => {
 	log("== Dependency audit ==");
-	const result = run("npm", ["audit", "--workspaces", "--json"]);
+	const result = run("npm", ["audit", "--workspaces", "--json"], NPM_SPAWN_OPTIONS);
 	const raw = result.stdout.trim();
 
 	let parsed = null;
@@ -159,4 +165,6 @@ const main = () => {
 	log("\nSecurity checks passed.");
 };
 
-main();
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+	main();
+}
