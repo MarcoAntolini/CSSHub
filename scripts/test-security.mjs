@@ -9,18 +9,21 @@ const SECRET_PATTERNS = [
 	"xox[baprs]-[0-9A-Za-z-]{10,}",
 ];
 
-const run = (command, args) => {
-	const useShell = process.platform === "win32" && command === "npm";
+const NPM_SPAWN_OPTIONS = process.platform === "win32" ? { shell: true } : {};
+
+const normalizeRunResult = ({ status = 1, stdout = "", stderr = "" }) => ({
+	status,
+	stdout,
+	stderr,
+});
+
+const run = (command, args, options = {}) => {
 	const result = spawnSync(command, args, {
 		encoding: "utf8",
-		shell: useShell,
 		stdio: ["ignore", "pipe", "pipe"],
+		...options,
 	});
-	return {
-		status: result.status ?? 1,
-		stdout: result.stdout ?? "",
-		stderr: result.stderr ?? "",
-	};
+	return normalizeRunResult(result);
 };
 
 const isStrictMode = process.argv.includes("--strict");
@@ -37,7 +40,7 @@ const log = (message) => {
 
 const runAudit = () => {
 	log("== Dependency audit ==");
-	const result = run("npm", ["audit", "--workspaces", "--json"]);
+	const result = run("npm", ["audit", "--workspaces", "--json"], NPM_SPAWN_OPTIONS);
 	const raw = result.stdout.trim();
 
 	let parsed = null;
