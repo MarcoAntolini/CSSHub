@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const SECRET_PATTERNS = [
 	"ghp_[A-Za-z0-9]{36}",
@@ -11,10 +12,10 @@ const SECRET_PATTERNS = [
 
 const NPM_SPAWN_OPTIONS = process.platform === "win32" ? { shell: true } : {};
 
-const normalizeRunResult = ({ status = 1, stdout = "", stderr = "" }) => ({
-	status,
-	stdout,
-	stderr,
+export const normalizeRunResult = (result) => ({
+	status: result.status ?? 1,
+	stdout: result.stdout ?? "",
+	stderr: result.stderr ?? "",
 });
 
 const run = (command, args, options = {}) => {
@@ -164,4 +165,6 @@ const main = () => {
 	log("\nSecurity checks passed.");
 };
 
-main();
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+	main();
+}
