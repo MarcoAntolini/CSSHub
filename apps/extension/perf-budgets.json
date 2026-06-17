@@ -1,7 +1,7 @@
 {
 	"entries": {
-		"background.js": 12,
-		"contentScript.js": 4,
+		"background.js": 13,
+		"contentScript.js": 22,
 		"popup.js": 12,
 		"settings.js": 15
 	},
@@ -12,5 +12,5 @@
 		"schemas": 2,
 		"messaging": 2
 	},
-	"totalJsGzipMaxKb": 130
+	"totalJsGzipMaxKb": 132
 }

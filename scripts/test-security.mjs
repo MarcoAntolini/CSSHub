@@ -10,8 +10,10 @@ const SECRET_PATTERNS = [
 ];
 
 const run = (command, args) => {
+	const useShell = process.platform === "win32" && command === "npm";
 	const result = spawnSync(command, args, {
 		encoding: "utf8",
+		shell: useShell,
 		stdio: ["ignore", "pipe", "pipe"],
 	});
 	return {
