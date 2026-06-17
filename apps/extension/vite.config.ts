@@ -124,17 +124,22 @@ const contentScriptBundlePlugin = (): Plugin => ({
 	name: "content-script-iife",
 	apply: "build",
 	async closeBundle() {
-		await esbuild({
-			entryPoints: [resolve(__dirname, "src/contentScript.ts")],
-			outfile: resolve(__dirname, "dist/contentScript.js"),
-			bundle: true,
-			format: "iife",
-			minify: true,
-			platform: "browser",
-			target: "chrome109",
-			alias: extensionSrcAlias,
-			logLevel: "silent",
-		});
+		for (const [entry, outfile] of [
+			["src/contentScript.ts", "dist/contentScript.js"],
+			["src/contentScriptShortcutBridge.ts", "dist/shortcutBridge.js"],
+		] as const) {
+			await esbuild({
+				entryPoints: [resolve(__dirname, entry)],
+				outfile: resolve(__dirname, outfile),
+				bundle: true,
+				format: "iife",
+				minify: true,
+				platform: "browser",
+				target: "chrome109",
+				alias: extensionSrcAlias,
+				logLevel: "silent",
+			});
+		}
 	},
 });
 
