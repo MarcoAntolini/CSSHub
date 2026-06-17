@@ -184,7 +184,8 @@ test("cssbattleSubmission commits within SLO with mocked GitHub", async () => {
 					matchPct: 99.5,
 					code: "<div></div>",
 					targetImage: null,
-					resultImageDataUrl: null,
+					resultImageDataUrl:
+						"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
 				},
 			});
 		});
