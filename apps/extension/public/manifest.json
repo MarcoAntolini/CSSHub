@@ -2,7 +2,7 @@
 	"manifest_version": 3,
 	"name": "CssHub",
 	"author": "CssHub",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"description": "Sync CSSBattle submissions to GitHub",
 	"icons": {
 		"16": "icons/icon_16.png",

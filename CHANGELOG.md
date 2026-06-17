@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-17
+
 ### Added
 
 - Extension icon shows setup-required badges while GitHub auth or repository selection is missing
