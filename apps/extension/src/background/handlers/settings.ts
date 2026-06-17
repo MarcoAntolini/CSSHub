@@ -1,6 +1,7 @@
 import { extensionStateResponseSchema, type Repo } from "@/shared/contracts";
 import { listUserRepos } from "@/githubClient";
 import { clearRecentEvents, getStoredState, saveStoredState } from "@/storage";
+import { setSetupActionBadgeState } from "../feedback";
 import type { Handler } from "./types";
 
 export const handleGetExtensionState: Handler<"getExtensionState"> = async (
@@ -35,6 +36,10 @@ export const handleSaveSettings: Handler<"saveSettings"> = async (data, sendResp
 	await saveStoredState({
 		...state,
 		settings: data.settings,
+	});
+	setSetupActionBadgeState({
+		isAuthenticated: state.auth.isAuthenticated,
+		hasSelectedRepo: Boolean(data.settings.selectedRepoFullName),
 	});
 	sendResponse({ ok: true });
 };

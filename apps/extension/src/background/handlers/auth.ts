@@ -7,6 +7,7 @@ import {
 } from "@/githubAuth";
 import { fetchAuthenticatedUser } from "@/githubClient";
 import { clearAuthState, getStoredState, saveStoredState } from "@/storage";
+import { setSetupActionBadgeState } from "../feedback";
 import type { Handler } from "./types";
 
 const runLaunchWebAuthFlow = async (url: string): Promise<string> =>
@@ -63,6 +64,10 @@ export const handlePollGithubDeviceFlow: Handler<"pollGithubDeviceFlow"> = async
 			method: "device",
 		},
 	});
+	setSetupActionBadgeState({
+		isAuthenticated: true,
+		hasSelectedRepo: Boolean(state.settings.selectedRepoFullName),
+	});
 
 	sendResponse({
 		ok: true,
@@ -100,6 +105,10 @@ export const handleStartGithubWebFlow: Handler<"startGithubWebFlow"> = async (
 			method: "web",
 		},
 	});
+	setSetupActionBadgeState({
+		isAuthenticated: true,
+		hasSelectedRepo: Boolean(current.settings.selectedRepoFullName),
+	});
 
 	sendResponse({
 		ok: true,
@@ -119,6 +128,10 @@ export const handleLoginWithPat: Handler<"loginWithPat"> = async (data, sendResp
 			method: "pat",
 		},
 	});
+	setSetupActionBadgeState({
+		isAuthenticated: true,
+		hasSelectedRepo: Boolean(current.settings.selectedRepoFullName),
+	});
 
 	sendResponse({
 		ok: true,
@@ -128,5 +141,9 @@ export const handleLoginWithPat: Handler<"loginWithPat"> = async (data, sendResp
 
 export const handleLogoutGithub: Handler<"logoutGithub"> = async (_data, sendResponse) => {
 	await clearAuthState();
+	setSetupActionBadgeState({
+		isAuthenticated: false,
+		hasSelectedRepo: false,
+	});
 	sendResponse({ ok: true });
 };

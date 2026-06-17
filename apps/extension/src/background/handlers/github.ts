@@ -1,5 +1,6 @@
 import { createUserRepo, createBranch, listBranches, listUserRepos } from "@/githubClient";
 import { saveStoredState } from "@/storage";
+import { setSetupActionBadgeState } from "../feedback";
 import { getAuthenticatedState, type Handler } from "./types";
 
 export const handleListRepos: Handler<"listRepos"> = async (_data, sendResponse) => {
@@ -36,6 +37,10 @@ export const handleCreateRepo: Handler<"createRepo"> = async (data, sendResponse
 			selectedBranch: repo.defaultBranch,
 		},
 	});
+	setSetupActionBadgeState({
+		isAuthenticated: true,
+		hasSelectedRepo: true,
+	});
 	sendResponse({ ok: true, data: repo });
 };
 
@@ -58,6 +63,10 @@ export const handleCreateBranch: Handler<"createBranch"> = async (data, sendResp
 			selectedRepoFullName: data.repoFullName,
 			selectedBranch: branch.name,
 		},
+	});
+	setSetupActionBadgeState({
+		isAuthenticated: true,
+		hasSelectedRepo: true,
 	});
 	sendResponse({ ok: true, data: branch });
 };

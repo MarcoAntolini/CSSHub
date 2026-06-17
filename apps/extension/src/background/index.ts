@@ -5,6 +5,7 @@ import {
 	pushEvent,
 	registerNotificationHandlers,
 	setActionBadge,
+	setSetupActionBadgeState,
 	showBrowserNotification,
 } from "./feedback";
 import {
@@ -39,6 +40,24 @@ import {
 import type { Handler, SendResponse } from "./handlers/types";
 
 registerNotificationHandlers();
+
+const refreshSetupActionBadge = (): void => {
+	void getStoredState()
+		.then((state) => {
+			setSetupActionBadgeState({
+				isAuthenticated: state.auth.isAuthenticated,
+				hasSelectedRepo: Boolean(state.settings.selectedRepoFullName),
+			});
+		})
+		.catch(() => undefined);
+};
+
+refreshSetupActionBadge();
+chrome.storage.onChanged.addListener((_changes, areaName) => {
+	if (areaName === "local" || areaName === "session") {
+		refreshSetupActionBadge();
+	}
+});
 
 const actionHandlers: {
 	[K in PopupToBackgroundMessage["action"]]: Handler<K>;

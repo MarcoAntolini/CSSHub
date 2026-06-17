@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Extension icon shows setup-required badges while GitHub auth or repository selection is missing
+
 ### Fixed
 
+- Sync status badges are suppressed until setup is complete and clear back to the correct extension icon state
+- CSSBattle Cmd+Enter/Ctrl+Enter submissions trigger extension sync through the same ingestion path as submit clicks
 - README battle index sorts challenges by number within each battle group (e.g. #10 after #9, not before #2)
 
 ## [1.1.0] - 2026-06-10

@@ -3,6 +3,9 @@ import { MAX_RECENT_EVENTS, pushSyncEvent } from "@/submission/recentEvents";
 
 export const MAX_EVENTS = MAX_RECENT_EVENTS;
 const BADGE_CLEAR_TIMEOUT_MS = 10_000;
+const DEFAULT_ACTION_TITLE = "CssHub";
+const SIGN_IN_ACTION_TITLE = "CssHub: sign in required";
+const SELECT_REPO_ACTION_TITLE = "CssHub: select a repository";
 
 export type FeedbackLevel = "success" | "warn" | "error" | "loading";
 
@@ -56,6 +59,11 @@ export const registerNotificationHandlers = (): void => {
 };
 
 let badgeClearTimer: ReturnType<typeof setTimeout> | null = null;
+let setupBadgeState = {
+	isAuthenticated: true,
+	hasSelectedRepo: true,
+};
+let hasTransientBadge = false;
 
 const resolveBadgeBackgroundColor = (level: FeedbackLevel): string => {
 	if (level === "success") {
@@ -70,12 +78,55 @@ const resolveBadgeBackgroundColor = (level: FeedbackLevel): string => {
 	return "#b91c1c";
 };
 
+const applyBaseActionBadge = (): void => {
+	if (!setupBadgeState.isAuthenticated) {
+		chrome.action.setBadgeBackgroundColor({ color: resolveBadgeBackgroundColor("error") });
+		chrome.action.setBadgeText({ text: "!" });
+		chrome.action.setTitle({ title: SIGN_IN_ACTION_TITLE });
+		return;
+	}
+
+	if (!setupBadgeState.hasSelectedRepo) {
+		chrome.action.setBadgeBackgroundColor({ color: resolveBadgeBackgroundColor("warn") });
+		chrome.action.setBadgeText({ text: "!" });
+		chrome.action.setTitle({ title: SELECT_REPO_ACTION_TITLE });
+		return;
+	}
+
+	chrome.action.setBadgeText({ text: "" });
+	chrome.action.setTitle({ title: DEFAULT_ACTION_TITLE });
+};
+
+export type SetupActionBadgeState = {
+	isAuthenticated: boolean;
+	hasSelectedRepo: boolean;
+};
+
+export const setSetupActionBadgeState = (state: SetupActionBadgeState): void => {
+	setupBadgeState = state;
+	const isSetupComplete = state.isAuthenticated && state.hasSelectedRepo;
+	if (!isSetupComplete && hasTransientBadge) {
+		if (badgeClearTimer) {
+			clearTimeout(badgeClearTimer);
+			badgeClearTimer = null;
+		}
+		hasTransientBadge = false;
+		applyBaseActionBadge();
+		return;
+	}
+
+	if (!hasTransientBadge) {
+		applyBaseActionBadge();
+	}
+};
+
 export const clearActionBadge = (): void => {
 	if (badgeClearTimer) {
 		clearTimeout(badgeClearTimer);
 		badgeClearTimer = null;
 	}
-	chrome.action.setBadgeText({ text: "" });
+	hasTransientBadge = false;
+	applyBaseActionBadge();
 };
 
 export const setLoadingBadge = (): void => {
@@ -88,6 +139,13 @@ export const setActionBadge = (level: FeedbackLevel, text: string): void => {
 		badgeClearTimer = null;
 	}
 
+	if (!setupBadgeState.isAuthenticated || !setupBadgeState.hasSelectedRepo) {
+		hasTransientBadge = false;
+		applyBaseActionBadge();
+		return;
+	}
+
+	hasTransientBadge = true;
 	chrome.action.setBadgeBackgroundColor({ color: resolveBadgeBackgroundColor(level) });
 	chrome.action.setBadgeText({ text });
 
@@ -96,7 +154,8 @@ export const setActionBadge = (level: FeedbackLevel, text: string): void => {
 	}
 
 	badgeClearTimer = setTimeout(() => {
-		chrome.action.setBadgeText({ text: "" });
+		hasTransientBadge = false;
+		applyBaseActionBadge();
 		badgeClearTimer = null;
 	}, BADGE_CLEAR_TIMEOUT_MS);
 };
