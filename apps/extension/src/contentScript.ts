@@ -243,16 +243,6 @@ const processKeyboardSubmission = (): void => {
 	void processSubmission();
 };
 
-const isSubmitShortcutBridgeMessage = (
-	data: unknown
-): data is { source: string; type: string } =>
-	typeof data === "object" &&
-	data !== null &&
-	"source" in data &&
-	"type" in data &&
-	data.source === CSSHUB_MESSAGE_SOURCE &&
-	data.type === CSSHUB_SUBMIT_SHORTCUT_MESSAGE_TYPE;
-
 const installSubmitListeners = (): void => {
 	// Main ingestion path: capture and submit are automatic on CSSBattle submit clicks.
 	document.addEventListener(
@@ -284,7 +274,11 @@ const installSubmitListeners = (): void => {
 			if (event.source !== window || event.origin !== window.location.origin) {
 				return;
 			}
-			if (!isSubmitShortcutBridgeMessage(event.data)) {
+			const data = event.data as { source?: unknown; type?: unknown } | null;
+			if (
+				data?.source !== CSSHUB_MESSAGE_SOURCE ||
+				data.type !== CSSHUB_SUBMIT_SHORTCUT_MESSAGE_TYPE
+			) {
 				return;
 			}
 			processKeyboardSubmission();
