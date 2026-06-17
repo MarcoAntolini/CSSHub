@@ -40,11 +40,11 @@ export const getBackgroundErrorMessage = (
 	return fallback;
 };
 
-export const parseBackgroundOk = <T>(
+export const parseBackgroundOk = <TSchema extends z.ZodTypeAny>(
 	response: unknown,
-	schema: z.ZodType<T>,
+	schema: TSchema,
 	fallbackError: string
-): T => {
+): z.output<TSchema> => {
 	if (!isBackgroundResponse(response) || !response.ok) {
 		throw new BackgroundError(getBackgroundErrorMessage(response, fallbackError));
 	}
