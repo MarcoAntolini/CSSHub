@@ -189,6 +189,7 @@ const processSubmission = async (): Promise<void> => {
 				: challengeContext.mode === "battle"
 					? challengeContext.challengeLabel
 					: getChallengeName();
+		const characterCount = postSubmitStats.characterCount ?? code.length;
 
 		const payload: SubmissionPayload = {
 			...modeFields,
@@ -198,6 +199,7 @@ const processSubmission = async (): Promise<void> => {
 			submittedAt: new Date().toISOString(),
 			score: postSubmitStats.score,
 			matchPct: postSubmitStats.matchPct,
+			characterCount,
 			code,
 			targetImage,
 			resultImageDataUrl,

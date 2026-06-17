@@ -21,24 +21,28 @@ describe("parseScoreFromText", () => {
 		const parsed = parseScoreFromText("640 99.2% match Last score");
 		expect(parsed.score).toBe(640);
 		expect(parsed.matchPct).toBe(99.2);
+		expect(parsed.characterCount).toBeNull();
 	});
 
 	it("returns zero score when dash precedes label", () => {
 		const parsed = parseScoreFromText("- Last score");
 		expect(parsed.score).toBe(0);
 		expect(parsed.matchPct).toBe(0);
+		expect(parsed.characterCount).toBeNull();
 	});
 
 	it("returns null match when score exists but percent is missing", () => {
 		const parsed = parseScoreFromText("640 Last score");
 		expect(parsed.score).toBe(640);
 		expect(parsed.matchPct).toBeNull();
+		expect(parsed.characterCount).toBeNull();
 	});
 
 	it("parses score when CSSBattle renders the value after the label", () => {
 		const parsed = parseScoreFromText("Last score 648.85 (225)");
 		expect(parsed.score).toBe(648.85);
 		expect(parsed.matchPct).toBeNull();
+		expect(parsed.characterCount).toBe(225);
 	});
 });
 
@@ -61,6 +65,7 @@ describe("extractStatsFromDocument", () => {
 		const stats = extractStatsFromDocument(document);
 		expect(stats.score).toBe(640);
 		expect(stats.matchPct).toBe(99.2);
+		expect(stats.characterCount).toBeNull();
 	});
 
 	it("reads stats from the current CSSBattle label-before-value DOM", () => {
@@ -79,6 +84,7 @@ describe("extractStatsFromDocument", () => {
 		const stats = extractStatsFromDocument(document);
 		expect(stats.score).toBe(648.85);
 		expect(stats.matchPct).toBe(100);
+		expect(stats.characterCount).toBe(225);
 	});
 });
 
@@ -86,16 +92,28 @@ describe("didStatsChange", () => {
 	it("detects score updates", () => {
 		expect(
 			didStatsChange(
-				{ score: 100, matchPct: 90 },
-				{ score: 50, matchPct: 90 }
+				{ score: 100, matchPct: 90, characterCount: null },
+				{ score: 50, matchPct: 90, characterCount: null }
 			)
 		).toBe(true);
 	});
 
 	it("detects newly available stats", () => {
-		expect(didStatsChange({ score: 10, matchPct: 80 }, { score: null, matchPct: null })).toBe(
-			true
-		);
+		expect(
+			didStatsChange(
+				{ score: 10, matchPct: 80, characterCount: 120 },
+				{ score: null, matchPct: null, characterCount: null }
+			)
+		).toBe(true);
+	});
+
+	it("detects newly available character counts", () => {
+		expect(
+			didStatsChange(
+				{ score: 10, matchPct: 80, characterCount: 120 },
+				{ score: 10, matchPct: 80, characterCount: null }
+			)
+		).toBe(true);
 	});
 });
 
@@ -139,7 +157,7 @@ describe("waitForPostSubmitStats", () => {
 			pollIntervalMs: 20,
 			timeoutMs: 120,
 		});
-		expect(stats).toEqual({ score: 640, matchPct: 99.2 });
+		expect(stats).toEqual({ score: 640, matchPct: 99.2, characterCount: null });
 	});
 
 	it("returns null stats on timeout when no score was on the page", async () => {
@@ -157,7 +175,7 @@ describe("waitForPostSubmitStats", () => {
 			pollIntervalMs: 20,
 			timeoutMs: 120,
 		});
-		expect(stats).toEqual({ score: null, matchPct: null });
+		expect(stats).toEqual({ score: null, matchPct: null, characterCount: null });
 	});
 
 	it("accepts unchanged stats after a leaderboard mutation", async () => {

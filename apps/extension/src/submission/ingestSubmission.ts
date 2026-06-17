@@ -13,6 +13,7 @@ import {
 	type SyncSubmissionDeps,
 	type SyncSubmissionResult,
 } from "./syncSubmission";
+import { normalizeSubmissionCharacterCount } from "./characterCount";
 
 export type SubmissionFeedbackLevel = "success" | "warn" | "error";
 
@@ -140,20 +141,21 @@ export const ingestCssbattleSubmission = async (
 	state: StoredState,
 	deps: IngestSubmissionDeps
 ): Promise<IngestSubmissionOutcome> => {
+	const normalizedPayload = normalizeSubmissionCharacterCount(payload);
 	try {
-		const result = await processCssbattleSubmission(payload, state, deps);
+		const result = await processCssbattleSubmission(normalizedPayload, state, deps);
 		const responsePayload = toIngestionResponse(result);
 		return {
 			errorOccurred: false,
 			responsePayload,
-			storagePatch: buildIngestionStoragePatch(payload, state, result),
+			storagePatch: buildIngestionStoragePatch(normalizedPayload, state, result),
 			feedback: resolveSubmissionFeedback(result),
 			errorMessage: null,
 		};
 	} catch (error) {
 		const safeError = deps.mapError(error);
 		const threshold = state.settings.threshold;
-		const accepted = acceptedByThreshold(payload, threshold);
+		const accepted = acceptedByThreshold(normalizedPayload, threshold);
 		const recentEvents = pushSyncEvent(
 			state.recentEvents,
 			"error",
@@ -175,7 +177,7 @@ export const ingestCssbattleSubmission = async (
 			responsePayload,
 			storagePatch: {
 				lastSubmission: shouldStoreAttemptedSubmission(true, false)
-					? payload
+					? normalizedPayload
 					: state.lastSubmission,
 				lastSubmissionAccepted: accepted,
 				lastIngestion: responsePayload,

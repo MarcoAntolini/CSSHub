@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Extension icon shows setup-required badges while GitHub auth or repository selection is missing
+- CSSBattle submission character counts are captured and included in commit messages, `submission.json`, and managed README index entries
 
 ### Fixed
 

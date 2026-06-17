@@ -19,6 +19,7 @@ const basePayload = (): SubmissionPayload => ({
 	submittedAt: new Date().toISOString(),
 	score: 640,
 	matchPct: 99,
+	characterCount: 225,
 	code: "<div></div>",
 	targetImage: null,
 	resultImageDataUrl: "data:image/png;base64,USER",
@@ -63,7 +64,9 @@ const noopDeps = () => ({
 	}),
 	challengeFolderPath: () => "Battles/Battle #1/#42. Carrom",
 	formatChallengeTitle: () => "#42. Carrom",
-	formatCommitMessage: () => "Score: 640 (99.00% match) - CSSHub",
+	formatCommitMessage: vi.fn(
+		() => "Score: 640, Characters: 225 (99.00% match) - CSSHub"
+	),
 });
 
 describe("submission helpers", () => {
@@ -81,6 +84,13 @@ describe("submission helpers", () => {
 				fingerprint
 			)
 		).toBe(true);
+	});
+
+	it("includes character count in duplicate fingerprints", () => {
+		const payload = basePayload();
+		expect(fingerprintSubmission(payload)).not.toBe(
+			fingerprintSubmission({ ...payload, characterCount: 226 })
+		);
 	});
 });
 
@@ -107,7 +117,47 @@ describe("processCssbattleSubmission", () => {
 
 		expect(result.eventCode).toBe("SYNC_COMMITTED");
 		expect(result.committed).toBe(true);
+		expect(deps.formatCommitMessage).toHaveBeenCalledWith(640, 225, 99);
 		expect(deps.commitFilesToRepo).toHaveBeenCalledTimes(1);
+	});
+
+	it("falls back to code length before formatting commits and README labels", async () => {
+		const deps = noopDeps();
+		const payload = {
+			...basePayload(),
+			characterCount: null,
+			code: "<main></main>",
+		};
+		await processCssbattleSubmission(
+			payload,
+			baseState({
+				settings: {
+					...baseState().settings,
+					repositoryReadmeMode: "managed-section",
+				},
+			}),
+			deps
+		);
+
+		expect(deps.formatCommitMessage).toHaveBeenCalledWith(
+			640,
+			"<main></main>".length,
+			99
+		);
+		expect(deps.commitFilesToRepo).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.any(String),
+			expect.any(String),
+			expect.any(String),
+			expect.arrayContaining([
+				expect.objectContaining({
+					path: "README.md",
+					content: expect.stringContaining(
+						`#42. Carrom</a> (${"<main></main>".length} Characters)`
+					),
+				}),
+			])
+		);
 	});
 
 	it("skips accepted submissions when preview capture is unavailable", async () => {
@@ -154,7 +204,12 @@ describe("processCssbattleSubmission", () => {
 			expect.any(String),
 			expect.any(String),
 			expect.any(String),
-			expect.any(Array)
+			expect.arrayContaining([
+				expect.objectContaining({
+					path: "README.md",
+					content: expect.stringContaining("#42. Carrom</a> (225 Characters)"),
+				}),
+			])
 		);
 	});
 

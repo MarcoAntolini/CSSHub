@@ -8,6 +8,7 @@ export const LEADERBOARD_STATS_BOX_SELECTOR = ".leaderboard-stats-box";
 export type SubmissionStats = {
 	score: number | null;
 	matchPct: number | null;
+	characterCount: number | null;
 };
 
 const toNumber = (value: string): number | null => {
@@ -20,9 +21,39 @@ const getLastMatchPct = (text: string, regex: RegExp): number | null => {
 	return matchPctMatch ? toNumber(matchPctMatch[1]) : null;
 };
 
+const emptyStats = (): SubmissionStats => ({
+	score: null,
+	matchPct: null,
+	characterCount: null,
+});
+
+const zeroStats = (): SubmissionStats => ({
+	score: 0,
+	matchPct: 0,
+	characterCount: null,
+});
+
+const getLastParentheticalInteger = (text: string): number | null => {
+	const match = Array.from(text.matchAll(/\(\s*(\d+)\s*\)/g)).at(-1);
+	if (!match) {
+		return null;
+	}
+	const parsed = Number(match[1]);
+	return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+};
+
+const getLeadingParentheticalInteger = (text: string): number | null => {
+	const match = text.match(/^\s*\(\s*(\d+)\s*\)/);
+	if (!match) {
+		return null;
+	}
+	const parsed = Number(match[1]);
+	return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+};
+
 const getScoreBeforeLabel = (beforeLabel: string): SubmissionStats | null => {
 	if (/[-–—]\s*$/.test(beforeLabel)) {
-		return { score: 0, matchPct: 0 };
+		return zeroStats();
 	}
 
 	const matchPctMatches = Array.from(beforeLabel.matchAll(MATCH_REGEX));
@@ -30,7 +61,8 @@ const getScoreBeforeLabel = (beforeLabel: string): SubmissionStats | null => {
 	const scoreSearchText = matchPctMatch
 		? beforeLabel.slice(0, matchPctMatch.index).trim()
 		: beforeLabel;
-	const scoreMatches = Array.from(scoreSearchText.matchAll(NUMBER_REGEX));
+	const scoreTextWithoutCharacterCount = scoreSearchText.replace(/\(\s*\d+\s*\)/g, " ");
+	const scoreMatches = Array.from(scoreTextWithoutCharacterCount.matchAll(NUMBER_REGEX));
 	const scoreMatch = scoreMatches.at(-1);
 
 	if (!scoreMatch) {
@@ -42,25 +74,28 @@ const getScoreBeforeLabel = (beforeLabel: string): SubmissionStats | null => {
 	return {
 		score,
 		matchPct: score === null ? null : matchPct,
+		characterCount: score === null ? null : getLastParentheticalInteger(scoreSearchText),
 	};
 };
 
 const getScoreAfterLabel = (afterLabel: string): SubmissionStats | null => {
 	const searchText = afterLabel.replace(/\{[^}]*\}/g, " ").trim();
 	if (/^[-–—](?:\s|$)/.test(searchText)) {
-		return { score: 0, matchPct: 0 };
+		return zeroStats();
 	}
 
-	const scoreMatch = searchText.match(NUMBER_REGEX)?.at(0);
+	const scoreMatch = Array.from(searchText.matchAll(NUMBER_REGEX)).at(0);
 	if (!scoreMatch) {
 		return null;
 	}
 
-	const score = toNumber(scoreMatch);
+	const score = toNumber(scoreMatch[0]);
 	const matchPct = getLastMatchPct(searchText, EXPLICIT_MATCH_REGEX);
+	const afterScoreText = searchText.slice((scoreMatch.index ?? 0) + scoreMatch[0].length);
 	return {
 		score,
 		matchPct: score === null ? null : matchPct,
+		characterCount: score === null ? null : getLeadingParentheticalInteger(afterScoreText),
 	};
 };
 
@@ -79,7 +114,7 @@ export const parseScoreFromText = (text: string): SubmissionStats => {
 	const labelMatches = Array.from(normalized.matchAll(LAST_SCORE_LABEL_GLOBAL));
 	const lastLabelMatch = labelMatches.at(-1);
 	if (!lastLabelMatch) {
-		return { score: null, matchPct: null };
+		return emptyStats();
 	}
 
 	const beforeLabel = normalized
@@ -94,7 +129,7 @@ export const parseScoreFromText = (text: string): SubmissionStats => {
 
 	const afterLabel = normalized.slice((lastLabelMatch.index ?? 0) + lastLabelMatch[0].length);
 	const afterStats = getScoreAfterLabel(afterLabel);
-	return afterStats ? fillExplicitMatchPct(afterStats, normalized) : { score: null, matchPct: null };
+	return afterStats ? fillExplicitMatchPct(afterStats, normalized) : emptyStats();
 };
 
 const getLastScoreLabelElements = (root: Document | Element): Element[] =>
@@ -140,7 +175,7 @@ export const extractStatsFromDocument = (root: Document | Element = document): S
 		}
 	}
 
-	return { score: null, matchPct: null };
+	return emptyStats();
 };
 
 export const didStatsChange = (
@@ -149,11 +184,13 @@ export const didStatsChange = (
 ): boolean => {
 	const scoreChanged = current.score !== initial.score;
 	const matchChanged = current.matchPct !== initial.matchPct;
+	const characterCountChanged = current.characterCount !== initial.characterCount;
 	const becameAvailable =
 		(initial.score === null && current.score !== null) ||
-		(initial.matchPct === null && current.matchPct !== null);
+		(initial.matchPct === null && current.matchPct !== null) ||
+		(initial.characterCount === null && current.characterCount !== null);
 
-	return scoreChanged || matchChanged || becameAvailable;
+	return scoreChanged || matchChanged || characterCountChanged || becameAvailable;
 };
 
 /** True when the page already shows a scored result (not dash / unavailable). */
@@ -262,7 +299,7 @@ export const waitForPostSubmitStats = async (
 							? current
 							: hasDisplayableScore(initial)
 								? initial
-								: { score: null, matchPct: null }
+								: emptyStats()
 					);
 					return;
 				}

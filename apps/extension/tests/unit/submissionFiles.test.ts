@@ -3,6 +3,7 @@ import type { SubmissionPayload } from "@/shared/contracts";
 import {
 	buildSubmissionFiles,
 	challengeFolderPath,
+	formatCommitMessage,
 	formatChallengeTitle,
 	listBestSubmissionMetadataPaths,
 } from "@/submission/submissionFiles";
@@ -23,6 +24,7 @@ const battlePayload = (): SubmissionPayload => ({
 	submittedAt: new Date().toISOString(),
 	score: 100,
 	matchPct: 99,
+	characterCount: 225,
 	code: "<div></div>",
 	targetImage: null,
 	resultImageDataUrl: null,
@@ -38,6 +40,7 @@ const dailyPayload = (): SubmissionPayload => ({
 	submittedAt: new Date().toISOString(),
 	score: 100,
 	matchPct: 99,
+	characterCount: 225,
 	code: "<div></div>",
 	targetImage: null,
 	resultImageDataUrl: null,
@@ -96,6 +99,26 @@ describe("buildSubmissionFiles", () => {
 
 		const readme = files.find((file) => file.path.endsWith("README.md"));
 		expect(readme && "content" in readme ? readme.content : "").toContain("Not available");
+
+		const metadataFile = files.find((file) => file.path.endsWith("submission.json"));
+		const metadata = JSON.parse(
+			metadataFile && "content" in metadataFile ? metadataFile.content : "{}"
+		) as Record<string, unknown>;
+		expect(metadata.characterCount).toBe(225);
+	});
+
+	it("falls back to code length when metadata has no character count", async () => {
+		const files = await buildSubmissionFiles({
+			...battlePayload(),
+			characterCount: null,
+			code: "<main></main>",
+		});
+		const metadataFile = files.find((file) => file.path.endsWith("submission.json"));
+		const metadata = JSON.parse(
+			metadataFile && "content" in metadataFile ? metadataFile.content : "{}"
+		) as Record<string, unknown>;
+
+		expect(metadata.characterCount).toBe("<main></main>".length);
 	});
 
 	it("embeds user and target images from data URLs", async () => {
@@ -136,5 +159,13 @@ describe("buildSubmissionFiles", () => {
 			encoding: "base64",
 			content: "REMOTE",
 		});
+	});
+});
+
+describe("formatCommitMessage", () => {
+	it("includes score, characters, and match", () => {
+		expect(formatCommitMessage(640, 225, 99)).toBe(
+			"Score: 640, Characters: 225 (99.00% match) - CSSHub"
+		);
 	});
 });

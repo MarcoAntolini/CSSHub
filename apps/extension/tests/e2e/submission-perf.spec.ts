@@ -182,6 +182,7 @@ test("cssbattleSubmission commits within SLO with mocked GitHub", async () => {
 					submittedAt: new Date().toISOString(),
 					score: 500,
 					matchPct: 99.5,
+					characterCount: 225,
 					code: "<div></div>",
 					targetImage: null,
 					resultImageDataUrl:

@@ -18,6 +18,7 @@ const battlePayload = (): SubmissionPayload => ({
 	submittedAt: new Date().toISOString(),
 	score: 100,
 	matchPct: 99,
+	characterCount: 225,
 	code: "<div></div>",
 	targetImage: null,
 	resultImageDataUrl: null,

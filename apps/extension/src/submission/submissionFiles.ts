@@ -11,6 +11,7 @@ import {
 	formatChallengeTitle,
 	listBestSubmissionMetadataPaths,
 } from "./challengeModel";
+import { resolveSubmissionCharacterCount } from "./characterCount";
 
 export {
 	challengeFolderPath,
@@ -126,6 +127,7 @@ export const buildSubmissionFiles = async (
 		{ path: `${folder}/target.url.txt`, delete: true }
 	);
 
+	const characterCount = resolveSubmissionCharacterCount(payload);
 	const metadata = {
 		challengeMode: payload.challengeMode,
 		challengeId: payload.challengeId,
@@ -138,6 +140,7 @@ export const buildSubmissionFiles = async (
 		submittedAt: payload.submittedAt,
 		score: payload.score,
 		matchPct: payload.matchPct,
+		characterCount,
 	};
 	files.push({
 		path: `${folder}/submission.json`,
@@ -189,9 +192,10 @@ export const buildSubmissionFiles = async (
 
 export const formatCommitMessage = (
 	score: number | null,
+	characterCount: number,
 	matchPct: number | null
 ): string => {
 	const scoreValue = score ?? 0;
 	const matchValue = (matchPct ?? 0).toFixed(2);
-	return `Score: ${scoreValue} (${matchValue}% match) - CSSHub`;
+	return `Score: ${scoreValue}, Characters: ${characterCount} (${matchValue}% match) - CSSHub`;
 };

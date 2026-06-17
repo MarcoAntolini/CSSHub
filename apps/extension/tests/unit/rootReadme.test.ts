@@ -101,6 +101,17 @@ describe("formatIndexLinkHtml", () => {
 
 	});
 
+	it("renders character counts outside the challenge link", () => {
+		expect(
+			formatIndexLinkHtml({
+				folder: "Battles/Battle #1/#4. Ups n Downs",
+				label: "#4. Ups n Downs (404 Characters)",
+			})
+		).toBe(
+			'<li><a href="./Battles/Battle%20%231/%234.%20Ups%20n%20Downs/">#4. Ups n Downs</a> (404 Characters)</li>'
+		);
+	});
+
 });
 
 
@@ -235,6 +246,15 @@ describe("parseExistingReadmeLabels", () => {
 
 		);
 
+	});
+
+	it("decodes HTML labels before preserving them", () => {
+		const readme =
+			'<li><a href="./Battles/Battle%20%231/%231.%20A%20%26%20B/">#1. A &amp; B (225 Characters)</a></li>';
+
+		expect(parseExistingReadmeLabels(readme)).toEqual(
+			new Map([["Battles/Battle #1/#1. A & B", "#1. A & B (225 Characters)"]])
+		);
 	});
 
 });
@@ -412,6 +432,47 @@ ${CSSHUB_README_END}`;
 	});
 
 
+
+	it("managed: preserves old labels but uses the current resynced label", () => {
+		const oldBattlePath = encodeRepoPathForMarkdownLink("Battles/Battle #1/#8. Forking");
+		const currentBattlePath = encodeRepoPathForMarkdownLink("Battles/Battle #1/#11. Eye");
+		const existing = `# My repo
+
+${CSSHUB_README_START}
+## CssHub challenge index
+
+### Battles (2)
+
+<ul>
+<li>
+<details>
+<summary><strong>Battle #1 (2)</strong></summary>
+
+<ul>
+<li><a href="./${oldBattlePath}/">Target 8: Forking Crazy</a></li>
+<li><a href="./${currentBattlePath}/">#11. Eye of Sauron</a></li>
+</ul>
+</details>
+</li>
+</ul>
+
+${CSSHUB_README_END}`;
+
+		const out = buildRootReadmeContent({
+			mode: "managed-section",
+			existingReadme: existing,
+			existingBlobPaths: new Set([
+				"Battles/Battle #1/#8. Forking/submission.json",
+				"Battles/Battle #1/#11. Eye/submission.json",
+			]),
+			challengeFolder: "Battles/Battle #1/#11. Eye",
+			challengeTitle: "#11. Eye of Sauron (225 Characters)",
+		});
+
+		expect(out).toContain("Target 8: Forking Crazy");
+		expect(out).toContain("#11. Eye of Sauron</a> (225 Characters)");
+		expect(out).not.toContain("#11. Eye of Sauron (225 Characters)</a>");
+	});
 
 	it("managed: nests multiple battles under separate Battle # sections", () => {
 

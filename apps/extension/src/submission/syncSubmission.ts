@@ -2,6 +2,7 @@ import type { SubmissionPayload, SyncEvent, SyncIngestionEventCode } from "@/sha
 import { buildRootReadmeContent } from "@/rootReadme";
 import type { CommitFile, CommitResult, SavedSubmissionMetrics } from "@/githubClient";
 import type { StoredState } from "@/storage";
+import { normalizeSubmissionCharacterCount } from "./characterCount";
 import { challengeIdentityKey } from "./challengeModel";
 import { pushSyncEvent } from "./recentEvents";
 
@@ -40,7 +41,11 @@ export type SyncSubmissionDeps = {
 	) => Promise<CommitResult>;
 	challengeFolderPath: (payload: SubmissionPayload) => string;
 	formatChallengeTitle: (payload: SubmissionPayload) => string;
-	formatCommitMessage: (score: number | null, matchPct: number | null) => string;
+	formatCommitMessage: (
+		score: number | null,
+		characterCount: number,
+		matchPct: number | null
+	) => string;
 };
 
 export type SyncSubmissionResult = {
@@ -63,6 +68,7 @@ export const fingerprintSubmission = (payload: SubmissionPayload): string => {
 		challengeMode: payload.challengeMode,
 		score: payload.score,
 		matchPct: payload.matchPct,
+		characterCount: payload.characterCount,
 		code: payload.code,
 	});
 	let hash = 0;
@@ -94,7 +100,7 @@ export const isDuplicateSubmission = (
 };
 
 const duplicateReasonMessage = (): string =>
-	`Duplicate submission skipped: same challenge, code, and score within ${DUPLICATE_WINDOW_SECONDS}s window.`;
+	`Duplicate submission skipped: same challenge, code, score, match, and character count within ${DUPLICATE_WINDOW_SECONDS}s window.`;
 
 export const isImprovedSubmission = (
 	current: SavedSubmissionMetrics,
@@ -111,6 +117,11 @@ export const isImprovedSubmission = (
 
 const formatSubmissionLine = (m: SavedSubmissionMetrics): string =>
 	`${m.matchPct.toFixed(2)}% match · ${m.score} score`;
+
+const formatChallengeTitleWithCharacterCount = (
+	title: string,
+	characterCount: number | null
+): string => (characterCount === null ? title : `${title} (${characterCount} Characters)`);
 
 const notImprovedReasonMessage = (
 	current: SavedSubmissionMetrics,
@@ -134,10 +145,11 @@ export const hasPositiveLastScore = (payload: SubmissionPayload): boolean =>
 	payload.matchPct > 0;
 
 export const processCssbattleSubmission = async (
-	payload: SubmissionPayload,
+	rawPayload: SubmissionPayload,
 	state: StoredState,
 	deps: SyncSubmissionDeps
 ): Promise<SyncSubmissionResult> => {
+	const payload = normalizeSubmissionCharacterCount(rawPayload);
 	const threshold = state.settings.threshold;
 	const matchPct = payload.matchPct ?? -1;
 	const hasScoredResult = hasPositiveLastScore(payload);
@@ -217,7 +229,10 @@ export const processCssbattleSubmission = async (
 							existingReadme,
 							existingBlobPaths: existingPaths,
 							challengeFolder: deps.challengeFolderPath(payload),
-							challengeTitle: deps.formatChallengeTitle(payload),
+							challengeTitle: formatChallengeTitleWithCharacterCount(
+								deps.formatChallengeTitle(payload),
+								payload.characterCount
+							),
 						});
 						if (rootReadme !== null) {
 							files.push({
@@ -230,7 +245,11 @@ export const processCssbattleSubmission = async (
 						console.warn("CssHub: root README update skipped", readmeError);
 					}
 				}
-				const commitMessage = deps.formatCommitMessage(payload.score, payload.matchPct);
+				const commitMessage = deps.formatCommitMessage(
+					payload.score,
+					payload.characterCount,
+					payload.matchPct
+				);
 				const commitResult = await deps.commitFilesToRepo(
 					state.githubToken,
 					repoFullName,

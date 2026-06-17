@@ -19,6 +19,7 @@ const basePayload = (): SubmissionPayload => ({
 	submittedAt: new Date().toISOString(),
 	score: 640,
 	matchPct: 99,
+	characterCount: 225,
 	code: "<div></div>",
 	targetImage: null,
 	resultImageDataUrl: "data:image/png;base64,USER",
@@ -78,7 +79,7 @@ const noopDeps = () => ({
 	}),
 	challengeFolderPath: () => "Battles/Battle #1/#42. Carrom",
 	formatChallengeTitle: () => "#42. Carrom",
-	formatCommitMessage: () => "Score: 640 (99.00% match) - CSSHub",
+	formatCommitMessage: () => "Score: 640, Characters: 225 (99.00% match) - CSSHub",
 	mapError: (error: unknown) => ({
 		message: error instanceof Error ? error.message : "Unexpected background failure",
 		code: "UNEXPECTED_ERROR" as const,

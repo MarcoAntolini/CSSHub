@@ -91,6 +91,7 @@ export const submissionPayloadSchema = z
 		submittedAt: z.string(),
 		score: z.number().nullable(),
 		matchPct: z.number().min(0).max(100).nullable(),
+		characterCount: z.number().int().nonnegative().nullable().default(null),
 		code: z.string(),
 		targetImage: z
 			.object({

@@ -141,6 +141,14 @@ const README_HTML_LINK = /<a href="\.\/([^"]+)">([^<]*)<\/a>/gi;
 const normalizeReadmeLinkPath = (path: string): string =>
 	decodeURIComponent(path).replace(/\/$/, "");
 
+const decodeHtmlText = (value: string): string =>
+	value
+		.replace(/&quot;/g, '"')
+		.replace(/&#39;/g, "'")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&amp;/g, "&");
+
 export const parseExistingReadmeLabels = (readme: string): Map<string, string> => {
 	const labels = new Map<string, string>();
 	for (const line of readme.split("\n")) {
@@ -150,7 +158,7 @@ export const parseExistingReadmeLabels = (readme: string): Map<string, string> =
 		}
 	}
 	for (const match of readme.matchAll(README_HTML_LINK)) {
-		labels.set(normalizeReadmeLinkPath(match[1]), match[2]);
+		labels.set(normalizeReadmeLinkPath(match[1]), decodeHtmlText(match[2]));
 	}
 	return labels;
 };
@@ -235,10 +243,21 @@ const escapeHtmlText = (value: string): string =>
 		.replace(/>/g, "&gt;")
 		.replace(/"/g, "&quot;");
 
+const splitCharacterCountLabel = (
+	label: string
+): { linkLabel: string; characterCountSuffix: string | null } => {
+	const match = label.match(/^(.*?)\s+(\(\d+ Characters\))$/);
+	return match
+		? { linkLabel: match[1], characterCountSuffix: match[2] }
+		: { linkLabel: label, characterCountSuffix: null };
+};
+
 /** HTML links render reliably inside nested <details> on GitHub; markdown does not. */
 export const formatIndexLinkHtml = (entry: ChallengeIndexEntry): string => {
 	const href = `./${encodeRepoPathForMarkdownLink(entry.folder)}/`;
-	return `<li><a href="${href}">${escapeHtmlText(entry.label)}</a></li>`;
+	const { linkLabel, characterCountSuffix } = splitCharacterCountLabel(entry.label);
+	const suffix = characterCountSuffix ? ` ${characterCountSuffix}` : "";
+	return `<li><a href="${href}">${escapeHtmlText(linkLabel)}</a>${suffix}</li>`;
 };
 
 const formatIndexList = (entries: ChallengeIndexEntry[]): string =>
@@ -423,6 +442,7 @@ export const buildRootReadmeContent = (options: {
 	const existingLabels = options.existingReadme
 		? parseExistingReadmeLabels(options.existingReadme)
 		: undefined;
+	existingLabels?.delete(options.challengeFolder);
 
 	if (options.mode === "full") {
 		return [
