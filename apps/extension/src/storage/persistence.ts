@@ -12,21 +12,21 @@ export const readPersistedState = async (): Promise<{
 		typeof tokenPayload[TOKEN_KEY] === "string"
 			? (tokenPayload[TOKEN_KEY] as string)
 			: null;
-	return { local: state, sessionToken };
+	const localToken = typeof state?.githubToken === "string" ? state.githubToken : null;
+	return { local: state, sessionToken: sessionToken ?? localToken };
 };
 
 export const writePersistedState = async (state: StoredState): Promise<void> => {
-	await chrome.storage.session.set({
-		[TOKEN_KEY]: state.githubToken,
-	});
-
-	const persistableState: StoredState = {
-		...state,
-		githubToken: null,
-	};
+	if (state.githubToken) {
+		await chrome.storage.session.set({
+			[TOKEN_KEY]: state.githubToken,
+		});
+	} else {
+		await chrome.storage.session.remove(TOKEN_KEY);
+	}
 
 	await chrome.storage.local.set({
-		[STORAGE_KEY]: persistableState,
+		[STORAGE_KEY]: state,
 	});
 };
 
