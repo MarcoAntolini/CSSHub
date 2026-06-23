@@ -12,16 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Battle submissions capture optional CSSBattle battle totals and finished/unfinished status for generated README progress
 - Managed root README battle groups display synced progress as `x/y` for finished battles and `x/y+` for unfinished battles
 - Battle archives now write `battle.json` manifests so Battle progress uses one durable Battle-level metadata source
+- Managed root README daily target months display saved-over-available progress counts
+- Popup shows a processing spinner on the last submission card while capture and sync is in progress
 - Settings **How sync works** section explains background sync and the brief inactive CSSBattle tab used for battle README progress
 
 ### Changed
 
 - Privacy policy and data map document background service fetches and short-lived inactive CSSBattle tabs during sync
+- `CONTEXT.md` domain glossary defines shared product language for targets, submissions, and sync outcomes
 
 ### Fixed
 
 - Finished Battles no longer keep a stale `+` in the managed README because an older Target `submission.json` said the Battle was unfinished
 - Battle Metadata fetch now waits for the hidden Battle overview page to hydrate before reading Target totals and finished status
+- Submission character counts are normalized to numbers before sync when CSSBattle omits the field
 
 ## [1.2.0] - 2026-06-17
 
