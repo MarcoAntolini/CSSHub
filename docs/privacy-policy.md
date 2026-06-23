@@ -59,6 +59,8 @@ The backend is designed for OAuth exchange and rate limiting—not to store your
 
 A content script runs only on CSSBattle **play** URLs. It reads submission-related data visible on the page (for example challenge id and CSS) so you can sync to GitHub. That data is processed in the extension and, when you sync, written to your chosen GitHub repo—not to a CssHub cloud database.
 
+During sync, the extension may also fetch target images and battle metadata in its background service. To read battle progress for repository README indexes, CssHub may open a short-lived **inactive** `cssbattle.dev` tab in the background, read the page, and close it automatically. Your active play tab is not navigated away.
+
 ## What CssHub does not do
 
 - **No CssHub analytics:** No first-party analytics SDK, event pipeline, or advertising network in the extension.

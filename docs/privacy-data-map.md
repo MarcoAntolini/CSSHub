@@ -34,6 +34,10 @@ This document maps data handled by CssHub and where it is stored or transmitted.
   - Browser-based authorization flow via GitHub auth endpoints.
 - **CssHub backend OAuth exchange**
   - Receives OAuth code/state/redirect during web OAuth exchange; returns access token.
+- **CSSBattle (`cssbattle.dev`, `www.cssbattle.dev`)**
+  - Content script reads submission data on play pages the user opens.
+  - Background sync fetches target images and battle metadata via the extension service worker (`apps/extension/src/remoteImageFetch.ts`, `apps/extension/src/background/handlers/battleMetadata.ts`).
+  - For battle README progress, may open a short-lived inactive CSSBattle tab (`chrome.tabs.create` with `active: false`), read hydrated page state, then remove the tab. The user's active play tab is not switched.
 
 ## Minimization and Controls
 

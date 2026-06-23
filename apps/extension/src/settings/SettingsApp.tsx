@@ -10,6 +10,7 @@ import { LoadingShell } from "./components/LoadingShell";
 import { PickRepoModal } from "./components/PickRepoModal";
 import { PreferencesSection } from "./components/PreferencesSection";
 import { RepositorySection } from "./components/RepositorySection";
+import { SyncBehaviorSection } from "./components/SyncBehaviorSection";
 import { SettingsHero } from "./components/SettingsHero";
 import { useDeviceFlow } from "./hooks/useDeviceFlow";
 import { useExtensionState } from "./hooks/useExtensionState";
@@ -205,6 +206,7 @@ export const SettingsApp = (): ReactElement => {
 								void toggleSystemNotifications(enabled);
 							}}
 						/>
+						<SyncBehaviorSection />
 						<ActivityLogSection
 							recentEvents={recentEvents}
 							busy={busy}

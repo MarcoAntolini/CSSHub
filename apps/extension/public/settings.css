@@ -772,6 +772,14 @@ body {
 	padding-top: 0.22rem;
 }
 
+.section-title-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	width: 100%;
+}
+
 /* Activity log: anchor heading to top row; keep Clear log compact but readable (not min-height: 0). */
 .section-headline .btn {
 	min-height: 2rem;

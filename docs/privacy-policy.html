@@ -103,6 +103,7 @@
     <p>For <strong>web</strong> GitHub sign-in, the extension sends a short-lived OAuth <code>code</code>, <code>state</code>, and <code>redirectUri</code> to the CssHub backend (hosted on Vercel in production). The backend exchanges the code with GitHub and returns an access token. It is not used to store your CSSBattle submissions.</p>
     <h3>CSSBattle</h3>
     <p>On <code>cssbattle.dev</code> / <code>www.cssbattle.dev</code> play pages only, the extension reads submission data shown on the page so you can sync it to GitHub.</p>
+    <p>During sync, the extension may also fetch target images and battle metadata in its background service. To read battle progress for repository README indexes, CssHub may open a short-lived inactive <code>cssbattle.dev</code> tab in the background, read the page, and close it automatically. Your active play tab is not navigated away.</p>
   </section>
 
   <section>

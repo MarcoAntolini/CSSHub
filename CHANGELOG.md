@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Battle submissions capture optional CSSBattle battle totals and finished/unfinished status for generated README progress
 - Managed root README battle groups display synced progress as `x/y` for finished battles and `x/y+` for unfinished battles
 - Battle archives now write `battle.json` manifests so Battle progress uses one durable Battle-level metadata source
+- Settings **How sync works** section explains background sync and the brief inactive CSSBattle tab used for battle README progress
+
+### Changed
+
+- Privacy policy and data map document background service fetches and short-lived inactive CSSBattle tabs during sync
 
 ### Fixed
 
