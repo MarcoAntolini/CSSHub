@@ -14,6 +14,7 @@ export type StoredState = {
 	lastSubmission: Extract<PopupToBackgroundMessage, { action: "cssbattleSubmission" }>["payload"] | null;
 	lastSubmissionAccepted: boolean | null;
 	lastIngestion: SubmissionIngestionResponse | null;
+	submissionProcessing: boolean;
 	recentEvents: SyncEvent[];
 	lastSubmissionFingerprint: string | null;
 	battleMetadataCache: CssbattleBattleMetadataCache;

@@ -271,6 +271,7 @@ export const extensionStateResponseSchema = z.object({
 	lastSubmission: submissionPayloadSchema.nullable(),
 	lastSubmissionAccepted: z.boolean().nullable(),
 	lastIngestion: submissionIngestionResponseSchema.nullable(),
+	submissionProcessing: z.boolean(),
 	recentEvents: z.array(syncEventSchema),
 });
 

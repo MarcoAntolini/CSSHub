@@ -81,6 +81,7 @@ const seedAuthenticatedRepo = async (context: BrowserContext): Promise<void> => 
 					lastSubmission: null,
 					lastSubmissionAccepted: null,
 					lastIngestion: null,
+					submissionProcessing: false,
 					recentEvents: [],
 					lastSubmissionFingerprint: null,
 				},

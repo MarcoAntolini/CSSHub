@@ -14,6 +14,7 @@ export type LoadedState = {
 	lastSubmission: SubmissionPayload | null;
 	lastSubmissionAccepted: boolean | null;
 	lastIngestion: SubmissionIngestionResponse | null;
+	submissionProcessing: boolean;
 	recentEvents: SyncEvent[];
 };
 

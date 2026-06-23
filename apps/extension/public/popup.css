@@ -547,6 +547,9 @@ a.sync-target:hover {
 }
 
 .last-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
 	font-size: 0.75rem;
 	line-height: 1.2;
 	padding: 2px 8px;
@@ -555,6 +558,21 @@ a.sync-target:hover {
 	width: fit-content;
 	flex-shrink: 0;
 	letter-spacing: 0.01em;
+}
+
+.last-status-spinner {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	border: 2px solid currentColor;
+	border-right-color: transparent;
+	animation: last-status-spin 0.8s linear infinite;
+}
+
+@keyframes last-status-spin {
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 .last-status-success {

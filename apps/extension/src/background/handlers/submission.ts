@@ -51,11 +51,16 @@ export const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 		setLoadingBadge();
 
 		const state = await getStoredState();
+		await saveStoredState({
+			...state,
+			submissionProcessing: true,
+		});
 		const outcome = await ingestCssbattleSubmission(data.payload, state, defaultIngestionDeps);
 
 		await saveStoredState({
 			...state,
 			...outcome.storagePatch,
+			submissionProcessing: false,
 		});
 
 		const { feedback } = outcome;

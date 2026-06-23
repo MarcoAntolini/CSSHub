@@ -40,6 +40,7 @@ const buildAuthenticatedState = (): StoredState => ({
 	lastSubmission: null,
 	lastSubmissionAccepted: null,
 	lastIngestion: null,
+	submissionProcessing: false,
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
 	battleMetadataCache: {},
@@ -91,5 +92,18 @@ describe("extension storage auth persistence", () => {
 			username: null,
 			method: null,
 		});
+	});
+
+	it("defaults submission processing to false for older stored state", async () => {
+		const legacyState = buildAuthenticatedState() as Partial<StoredState>;
+		delete legacyState.submissionProcessing;
+
+		await local.set({
+			[STORAGE_KEY]: legacyState,
+		});
+
+		const state = await getStoredState();
+
+		expect(state.submissionProcessing).toBe(false);
 	});
 });

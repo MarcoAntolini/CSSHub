@@ -53,6 +53,7 @@ export const useExtensionState = () => {
 				lastSubmission: parsed.lastSubmission,
 				lastSubmissionAccepted: parsed.lastSubmissionAccepted,
 				lastIngestion: parsed.lastIngestion,
+				submissionProcessing: parsed.submissionProcessing,
 				recentEvents: parsed.recentEvents,
 			});
 		} catch (error) {

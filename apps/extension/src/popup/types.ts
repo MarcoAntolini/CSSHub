@@ -13,6 +13,7 @@ export type SubmissionCardView = {
 	statusText: string;
 	reason: string;
 	commitUrl?: string | null;
+	processing?: boolean;
 };
 
 export type PopupState = {
@@ -21,4 +22,5 @@ export type PopupState = {
 	lastSubmission: SubmissionPayload | null;
 	lastSubmissionAccepted: boolean | null;
 	lastIngestion: SubmissionIngestionResponse | null;
+	submissionProcessing: boolean;
 };

@@ -30,6 +30,7 @@ const buildDefaultState = (sessionToken: string | null): StoredState => ({
 	lastSubmission: null,
 	lastSubmissionAccepted: null,
 	lastIngestion: null,
+	submissionProcessing: false,
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
 	battleMetadataCache: {},
@@ -93,6 +94,10 @@ export const getStoredState = async (): Promise<StoredState> => {
 				? state.lastSubmissionAccepted
 				: null,
 		lastIngestion: lastIngestion.success ? lastIngestion.data : null,
+		submissionProcessing:
+			typeof state.submissionProcessing === "boolean"
+				? state.submissionProcessing
+				: false,
 		recentEvents: recentEvents.success ? recentEvents.data : [],
 		lastSubmissionFingerprint:
 			typeof state.lastSubmissionFingerprint === "string"

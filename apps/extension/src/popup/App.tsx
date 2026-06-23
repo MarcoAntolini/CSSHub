@@ -36,7 +36,7 @@ export const App = (): ReactElement => {
 		);
 	}
 
-	const { auth, settings, lastSubmission, lastIngestion } = data;
+	const { auth, settings, lastSubmission, lastIngestion, submissionProcessing } = data;
 
 	return (
 		<main className="popup popup-shell">
@@ -66,6 +66,7 @@ export const App = (): ReactElement => {
 					<LastSubmissionSection
 						lastSubmission={lastSubmission}
 						lastIngestion={lastIngestion}
+						submissionProcessing={submissionProcessing}
 					/>
 					{SHOW_STATUS_DEMO ? (
 						<section className="card card-compact">

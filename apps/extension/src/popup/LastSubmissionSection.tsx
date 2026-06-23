@@ -10,9 +10,11 @@ import { relativeTime } from "./utils";
 export const LastSubmissionSection = ({
 	lastSubmission,
 	lastIngestion,
+	submissionProcessing,
 }: {
 	lastSubmission: SubmissionPayload | null;
 	lastIngestion: SubmissionIngestionResponse | null;
+	submissionProcessing: boolean;
 }): ReactElement => {
 	const statusTone = getIngestionTone(lastIngestion);
 	const statusText = statusTextFromTone(statusTone, "—");
@@ -20,7 +22,19 @@ export const LastSubmissionSection = ({
 	return (
 		<section className="card card-compact">
 			<h2 className="card-heading">Last submission</h2>
-			{lastSubmission ? (
+			{submissionProcessing ? (
+				<SubmissionCard
+					view={{
+						title: "Processing submission",
+						meta: "",
+						tone: "neutral",
+						statusText: "Processing",
+						reason: "Capturing result and syncing to GitHub",
+						commitUrl: null,
+						processing: true,
+					}}
+				/>
+			) : lastSubmission ? (
 				<SubmissionCard
 					view={{
 						title: lastSubmission.challengeName,

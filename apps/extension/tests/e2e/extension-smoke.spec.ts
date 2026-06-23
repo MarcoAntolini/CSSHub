@@ -109,6 +109,7 @@ const seedState = async (
 				lastSubmission: null,
 				lastSubmissionAccepted: null,
 				lastIngestion: null,
+				submissionProcessing: false,
 				recentEvents: input.recentEvents,
 				lastSubmissionFingerprint: null,
 			};
