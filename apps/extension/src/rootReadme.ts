@@ -27,6 +27,10 @@ export type BattleReadmeMetadata = {
 	status: "finished" | "unfinished";
 };
 
+export type ReadmeGenerationOptions = {
+	generatedAt?: Date;
+};
+
 export const encodeRepoPathForMarkdownLink = (folder: string): string =>
 	folder
 		.split("/")
@@ -383,24 +387,79 @@ const formatBattlesDetailsSection = (
 };
 
 const formatNestedDailyMonth = (
+	monthKey: string,
 	monthLabel: string,
-	entries: ChallengeIndexEntry[]
+	entries: ChallengeIndexEntry[],
+	options?: ReadmeGenerationOptions
 ): string =>
 	joinIndexBlock([
 		"<details>",
-		formatSummaryHtml(monthLabel, entries.length),
+		formatSummaryHtml(
+			monthLabel,
+			entries.length,
+			buildDailyMonthReadmeMetadata(monthKey, options?.generatedAt ?? new Date())
+		),
 		"",
 		formatIndexList(entries),
 		"</details>",
 	]);
 
-const formatDailyTargetsDetailsSection = (entries: ChallengeIndexEntry[]): string | null => {
+const parseDailyMonthKey = (monthKey: string): { year: number; month: number } | null => {
+	const match = monthKey.match(/^(\d{4})-(\d{2})$/);
+	if (!match) {
+		return null;
+	}
+	const year = parseInt(match[1], 10);
+	const month = parseInt(match[2], 10);
+	return month >= 1 && month <= 12 ? { year, month } : null;
+};
+
+const monthOrdinal = (year: number, month: number): number => year * 12 + month;
+
+const daysInMonth = (year: number, month: number): number =>
+	new Date(year, month, 0).getDate();
+
+const buildDailyMonthReadmeMetadata = (
+	monthKey: string,
+	generatedAt: Date
+): BattleReadmeMetadata | undefined => {
+	const parsed = parseDailyMonthKey(monthKey);
+	if (!parsed) {
+		return undefined;
+	}
+	const totalDays = daysInMonth(parsed.year, parsed.month);
+	const generatedYear = generatedAt.getFullYear();
+	const generatedMonth = generatedAt.getMonth() + 1;
+	const generatedDay = generatedAt.getDate();
+	const dailyMonth = monthOrdinal(parsed.year, parsed.month);
+	const currentMonth = monthOrdinal(generatedYear, generatedMonth);
+	const isCurrentMonth = dailyMonth === currentMonth;
+	const availableDays = isCurrentMonth ? Math.min(generatedDay, totalDays) : totalDays;
+
+	return {
+		totalChallenges: availableDays,
+		status: isCurrentMonth && availableDays < totalDays ? "unfinished" : "finished",
+	};
+};
+
+const formatDailyTargetsDetailsSection = (
+	entries: ChallengeIndexEntry[],
+	options?: ReadmeGenerationOptions
+): string | null => {
 	if (entries.length === 0) {
 		return null;
 	}
 	const groups = groupDailyEntriesByMonth(entries);
 	const nestedItems = groups
-		.map((group) => `<li>\n${formatNestedDailyMonth(group.monthLabel, group.entries)}\n</li>`)
+		.map(
+			(group) =>
+				`<li>\n${formatNestedDailyMonth(
+					group.monthKey,
+					group.monthLabel,
+					group.entries,
+					options
+				)}\n</li>`
+		)
 		.join("\n");
 
 	return joinIndexBlock([
@@ -415,7 +474,8 @@ const formatDailyTargetsDetailsSection = (entries: ChallengeIndexEntry[]): strin
 export const formatGroupedReadmeIndex = (
 	buckets: ChallengeIndexBuckets,
 	existingLabels?: Map<string, string>,
-	battleMetadataByGroup?: Map<string, BattleReadmeMetadata>
+	battleMetadataByGroup?: Map<string, BattleReadmeMetadata>,
+	options?: ReadmeGenerationOptions
 ): string => {
 	const withLabels = (entries: ChallengeIndexEntry[]): ChallengeIndexEntry[] =>
 		entries.map((entry) => ({
@@ -425,7 +485,7 @@ export const formatGroupedReadmeIndex = (
 
 	const sections = [
 		formatBattlesDetailsSection(withLabels(buckets.battles), battleMetadataByGroup),
-		formatDailyTargetsDetailsSection(withLabels(buckets.daily)),
+		formatDailyTargetsDetailsSection(withLabels(buckets.daily), options),
 		formatFlatTopLevelSection("Legacy", withLabels(buckets.legacy)),
 	].filter((section): section is string => section !== null);
 
@@ -436,8 +496,9 @@ export const formatGroupedReadmeIndex = (
 const buildManagedIndexBlock = (
 	buckets: ChallengeIndexBuckets,
 	existingLabels?: Map<string, string>,
-	battleMetadataByGroup?: Map<string, BattleReadmeMetadata>
-): string => formatGroupedReadmeIndex(buckets, existingLabels, battleMetadataByGroup);
+	battleMetadataByGroup?: Map<string, BattleReadmeMetadata>,
+	options?: ReadmeGenerationOptions
+): string => formatGroupedReadmeIndex(buckets, existingLabels, battleMetadataByGroup, options);
 
 export const injectManagedReadmeSection = (existing: string, indexBlock: string): string => {
 	const trimmed = existing.trimEnd();
@@ -464,6 +525,7 @@ export const buildRootReadmeContent = (options: {
 	challengeFolder: string;
 	challengeTitle: string;
 	battleMetadataByGroup?: Map<string, BattleReadmeMetadata>;
+	generatedAt?: Date;
 }): string | null => {
 	if (options.mode === "off") {
 		return null;
@@ -485,14 +547,18 @@ export const buildRootReadmeContent = (options: {
 			"",
 			"_This README is fully managed while “Full” mode is enabled. Use “Managed section” in CssHub settings to keep your own text above the index._",
 			"",
-			buildManagedIndexBlock(buckets, existingLabels, options.battleMetadataByGroup),
+			buildManagedIndexBlock(buckets, existingLabels, options.battleMetadataByGroup, {
+				generatedAt: options.generatedAt,
+			}),
 			"",
 		].join("\n");
 	}
 
 	return injectManagedReadmeSection(
 		options.existingReadme ?? "",
-		buildManagedIndexBlock(buckets, existingLabels, options.battleMetadataByGroup)
+		buildManagedIndexBlock(buckets, existingLabels, options.battleMetadataByGroup, {
+			generatedAt: options.generatedAt,
+		})
 	);
 };
 

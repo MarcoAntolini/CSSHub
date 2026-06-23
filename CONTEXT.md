@@ -20,6 +20,10 @@ _Avoid_: Submission metadata, target metadata
 A date-based CSSBattle Target published outside the normal Battle collection flow.
 _Avoid_: Daily challenge, daily battle
 
+**Daily Target Progress**:
+The saved-over-available count CssHub shows for a calendar month of Daily Targets in the Battle Archive. A month still receiving Daily Targets is marked as unfinished.
+_Avoid_: Daily metadata, daily battle progress
+
 **Solution**:
 The player's code and resulting rendered output for a Target.
 _Avoid_: Snippet, answer

@@ -144,6 +144,64 @@ describe("formatGroupedReadmeIndex", () => {
 		expect(out).toContain("</ul>\n\n### Daily Targets");
 		expect(out).toContain("</ul>\n\n### Legacy");
 	});
+
+	it("formats the current daily month as saved over available days", () => {
+		const out = formatGroupedReadmeIndex(
+			{
+				battles: [],
+				daily: [
+					{ folder: "Daily Targets/2026-06-01", label: "Jun 1, 2026" },
+					{ folder: "Daily Targets/2026-06-04", label: "Jun 4, 2026" },
+				],
+				legacy: [],
+			},
+			undefined,
+			undefined,
+			{ generatedAt: new Date("2026-06-20T12:00:00.000Z") }
+		);
+
+		expect(out).toContain("<summary><strong>June 2026 (2/20+)</strong></summary>");
+		expect(out).toContain("### Daily Targets (2)");
+	});
+
+	it("drops the unfinished suffix on the last day of the current daily month", () => {
+		const out = formatGroupedReadmeIndex(
+			{
+				battles: [],
+				daily: [
+					{ folder: "Daily Targets/2026-02-01", label: "Feb 1, 2026" },
+					{ folder: "Daily Targets/2026-02-28", label: "Feb 28, 2026" },
+				],
+				legacy: [],
+			},
+			undefined,
+			undefined,
+			{ generatedAt: new Date("2026-02-28T12:00:00.000Z") }
+		);
+
+		expect(out).toContain("<summary><strong>February 2026 (2/28)</strong></summary>");
+	});
+
+	it("uses calendar month lengths for completed daily months", () => {
+		const out = formatGroupedReadmeIndex(
+			{
+				battles: [],
+				daily: [
+					{ folder: "Daily Targets/2024-02-29", label: "Feb 29, 2024" },
+					{ folder: "Daily Targets/2026-04-01", label: "Apr 1, 2026" },
+					{ folder: "Daily Targets/2026-05-01", label: "May 1, 2026" },
+				],
+				legacy: [],
+			},
+			undefined,
+			undefined,
+			{ generatedAt: new Date("2026-06-20T12:00:00.000Z") }
+		);
+
+		expect(out).toContain("<summary><strong>February 2024 (1/29)</strong></summary>");
+		expect(out).toContain("<summary><strong>April 2026 (1/30)</strong></summary>");
+		expect(out).toContain("<summary><strong>May 2026 (1/31)</strong></summary>");
+	});
 });
 
 describe("groupDailyEntriesByMonth", () => {
