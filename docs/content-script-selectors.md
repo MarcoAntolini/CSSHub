@@ -2,6 +2,12 @@
 
 CssHub’s content script scrapes CSSBattle’s play page DOM. Selectors are brittle when the site changes; this document is the canonical inventory. Pure parsing lives in `contentScriptDom.ts` and `contentScriptStats.ts` with fixture tests under `apps/extension/tests/`.
 
+## Submission surface invariant
+
+Users submit Solutions from CSSBattle Target play pages (`https://cssbattle.dev/play/{targetId}`), not from Battle overview pages (`https://cssbattle.dev/battle/{battleId}`). The content script should treat the current page as the Target submission surface. Battle overview pages are only a background metadata source for Battle-level Target totals and finished/unfinished status.
+
+Battle Metadata must come from a hydrated Battle overview DOM. Static `fetch()` HTML can be only a fallback because CSSBattle may serve a loading shell before client-rendered Target tiles and status text are available.
+
 ## Stats and leaderboard (`contentScriptStats.ts`)
 
 | Constant | Pattern / selector | Purpose | Module |

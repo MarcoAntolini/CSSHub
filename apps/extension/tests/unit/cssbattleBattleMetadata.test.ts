@@ -143,4 +143,25 @@ describe("getCssbattleBattleMetadata", () => {
 		});
 		expect(result.cache["1"]).toEqual(result.metadata);
 	});
+
+	it("does not cache unknown metadata over a known unfinished count", async () => {
+		const cache: CssbattleBattleMetadataCache = {
+			"1": {
+				battleId: "1",
+				totalChallenges: 4,
+				status: "unfinished",
+				fetchedAt: "2026-06-17T00:00:00.000Z",
+			},
+		};
+		const fetchHtml = vi.fn().mockResolvedValue("Fetching battle details...");
+
+		const result = await getCssbattleBattleMetadata("1", cache, fetchHtml);
+
+		expect(result.metadata).toMatchObject({
+			battleId: "1",
+			totalChallenges: null,
+			status: "unfinished",
+		});
+		expect(result.cache).toEqual(cache);
+	});
 });

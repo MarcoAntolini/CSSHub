@@ -8,6 +8,11 @@ import type { CommitFile, CommitResult, SavedSubmissionMetrics } from "@/githubC
 import type { StoredState } from "@/storage";
 import { normalizeSubmissionCharacterCount } from "./characterCount";
 import { challengeIdentityKey, folderFromSubmissionJsonPath } from "./challengeModel";
+import {
+	battleManifestGroupFromPath,
+	parseBattleManifest,
+	type BattleManifest,
+} from "./battleManifest";
 import { pushSyncEvent } from "./recentEvents";
 
 export const DUPLICATE_WINDOW_MS = 45 * 1000;
@@ -160,6 +165,32 @@ const parseBattleReadmeMetadata = (content: string | null): {
 	}
 };
 
+const battleReadmeMetadataFromManifest = (
+	manifest: BattleManifest
+): { group: string; metadata: BattleReadmeMetadata } => ({
+	group: manifest.battleGroup,
+	metadata: {
+		totalChallenges: manifest.totalTargets,
+		status: manifest.status,
+	},
+});
+
+const mergeBattleReadmeMetadata = (
+	current: BattleReadmeMetadata | undefined,
+	next: BattleReadmeMetadata
+): BattleReadmeMetadata => {
+	if (!current) {
+		return next;
+	}
+	if (current.status === "finished") {
+		return current;
+	}
+	if (next.status === "finished") {
+		return next;
+	}
+	return next.totalChallenges >= current.totalChallenges ? next : current;
+};
+
 const collectCurrentBattleReadmeMetadata = (
 	payload: SubmissionPayload
 ): { group: string; metadata: BattleReadmeMetadata } | null => {
@@ -184,15 +215,30 @@ const collectCurrentBattleReadmeMetadata = (
 
 const collectBattleMetadataPathsByGroup = (
 	paths: Iterable<string>
-): Map<string, string> => {
-	const byGroup = new Map<string, string>();
+): Map<string, string[]> => {
+	const byGroup = new Map<string, string[]>();
 	for (const path of paths) {
 		const parsed = folderFromSubmissionJsonPath(path);
 		if (parsed?.kind !== "battle") {
 			continue;
 		}
 		const group = extractBattleGroupFromFolder(parsed.folder);
-		if (group && !byGroup.has(group)) {
+		if (group) {
+			const groupPaths = byGroup.get(group) ?? [];
+			groupPaths.push(path);
+			byGroup.set(group, groupPaths);
+		}
+	}
+	return byGroup;
+};
+
+const collectBattleManifestPathsByGroup = (
+	paths: Iterable<string>
+): Map<string, string> => {
+	const byGroup = new Map<string, string>();
+	for (const path of paths) {
+		const group = battleManifestGroupFromPath(path);
+		if (group) {
 			byGroup.set(group, path);
 		}
 	}
@@ -207,17 +253,43 @@ const fetchBattleReadmeMetadataByGroup = async (
 	fetchRepoUtf8File: SyncSubmissionDeps["fetchRepoUtf8File"]
 ): Promise<Map<string, BattleReadmeMetadata>> => {
 	const metadata = new Map<string, BattleReadmeMetadata>();
-	const byGroup = collectBattleMetadataPathsByGroup(paths);
+	const pathList = [...paths];
+	const manifestPathsByGroup = collectBattleManifestPathsByGroup(pathList);
 	await Promise.all(
-		[...byGroup.entries()].map(async ([group, path]) => {
-			const parsed = parseBattleReadmeMetadata(
+		[...manifestPathsByGroup.values()].map(async (path) => {
+			const manifest = parseBattleManifest(
 				await fetchRepoUtf8File(token, repoFullName, branch, path)
 			);
-			if (parsed) {
-				metadata.set(parsed.group, parsed.metadata);
+			if (manifest) {
+				const parsed = battleReadmeMetadataFromManifest(manifest);
+				metadata.set(
+					parsed.group,
+					mergeBattleReadmeMetadata(metadata.get(parsed.group), parsed.metadata)
+				);
+			}
+		})
+	);
+	const submissionPathsByGroup = collectBattleMetadataPathsByGroup(pathList);
+	await Promise.all(
+		[...submissionPathsByGroup.entries()].map(async ([group, groupPaths]) => {
+			if (metadata.has(group)) {
 				return;
 			}
-			metadata.delete(group);
+			const parsedItems = await Promise.all(
+				groupPaths.map(async (path) =>
+					parseBattleReadmeMetadata(
+						await fetchRepoUtf8File(token, repoFullName, branch, path)
+					)
+				)
+			);
+			for (const parsed of parsedItems) {
+				if (parsed) {
+					metadata.set(
+						parsed.group,
+						mergeBattleReadmeMetadata(metadata.get(parsed.group), parsed.metadata)
+					);
+				}
+			}
 		})
 	);
 	return metadata;
@@ -335,7 +407,10 @@ export const processCssbattleSubmission = async (
 						if (currentBattleMetadata) {
 							battleMetadataByGroup.set(
 								currentBattleMetadata.group,
-								currentBattleMetadata.metadata
+								mergeBattleReadmeMetadata(
+									battleMetadataByGroup.get(currentBattleMetadata.group),
+									currentBattleMetadata.metadata
+								)
 							);
 						}
 						const rootReadme = buildRootReadmeContent({

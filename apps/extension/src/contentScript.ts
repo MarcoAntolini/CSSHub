@@ -1,4 +1,7 @@
-import { detectChallengeContext } from "./contentScriptChallengeContext";
+import {
+	detectChallengeContext,
+	resolveBattleMetadataFromSources,
+} from "./contentScriptChallengeContext";
 import {
 	CLICKABLE_SELECTOR,
 	addCssBattleSubmitShortcutListener,
@@ -198,8 +201,12 @@ const processSubmission = async (): Promise<void> => {
 					: getChallengeName();
 		const characterCount = postSubmitStats.characterCount ?? code.length;
 		const battleMetadata =
-			challengeContext.mode === "battle" && challengeContext.battleId
-				? await sendCssbattleBattleMetadataMessage(challengeContext.battleId)
+			challengeContext.mode === "battle"
+				? await resolveBattleMetadataFromSources(
+						challengeContext,
+						document,
+						sendCssbattleBattleMetadataMessage
+					)
 				: null;
 		const battleTotalChallenges = battleMetadata?.totalChallenges ?? null;
 		const battleStatus = battleMetadata?.status ?? "unfinished";

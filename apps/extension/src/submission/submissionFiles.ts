@@ -12,6 +12,10 @@ import {
 	listBestSubmissionMetadataPaths,
 } from "./challengeModel";
 import { resolveSubmissionCharacterCount } from "./characterCount";
+import {
+	battleManifestPathFromGroup,
+	buildBattleManifestFromPayload,
+} from "./battleManifest";
 
 export {
 	challengeFolderPath,
@@ -150,6 +154,15 @@ export const buildSubmissionFiles = async (
 		content: JSON.stringify(metadata, null, 2),
 		encoding: "utf-8",
 	});
+
+	const battleManifest = buildBattleManifestFromPayload(payload);
+	if (battleManifest) {
+		files.push({
+			path: battleManifestPathFromGroup(battleManifest.battleGroup),
+			content: JSON.stringify(battleManifest, null, 2),
+			encoding: "utf-8",
+		});
+	}
 
 	if (payload.resultImageDataUrl) {
 		files.push({

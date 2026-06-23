@@ -137,6 +137,12 @@ export const getCssbattleBattleMetadata = async (
 		status: parsed.status,
 		fetchedAt: new Date().toISOString(),
 	};
+	if (metadata.totalChallenges === null) {
+		return {
+			metadata,
+			cache: currentCache,
+		};
+	}
 	return {
 		metadata,
 		cache: {

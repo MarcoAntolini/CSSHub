@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import type { SubmissionPayload } from "@/shared/contracts";
+import type { CommitFile } from "@/githubClient";
 import type { StoredState } from "@/storage";
 import {
 	SKIP_FAST_PATH_BUDGET_MS,
@@ -8,6 +8,7 @@ import {
 	isDuplicateSubmission,
 	processCssbattleSubmission,
 } from "@/submission/syncSubmission";
+import { describe, expect, it, vi } from "vitest";
 
 const basePayload = (): SubmissionPayload => ({
 	challengeMode: "battle",
@@ -114,7 +115,11 @@ describe("processCssbattleSubmission", () => {
 
 	it("commits when accepted and improved", async () => {
 		const deps = noopDeps();
-		const result = await processCssbattleSubmission(basePayload(), baseState(), deps);
+		const result = await processCssbattleSubmission(
+			basePayload(),
+			baseState(),
+			deps
+		);
 
 		expect(result.eventCode).toBe("SYNC_COMMITTED");
 		expect(result.committed).toBe(true);
@@ -266,6 +271,137 @@ describe("processCssbattleSubmission", () => {
 				}),
 			])
 		);
+	});
+
+	it("prefers battle manifests over stale submission metadata for README progress", async () => {
+		const deps = noopDeps();
+		deps.listBranchBlobPaths.mockResolvedValue(
+			new Set([
+				"Battles/Battle #1/battle.json",
+				"Battles/Battle #1/#41. Prior/submission.json",
+				"Battles/Battle #1/#42. Carrom/submission.json",
+			])
+		);
+		deps.fetchRepoUtf8File.mockImplementation(
+			async (
+				_token: string,
+				_repoFullName: string,
+				_branch: string,
+				path: string
+			): Promise<string | null> => {
+				if (path === "README.md") {
+					return null;
+				}
+				if (path === "Battles/Battle #1/battle.json") {
+					return JSON.stringify({
+						schemaVersion: 1,
+						battleId: "1",
+						battleGroup: "Battle #1",
+						totalTargets: 4,
+						status: "finished",
+						fetchedAt: "2026-06-23T12:00:00.000Z",
+						lastUpdatedFromTarget: "#42. Carrom",
+					});
+				}
+				if (path === "Battles/Battle #1/#41. Prior/submission.json") {
+					return JSON.stringify({
+						battleGroup: "Battle #1",
+						battleTotalChallenges: 4,
+						battleStatus: "unfinished",
+					});
+				}
+				return null;
+			}
+		);
+
+		await processCssbattleSubmission(
+			basePayload(),
+			baseState({
+				settings: {
+					...baseState().settings,
+					repositoryReadmeMode: "managed-section",
+				},
+			}),
+			deps
+		);
+
+		expect(deps.commitFilesToRepo).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.any(String),
+			expect.any(String),
+			expect.any(String),
+			expect.arrayContaining([
+				expect.objectContaining({
+					path: "README.md",
+					content: expect.stringContaining("Battle #1 (2/4)"),
+				}),
+			])
+		);
+		const committedFiles = deps.commitFilesToRepo.mock.calls[0]?.[4] as
+			| CommitFile[]
+			| undefined;
+		const readmeFile = committedFiles?.find(
+			(file) => file.path === "README.md" && "content" in file
+		);
+		expect(readmeFile && "content" in readmeFile ? readmeFile.content : "").not.toContain(
+			"Battle #1 (2/4+)"
+		);
+	});
+
+	it("repairs stale unfinished README progress from current finished battle metadata", async () => {
+		const deps = noopDeps();
+		deps.listBranchBlobPaths.mockResolvedValue(
+			new Set([
+				"Battles/Battle #1/#41. Prior/submission.json",
+				"Battles/Battle #1/#42. Carrom/submission.json",
+			])
+		);
+		deps.fetchRepoUtf8File.mockImplementation(
+			async (
+				_token: string,
+				_repoFullName: string,
+				_branch: string,
+				path: string
+			): Promise<string | null> => {
+				if (path === "README.md") {
+					return null;
+				}
+				if (path === "Battles/Battle #1/#41. Prior/submission.json") {
+					return JSON.stringify({
+						battleGroup: "Battle #1",
+						battleTotalChallenges: 12,
+						battleStatus: "unfinished",
+					});
+				}
+				return null;
+			}
+		);
+
+		await processCssbattleSubmission(
+			{
+				...basePayload(),
+				battleId: "1",
+				battleTotalChallenges: 12,
+				battleStatus: "finished",
+			},
+			baseState({
+				settings: {
+					...baseState().settings,
+					repositoryReadmeMode: "managed-section",
+				},
+			}),
+			deps
+		);
+
+		const committedFiles = deps.commitFilesToRepo.mock.calls[0]?.[4] as
+			| CommitFile[]
+			| undefined;
+		const readmeFile = committedFiles?.find(
+			(file) => file.path === "README.md" && "content" in file
+		);
+		const readme = readmeFile && "content" in readmeFile ? readmeFile.content : "";
+		expect(readme).toContain("Battle #1 (2/12)");
+		expect(readme).not.toContain("Battle #1 (2/12+)");
 	});
 
 	it("completes mocked commit path within budget", async () => {

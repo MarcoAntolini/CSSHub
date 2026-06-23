@@ -12,6 +12,10 @@ _Avoid_: Challenge, level
 A CSSBattle collection that groups multiple Targets under a shared theme or sequence.
 _Avoid_: Battle group, challenge group
 
+**Battle Metadata**:
+The Battle-level Target total and finished/unfinished status CssHub uses to show Battle progress in the Battle Archive.
+_Avoid_: Submission metadata, target metadata
+
 **Daily Target**:
 A date-based CSSBattle Target published outside the normal Battle collection flow.
 _Avoid_: Daily challenge, daily battle
@@ -21,7 +25,7 @@ The player's code and resulting rendered output for a Target.
 _Avoid_: Snippet, answer
 
 **Submission**:
-One captured attempt to save a Solution, including the Target identity, score, match percentage, code, and optional images available at that moment.
+One captured attempt from a CSSBattle Target play page (`/play/{targetId}`) to save a Solution, including the Target identity, score, match percentage, code, and optional images available at that moment. CssHub does not expect users to submit from Battle overview pages.
 _Avoid_: Solution, sync, upload
 
 **Score**:

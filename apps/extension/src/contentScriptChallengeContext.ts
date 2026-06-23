@@ -141,6 +141,38 @@ export const extractBattleStatusFromDocument = (
 	return /\bFINISHED\b/i.test(text) ? "finished" : null;
 };
 
+export type BattleMetadataResult = {
+	battleId: string;
+	totalChallenges: number | null;
+	status: BattleStatus;
+};
+
+export const resolveBattleMetadataFromSources = async (
+	context: SupportedChallengeContext,
+	root: Document | Element,
+	fetchMetadata: (battleId: string) => Promise<BattleMetadataResult | null>
+): Promise<BattleMetadataResult | null> => {
+	if (!context.battleId) {
+		return null;
+	}
+
+	const remoteMetadata = await fetchMetadata(context.battleId);
+	if (remoteMetadata?.totalChallenges) {
+		return remoteMetadata;
+	}
+
+	const localTotalChallenges = extractBattleChallengeCountFromDocument(root);
+	if (!localTotalChallenges) {
+		return remoteMetadata;
+	}
+
+	return {
+		battleId: context.battleId,
+		totalChallenges: localTotalChallenges,
+		status: extractBattleStatusFromDocument(root) ?? remoteMetadata?.status ?? "unfinished",
+	};
+};
+
 const collectBattleId = (root: Document | Element): string | null => {
 	const container = root.querySelector(BREADCRUMB_CONTAINER_SELECTOR);
 	if (!container) {

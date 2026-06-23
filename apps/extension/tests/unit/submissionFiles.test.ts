@@ -93,6 +93,7 @@ describe("buildSubmissionFiles", () => {
 		const files = await buildSubmissionFiles(battlePayload());
 		const paths = files.map((file) => file.path);
 
+		expect(paths).toContain("Battles/Battle #39/battle.json");
 		expect(paths).toContain("Battles/Battle #39/#254. Unfitting/README.md");
 		expect(paths).toContain("Battles/Battle #39/#254. Unfitting/submission.json");
 		expect(paths).toContain("Battles/Battle #39/#254. Unfitting/solution.html");
@@ -111,6 +112,29 @@ describe("buildSubmissionFiles", () => {
 		expect(metadata.battleId).toBe("39");
 		expect(metadata.battleTotalChallenges).toBe(8);
 		expect(metadata.battleStatus).toBe("finished");
+
+		const manifestFile = files.find((file) => file.path === "Battles/Battle #39/battle.json");
+		const manifest = JSON.parse(
+			manifestFile && "content" in manifestFile ? manifestFile.content : "{}"
+		) as Record<string, unknown>;
+		expect(manifest).toMatchObject({
+			schemaVersion: 1,
+			battleId: "39",
+			battleGroup: "Battle #39",
+			totalTargets: 8,
+			status: "finished",
+			lastUpdatedFromTarget: "#254. Unfitting",
+		});
+	});
+
+	it("does not write a battle manifest when battle metadata is unknown", async () => {
+		const files = await buildSubmissionFiles({
+			...battlePayload(),
+			battleTotalChallenges: undefined,
+			battleStatus: undefined,
+		});
+
+		expect(files.map((file) => file.path)).not.toContain("Battles/Battle #39/battle.json");
 	});
 
 	it("falls back to code length when metadata has no character count", async () => {

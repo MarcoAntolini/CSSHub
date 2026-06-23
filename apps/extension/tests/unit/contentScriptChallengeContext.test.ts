@@ -10,6 +10,7 @@ import {
 	extractBattleChallengeCountFromDocument,
 	extractBattleStatusFromDocument,
 	parseDailyDateLabelToIso,
+	resolveBattleMetadataFromSources,
 } from "@/contentScriptChallengeContext";
 
 const FIXTURE_DIR = join(dirname(fileURLToPath(import.meta.url)), "../fixtures");
@@ -114,6 +115,48 @@ describe("battle metadata extraction from play page DOM", () => {
 		document.body.innerHTML = `<span class="badge">FINISHED</span>`;
 
 		expect(extractBattleStatusFromDocument(document)).toBe("finished");
+	});
+
+	it("falls back to current Battle page metadata when the remote fetch has no target count", async () => {
+		document.body.innerHTML = `
+			<nav class="Header-module__breadcrumbs">
+				<a href="/battles">Battles</a>
+				<a href="/battle/1">Battle #1</a>
+				<button>#7. Leafy Trail</button>
+			</nav>
+			<section class="targets-container">
+				<a href="/play/3">#3. Push Button</a>
+				<a href="/play/4">#4. Ups n Downs</a>
+				<a href="/play/5">#5. Acid Rain</a>
+				<a href="/play/6">#6. Missing Slice</a>
+				<a href="/play/7">#7. Leafy Trail</a>
+				<a href="/play/8">#8. Forking Crazy</a>
+				<a href="/play/9">#9. Tesseract</a>
+				<a href="/play/10">#10. Cloaked Spirits</a>
+				<a href="/play/11">#11. Eye of Sauron</a>
+				<a href="/play/12">#12. Wiggly Moustache</a>
+				<a href="/play/13">#13. Totally Triangle</a>
+				<a href="/play/14">#14. Web Maker Logo</a>
+			</section>
+			<span class="badge">FINISHED</span>
+		`;
+		const context = detectChallengeContext(document);
+		expect(context.mode).toBe("battle");
+		if (context.mode !== "battle") {
+			return;
+		}
+
+		await expect(
+			resolveBattleMetadataFromSources(context, document, async () => ({
+				battleId: "1",
+				totalChallenges: null,
+				status: "unfinished",
+			}))
+		).resolves.toEqual({
+			battleId: "1",
+			totalChallenges: 12,
+			status: "finished",
+		});
 	});
 });
 
