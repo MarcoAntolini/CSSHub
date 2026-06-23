@@ -1,4 +1,5 @@
 import { popupToBackgroundMessageSchema, type PopupToBackgroundMessage } from "@/shared/contracts";
+import { isBattleMetadataInternalMessage } from "@/battleMetadataMessages";
 import { getStoredState, saveStoredState } from "@/storage";
 import { toUserSafeError } from "./errors";
 import {
@@ -88,6 +89,9 @@ const actionHandlers: {
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 	const parsed = popupToBackgroundMessageSchema.safeParse(request);
 	if (!parsed.success) {
+		if (isBattleMetadataInternalMessage(request)) {
+			return false;
+		}
 		sendResponse({
 			ok: false,
 			error: "Invalid message payload",

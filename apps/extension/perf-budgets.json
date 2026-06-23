@@ -1,7 +1,9 @@
 {
 	"entries": {
 		"background.js": 13,
+		"battleMetadataProbe.js": 4,
 		"contentScript.js": 22,
+		"offscreen.js": 4,
 		"popup.js": 12,
 		"settings.js": 15
 	},

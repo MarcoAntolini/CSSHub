@@ -127,6 +127,7 @@ const contentScriptBundlePlugin = (): Plugin => ({
 		for (const [entry, outfile] of [
 			["src/contentScript.ts", "dist/contentScript.js"],
 			["src/contentScriptShortcutBridge.ts", "dist/shortcutBridge.js"],
+			["src/battleMetadataProbe.ts", "dist/battleMetadataProbe.js"],
 		] as const) {
 			await esbuild({
 				entryPoints: [resolve(__dirname, entry)],
@@ -165,6 +166,7 @@ export default defineConfig(({ mode }) => {
 				input: {
 					popup: resolve(__dirname, "popup.html"),
 					settings: resolve(__dirname, "settings.html"),
+					offscreen: resolve(__dirname, "offscreen.html"),
 					background: resolve(__dirname, "src/background.ts"),
 				},
 				output: {

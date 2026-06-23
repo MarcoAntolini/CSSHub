@@ -18,7 +18,15 @@
 		"page": "settings.html",
 		"open_in_tab": true
 	},
-	"permissions": ["storage", "activeTab", "tabs", "identity", "scripting", "notifications"],
+	"permissions": [
+		"storage",
+		"activeTab",
+		"tabs",
+		"identity",
+		"scripting",
+		"notifications",
+		"offscreen"
+	],
 	"host_permissions": [
 		"https://api.github.com/*",
 		"https://github.com/*",
@@ -45,6 +53,15 @@
 			],
 			"js": ["contentScript.js"],
 			"run_at": "document_start"
+		},
+		{
+			"matches": [
+				"https://cssbattle.dev/battle/*",
+				"https://www.cssbattle.dev/battle/*"
+			],
+			"js": ["battleMetadataProbe.js"],
+			"run_at": "document_idle",
+			"all_frames": true
 		}
 	],
 	"background": {

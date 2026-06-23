@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 
-import { pollHydratedBattlePageMetadata } from "@/background/handlers/battleMetadata";
+import { pollHydratedBattlePageMetadata } from "@/battleMetadataHydration";
 
 describe("pollHydratedBattlePageMetadata", () => {
 	it("waits for client-rendered battle metadata to appear and stabilize", async () => {
