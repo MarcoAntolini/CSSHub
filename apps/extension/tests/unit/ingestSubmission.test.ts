@@ -44,6 +44,7 @@ const baseState = (overrides: Partial<StoredState> = {}): StoredState => ({
 	lastIngestion: null,
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
+	battleMetadataCache: {},
 	...overrides,
 });
 
@@ -155,6 +156,22 @@ describe("buildIngestionStoragePatch", () => {
 		expect(patch.lastSubmission).toEqual(payload);
 		expect(patch.lastSubmissionFingerprint).toBeTruthy();
 		expect(patch.lastSubmissionAccepted).toBe(true);
+	});
+
+	it("stores battle metadata from payload in the cache", () => {
+		const payload = {
+			...basePayload(),
+			battleId: "1",
+			battleTotalChallenges: 12,
+			battleStatus: "finished" as const,
+		};
+		const patch = buildIngestionStoragePatch(payload, baseState(), syncResult());
+
+		expect(patch.battleMetadataCache["1"]).toMatchObject({
+			battleId: "1",
+			totalChallenges: 12,
+			status: "finished",
+		});
 	});
 
 	it("preserves prior submission state for duplicates", () => {

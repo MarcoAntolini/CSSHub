@@ -22,6 +22,11 @@ export type ChallengeIndexBuckets = {
 	legacy: ChallengeIndexEntry[];
 };
 
+export type BattleReadmeMetadata = {
+	totalChallenges: number;
+	status: "finished" | "unfinished";
+};
+
 export const encodeRepoPathForMarkdownLink = (folder: string): string =>
 	folder
 		.split("/")
@@ -136,7 +141,7 @@ export const compareLegacyEntries = (a: ChallengeIndexEntry, b: ChallengeIndexEn
 };
 
 const README_MARKDOWN_LINK = /\[([^\]]+)\]\(\.\/([^)]+)\/\)/;
-const README_HTML_LINK = /<a href="\.\/([^"]+)">([^<]*)<\/a>/gi;
+const README_HTML_LINK = /<a href="\.\/([^"]+)">([^<]*)<\/a>(\s+\(\d+ Characters\))?/gi;
 
 const normalizeReadmeLinkPath = (path: string): string =>
 	decodeURIComponent(path).replace(/\/$/, "");
@@ -158,7 +163,10 @@ export const parseExistingReadmeLabels = (readme: string): Map<string, string> =
 		}
 	}
 	for (const match of readme.matchAll(README_HTML_LINK)) {
-		labels.set(normalizeReadmeLinkPath(match[1]), decodeHtmlText(match[2]));
+		labels.set(
+			normalizeReadmeLinkPath(match[1]),
+			`${decodeHtmlText(match[2])}${match[3] ?? ""}`
+		);
 	}
 	return labels;
 };
@@ -263,8 +271,15 @@ export const formatIndexLinkHtml = (entry: ChallengeIndexEntry): string => {
 const formatIndexList = (entries: ChallengeIndexEntry[]): string =>
 	["<ul>", ...entries.map(formatIndexLinkHtml), "</ul>"].join("\n");
 
-export const formatSummaryHtml = (title: string, count: number): string => {
-	const label = `${title} (${count})`;
+export const formatSummaryHtml = (
+	title: string,
+	count: number,
+	battleMetadata?: BattleReadmeMetadata
+): string => {
+	const progress = battleMetadata
+		? `${count}/${battleMetadata.totalChallenges}${battleMetadata.status === "unfinished" ? "+" : ""}`
+		: String(count);
+	const label = `${title} (${progress})`;
 	return `<summary><strong>${label}</strong></summary>`;
 };
 
@@ -308,11 +323,12 @@ export const groupBattleEntriesByGroup = (
 
 const formatNestedBattleGroup = (
 	battleGroup: string,
-	entries: ChallengeIndexEntry[]
+	entries: ChallengeIndexEntry[],
+	battleMetadata?: BattleReadmeMetadata
 ): string =>
 	joinIndexBlock([
 		"<details>",
-		formatSummaryHtml(battleGroup, entries.length),
+		formatSummaryHtml(battleGroup, entries.length, battleMetadata),
 		"",
 		formatIndexList(entries),
 		"</details>",
@@ -332,17 +348,33 @@ const formatFlatTopLevelSection = (
 	]);
 };
 
-const formatBattlesDetailsSection = (entries: ChallengeIndexEntry[]): string | null => {
+const formatBattlesDetailsSection = (
+	entries: ChallengeIndexEntry[],
+	battleMetadataByGroup?: Map<string, BattleReadmeMetadata>
+): string | null => {
 	if (entries.length === 0) {
 		return null;
 	}
 	const groups = groupBattleEntriesByGroup(entries);
 	const nestedItems = groups
-		.map((group) => `<li>\n${formatNestedBattleGroup(group.group, group.entries)}\n</li>`)
+		.map(
+			(group) =>
+				`<li>\n${formatNestedBattleGroup(
+					group.group,
+					group.entries,
+					battleMetadataByGroup?.get(group.group)
+				)}\n</li>`
+		)
 		.join("\n");
+	const hasUnfinishedProgress = groups.some(
+		(group) => battleMetadataByGroup?.get(group.group)?.status === "unfinished"
+	);
 
 	return joinIndexBlock([
 		formatTopLevelHeading("Battles", entries.length),
+		...(hasUnfinishedProgress
+			? ["", "_+ means this battle may receive more targets._"]
+			: []),
 		"",
 		"<ul>",
 		nestedItems,
@@ -382,7 +414,8 @@ const formatDailyTargetsDetailsSection = (entries: ChallengeIndexEntry[]): strin
 
 export const formatGroupedReadmeIndex = (
 	buckets: ChallengeIndexBuckets,
-	existingLabels?: Map<string, string>
+	existingLabels?: Map<string, string>,
+	battleMetadataByGroup?: Map<string, BattleReadmeMetadata>
 ): string => {
 	const withLabels = (entries: ChallengeIndexEntry[]): ChallengeIndexEntry[] =>
 		entries.map((entry) => ({
@@ -391,7 +424,7 @@ export const formatGroupedReadmeIndex = (
 		}));
 
 	const sections = [
-		formatBattlesDetailsSection(withLabels(buckets.battles)),
+		formatBattlesDetailsSection(withLabels(buckets.battles), battleMetadataByGroup),
 		formatDailyTargetsDetailsSection(withLabels(buckets.daily)),
 		formatFlatTopLevelSection("Legacy", withLabels(buckets.legacy)),
 	].filter((section): section is string => section !== null);
@@ -402,8 +435,9 @@ export const formatGroupedReadmeIndex = (
 
 const buildManagedIndexBlock = (
 	buckets: ChallengeIndexBuckets,
-	existingLabels?: Map<string, string>
-): string => formatGroupedReadmeIndex(buckets, existingLabels);
+	existingLabels?: Map<string, string>,
+	battleMetadataByGroup?: Map<string, BattleReadmeMetadata>
+): string => formatGroupedReadmeIndex(buckets, existingLabels, battleMetadataByGroup);
 
 export const injectManagedReadmeSection = (existing: string, indexBlock: string): string => {
 	const trimmed = existing.trimEnd();
@@ -429,6 +463,7 @@ export const buildRootReadmeContent = (options: {
 	existingBlobPaths: Set<string>;
 	challengeFolder: string;
 	challengeTitle: string;
+	battleMetadataByGroup?: Map<string, BattleReadmeMetadata>;
 }): string | null => {
 	if (options.mode === "off") {
 		return null;
@@ -450,14 +485,14 @@ export const buildRootReadmeContent = (options: {
 			"",
 			"_This README is fully managed while “Full” mode is enabled. Use “Managed section” in CssHub settings to keep your own text above the index._",
 			"",
-			buildManagedIndexBlock(buckets, existingLabels),
+			buildManagedIndexBlock(buckets, existingLabels, options.battleMetadataByGroup),
 			"",
 		].join("\n");
 	}
 
 	return injectManagedReadmeSection(
 		options.existingReadme ?? "",
-		buildManagedIndexBlock(buckets, existingLabels)
+		buildManagedIndexBlock(buckets, existingLabels, options.battleMetadataByGroup)
 	);
 };
 

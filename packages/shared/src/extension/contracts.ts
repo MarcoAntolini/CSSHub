@@ -57,6 +57,10 @@ export const repositoryReadmeModeSchema = z.enum(["off", "managed-section", "ful
 
 export type RepositoryReadmeMode = z.infer<typeof repositoryReadmeModeSchema>;
 
+export const battleStatusSchema = z.enum(["finished", "unfinished"]);
+
+export type BattleStatus = z.infer<typeof battleStatusSchema>;
+
 export const extensionSettingsSchema = z.object({
 	threshold: z.number().min(0).max(100),
 	selectedRepoFullName: z.string().nullable(),
@@ -81,8 +85,11 @@ export const submissionPayloadSchema = z
 		challengeId: z.string().min(1),
 		challengeName: z.string().min(1),
 		challengeUrl: z.string().url().optional(),
+		battleId: z.string().min(1).optional(),
 		battleGroup: z.string().min(1).optional(),
 		challengeLabel: z.string().min(1).optional(),
+		battleTotalChallenges: z.number().int().positive().optional(),
+		battleStatus: battleStatusSchema.optional(),
 		dailyDateIso: z
 			.string()
 			.regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -207,6 +214,10 @@ export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
 	}),
 	z.object({
 		action: z.literal("clearActionBadge"),
+	}),
+	z.object({
+		action: z.literal("fetchCssbattleBattleMetadata"),
+		battleId: z.string().min(1),
 	}),
 	z.object({
 		action: z.literal("cssbattleSubmission"),

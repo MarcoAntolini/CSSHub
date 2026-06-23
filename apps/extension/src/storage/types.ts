@@ -5,6 +5,7 @@ import type {
 	SubmissionIngestionResponse,
 	SyncEvent,
 } from "@/shared/contracts";
+import type { CssbattleBattleMetadataCache } from "@/cssbattleBattleMetadata";
 
 export type StoredState = {
 	githubToken: string | null;
@@ -15,4 +16,5 @@ export type StoredState = {
 	lastIngestion: SubmissionIngestionResponse | null;
 	recentEvents: SyncEvent[];
 	lastSubmissionFingerprint: string | null;
+	battleMetadataCache: CssbattleBattleMetadataCache;
 };

@@ -5,6 +5,7 @@ import {
 	type SubmissionPayload,
 } from "@/shared/contracts";
 import type { StoredState } from "@/storage";
+import type { CssbattleBattleMetadataCache } from "@/cssbattleBattleMetadata";
 import { pushSyncEvent } from "./recentEvents";
 import {
 	fingerprintSubmission,
@@ -38,6 +39,7 @@ export type IngestSubmissionOutcome = {
 		| "lastIngestion"
 		| "lastSubmissionFingerprint"
 		| "recentEvents"
+		| "battleMetadataCache"
 	>;
 	feedback: SubmissionFeedback;
 	errorMessage: string | null;
@@ -68,6 +70,35 @@ const toIngestionResponse = (
 		commitUrl: result.commitUrl,
 	});
 
+const updateBattleMetadataCacheFromPayload = (
+	payload: SubmissionPayload,
+	cache: CssbattleBattleMetadataCache
+): CssbattleBattleMetadataCache => {
+	if (
+		payload.challengeMode !== "battle" ||
+		!payload.battleId ||
+		typeof payload.battleTotalChallenges !== "number" ||
+		!Number.isInteger(payload.battleTotalChallenges) ||
+		payload.battleTotalChallenges <= 0 ||
+		(payload.battleStatus !== "finished" && payload.battleStatus !== "unfinished")
+	) {
+		return cache;
+	}
+	const cached = cache[payload.battleId];
+	if (cached?.status === "finished" && cached.totalChallenges !== null) {
+		return cache;
+	}
+	return {
+		...cache,
+		[payload.battleId]: {
+			battleId: payload.battleId,
+			totalChallenges: payload.battleTotalChallenges,
+			status: payload.battleStatus,
+			fetchedAt: new Date().toISOString(),
+		},
+	};
+};
+
 export const buildIngestionStoragePatch = (
 	payload: SubmissionPayload,
 	state: StoredState,
@@ -87,6 +118,10 @@ export const buildIngestionStoragePatch = (
 			? fingerprintSubmission(payload)
 			: state.lastSubmissionFingerprint,
 		recentEvents: result.recentEvents,
+		battleMetadataCache: updateBattleMetadataCacheFromPayload(
+			payload,
+			state.battleMetadataCache
+		),
 	};
 };
 
@@ -183,6 +218,10 @@ export const ingestCssbattleSubmission = async (
 				lastIngestion: responsePayload,
 				lastSubmissionFingerprint: state.lastSubmissionFingerprint,
 				recentEvents,
+				battleMetadataCache: updateBattleMetadataCacheFromPayload(
+					normalizedPayload,
+					state.battleMetadataCache
+				),
 			},
 			feedback: {
 				level: "error",

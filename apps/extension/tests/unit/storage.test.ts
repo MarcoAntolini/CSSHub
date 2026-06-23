@@ -42,6 +42,7 @@ const buildAuthenticatedState = (): StoredState => ({
 	lastIngestion: null,
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
+	battleMetadataCache: {},
 });
 
 describe("extension storage auth persistence", () => {

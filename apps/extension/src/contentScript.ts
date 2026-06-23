@@ -17,6 +17,7 @@ import {
 	parseContentScriptTabMessage,
 	sendBackgroundAction,
 	sendCapturePreviewMessage,
+	sendCssbattleBattleMetadataMessage,
 	sendCssbattleSubmissionMessage,
 } from "./contentScriptMessaging";
 import {
@@ -53,11 +54,17 @@ const buildSubmissionPayloadBase = (
 	context: ReturnType<typeof detectChallengeContext>
 ): Pick<
 	SubmissionPayload,
-	"challengeMode" | "battleGroup" | "challengeLabel" | "dailyDateIso" | "dailyDateLabel"
+	| "challengeMode"
+	| "battleId"
+	| "battleGroup"
+	| "challengeLabel"
+	| "dailyDateIso"
+	| "dailyDateLabel"
 > | null => {
 	if (context.mode === "battle") {
 		return {
 			challengeMode: "battle",
+			battleId: context.battleId,
 			battleGroup: context.battleGroup,
 			challengeLabel: context.challengeLabel,
 		};
@@ -190,9 +197,21 @@ const processSubmission = async (): Promise<void> => {
 					? challengeContext.challengeLabel
 					: getChallengeName();
 		const characterCount = postSubmitStats.characterCount ?? code.length;
+		const battleMetadata =
+			challengeContext.mode === "battle" && challengeContext.battleId
+				? await sendCssbattleBattleMetadataMessage(challengeContext.battleId)
+				: null;
+		const battleTotalChallenges = battleMetadata?.totalChallenges ?? null;
+		const battleStatus = battleMetadata?.status ?? "unfinished";
 
 		const payload: SubmissionPayload = {
 			...modeFields,
+			...(battleTotalChallenges
+				? {
+						battleTotalChallenges,
+						battleStatus,
+					}
+				: {}),
 			challengeId: getChallengeId(),
 			challengeName,
 			challengeUrl: window.location.href,

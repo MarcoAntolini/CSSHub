@@ -18,8 +18,11 @@ const battlePayload = (): SubmissionPayload => ({
 	challengeMode: "battle",
 	challengeId: "254",
 	challengeName: "Unfitting",
+	battleId: "39",
 	battleGroup: "Battle #39",
 	challengeLabel: "#254. Unfitting",
+	battleTotalChallenges: 8,
+	battleStatus: "finished",
 	challengeUrl: "https://cssbattle.dev/play/254",
 	submittedAt: new Date().toISOString(),
 	score: 100,
@@ -105,6 +108,9 @@ describe("buildSubmissionFiles", () => {
 			metadataFile && "content" in metadataFile ? metadataFile.content : "{}"
 		) as Record<string, unknown>;
 		expect(metadata.characterCount).toBe(225);
+		expect(metadata.battleId).toBe("39");
+		expect(metadata.battleTotalChallenges).toBe(8);
+		expect(metadata.battleStatus).toBe("finished");
 	});
 
 	it("falls back to code length when metadata has no character count", async () => {

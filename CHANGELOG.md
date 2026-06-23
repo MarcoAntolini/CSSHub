@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Battle submissions capture optional CSSBattle battle totals and finished/unfinished status for generated README progress
+- Managed root README battle groups display synced progress as `x/y` for finished battles and `x/y+` for unfinished battles
+
 ## [1.2.0] - 2026-06-17
 
 ### Added

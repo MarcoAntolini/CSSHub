@@ -7,6 +7,8 @@ import {
 	classifyChallengeContext,
 	collectBreadcrumbTexts,
 	detectChallengeContext,
+	extractBattleChallengeCountFromDocument,
+	extractBattleStatusFromDocument,
 	parseDailyDateLabelToIso,
 } from "@/contentScriptChallengeContext";
 
@@ -55,6 +57,63 @@ describe("classifyChallengeContext", () => {
 	it("marks unknown modes unsupported", () => {
 		expect(classifyChallengeContext(["Versus", "Room 1"]).mode).toBe("unsupported");
 		expect(classifyChallengeContext([]).mode).toBe("unsupported");
+	});
+});
+
+describe("battle id extraction", () => {
+	it("extracts battle id from live /battle/:id breadcrumb hrefs", () => {
+		document.body.innerHTML = `
+			<nav class="Header-module__breadcrumbs">
+				<a href="/battles">Battles</a>
+				<a href="/battle/39">Battle #39</a>
+				<button>#254. Unfitting</button>
+			</nav>
+		`;
+
+		const ctx = detectChallengeContext(document);
+
+		expect(ctx.mode).toBe("battle");
+		if (ctx.mode === "battle") {
+			expect(ctx.battleId).toBe("39");
+		}
+	});
+
+	it("extracts battle id from legacy /battles/:id breadcrumb hrefs", () => {
+		document.body.innerHTML = `
+			<nav class="Header-module__breadcrumbs">
+				<a href="/battles">Battles</a>
+				<a href="/battles/39">Battle #39</a>
+				<button>#254. Unfitting</button>
+			</nav>
+		`;
+
+		const ctx = detectChallengeContext(document);
+
+		expect(ctx.mode).toBe("battle");
+		if (ctx.mode === "battle") {
+			expect(ctx.battleId).toBe("39");
+		}
+	});
+});
+
+describe("battle metadata extraction from play page DOM", () => {
+	it("counts unique challenge links from an open challenge dropdown", () => {
+		document.body.innerHTML = `
+			<div class="dropdown-menu">
+				<a href="/play/1">#1. Simply Square</a>
+				<a href="/play/2">#2. Carrom</a>
+				<a href="/play/2?from=menu">#2. Carrom duplicate</a>
+				<a href="/battle/1">Battle overview</a>
+			</div>
+		`;
+
+		expect(extractBattleChallengeCountFromDocument(document)).toBe(2);
+	});
+
+	it("detects finished status from the current page DOM", () => {
+		document.body.innerHTML = `<span class="badge">FINISHED</span>`;
+
+		expect(extractBattleStatusFromDocument(document)).toBe("finished");
 	});
 });
 

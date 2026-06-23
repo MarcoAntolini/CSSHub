@@ -1,5 +1,7 @@
 /** Challenge mode and breadcrumb metadata from the CSSBattle play page header. */
 
+import type { BattleStatus } from "./shared/contracts";
+
 export const BREADCRUMB_CONTAINER_SELECTOR = '[class*="breadcrumbs"]';
 
 export type ChallengeMode = "battle" | "daily" | "unsupported";
@@ -7,6 +9,7 @@ export type ChallengeMode = "battle" | "daily" | "unsupported";
 export type SupportedChallengeContext = {
 	mode: "battle";
 	crumbs: string[];
+	battleId?: string;
 	battleGroup: string;
 	challengeLabel: string;
 };
@@ -99,6 +102,59 @@ export const collectBreadcrumbTexts = (root: Document | Element): string[] => {
 	return dedupeAdjacent(lines);
 };
 
+export const extractBattleIdFromHref = (href: string | null): string | null => {
+	const match = href?.match(/\/battles?\/(\d+)(?:[/?#]|$)/i);
+	return match?.[1] ?? null;
+};
+
+export const extractPlayIdFromHref = (href: string | null): string | null => {
+	const match = href?.match(/\/play\/([^/?#]+)(?:[/?#]|$)/i);
+	return match?.[1] ? decodeURIComponent(match[1]) : null;
+};
+
+export const extractBattleChallengeCountFromDocument = (
+	root: Document | Element
+): number | null => {
+	const ids = new Set<string>();
+	const selectors = [
+		".dropdown-menu a[href*='/play/']",
+		"[class*='dropdown-menu'] a[href*='/play/']",
+		"[class*='targets-container'] a[href*='/play/']",
+		"[class*='battle'] a[href*='/play/']",
+	];
+	for (const anchor of Array.from(root.querySelectorAll<HTMLAnchorElement>(selectors.join(",")))) {
+		const playId = extractPlayIdFromHref(anchor.getAttribute("href"));
+		if (playId) {
+			ids.add(playId);
+		}
+	}
+	return ids.size > 0 ? ids.size : null;
+};
+
+export const extractBattleStatusFromDocument = (
+	root: Document | Element
+): BattleStatus | null => {
+	const text =
+		root instanceof Document
+			? (root.body?.textContent ?? root.documentElement?.textContent ?? "")
+			: (root.textContent ?? "");
+	return /\bFINISHED\b/i.test(text) ? "finished" : null;
+};
+
+const collectBattleId = (root: Document | Element): string | null => {
+	const container = root.querySelector(BREADCRUMB_CONTAINER_SELECTOR);
+	if (!container) {
+		return null;
+	}
+	for (const anchor of Array.from(container.querySelectorAll("a[href]"))) {
+		const battleId = extractBattleIdFromHref(anchor.getAttribute("href"));
+		if (battleId) {
+			return battleId;
+		}
+	}
+	return null;
+};
+
 export const classifyChallengeContext = (crumbs: string[]): ChallengeContext => {
 	if (crumbs.length === 0) {
 		return { mode: "unsupported", crumbs };
@@ -133,4 +189,13 @@ export const classifyChallengeContext = (crumbs: string[]): ChallengeContext => 
 
 export const detectChallengeContext = (
 	root: Document | Element = document
-): ChallengeContext => classifyChallengeContext(collectBreadcrumbTexts(root));
+): ChallengeContext => {
+	const context = classifyChallengeContext(collectBreadcrumbTexts(root));
+	if (context.mode !== "battle") {
+		return context;
+	}
+	return {
+		...context,
+		battleId: collectBattleId(root) ?? undefined,
+	};
+};

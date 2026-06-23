@@ -1,4 +1,5 @@
 import {
+	battleStatusSchema,
 	contentScriptTabMessageSchema,
 	submissionIngestionResponseSchema,
 	type ElementDimensions,
@@ -36,6 +37,40 @@ export const sendCapturePreviewMessage = async (
 	}
 	const data = response.data as { croppedDataUrl?: unknown } | undefined;
 	return typeof data?.croppedDataUrl === "string" ? data.croppedDataUrl : null;
+};
+
+export const sendCssbattleBattleMetadataMessage = async (
+	battleId: string
+): Promise<{
+	battleId: string;
+	totalChallenges: number | null;
+	status: "finished" | "unfinished";
+} | null> => {
+	try {
+		const response = await sendMessage({
+			action: "fetchCssbattleBattleMetadata",
+			battleId,
+		});
+		if (!isBackgroundResponse(response) || !response.ok) {
+			return null;
+		}
+		const data = response.data as Record<string, unknown> | null | undefined;
+		const status = battleStatusSchema.safeParse(data?.status);
+		if (!data || typeof data.battleId !== "string" || !status.success) {
+			return null;
+		}
+		const totalChallenges = data.totalChallenges;
+		return {
+			battleId: data.battleId,
+			totalChallenges:
+				typeof totalChallenges === "number" && Number.isInteger(totalChallenges)
+					? totalChallenges
+					: null,
+			status: status.data,
+		};
+	} catch (_error) {
+		return null;
+	}
 };
 
 export const sendCssbattleSubmissionMessage = async (

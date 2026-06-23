@@ -77,6 +77,24 @@ describe("formatSummaryHtml", () => {
 			"<summary><strong>Battle #1 (2)</strong></summary>"
 		);
 	});
+
+	it("formats finished battle progress as synced over total", () => {
+		expect(
+			formatSummaryHtml("Battle #1", 2, {
+				totalChallenges: 4,
+				status: "finished",
+			})
+		).toBe("<summary><strong>Battle #1 (2/4)</strong></summary>");
+	});
+
+	it("formats unfinished battle progress with a plus suffix", () => {
+		expect(
+			formatSummaryHtml("Battle #1", 2, {
+				totalChallenges: 4,
+				status: "unfinished",
+			})
+		).toBe("<summary><strong>Battle #1 (2/4+)</strong></summary>");
+	});
 });
 
 describe("formatIndexLinkHtml", () => {
@@ -254,6 +272,15 @@ describe("parseExistingReadmeLabels", () => {
 
 		expect(parseExistingReadmeLabels(readme)).toEqual(
 			new Map([["Battles/Battle #1/#1. A & B", "#1. A & B (225 Characters)"]])
+		);
+	});
+
+	it("preserves character counts rendered after HTML links", () => {
+		const readme =
+			'<li><a href="./Battles/Battle%20%231/%231.%20Simply%20Square/">#1. Simply Square</a> (55 Characters)</li>';
+
+		expect(parseExistingReadmeLabels(readme)).toEqual(
+			new Map([["Battles/Battle #1/#1. Simply Square", "#1. Simply Square (55 Characters)"]])
 		);
 	});
 
@@ -474,6 +501,58 @@ ${CSSHUB_README_END}`;
 		expect(out).not.toContain("#11. Eye of Sauron (225 Characters)</a>");
 	});
 
+	it("managed: preserves character counts for existing challenge links", () => {
+		const oldBattlePath = encodeRepoPathForMarkdownLink(
+			"Battles/Battle #2023/#236. Missing Slice"
+		);
+		const currentBattlePath = encodeRepoPathForMarkdownLink(
+			"Battles/Battle #2023/#233. Push Button"
+		);
+		const existing = `# My repo
+
+${CSSHUB_README_START}
+## CssHub challenge index
+
+### Battles (1)
+
+<ul>
+<li>
+<details>
+<summary><strong>Battle #2023 (1)</strong></summary>
+
+<ul>
+<li><a href="./${oldBattlePath}/">#236. Missing Slice</a> (212 Characters)</li>
+</ul>
+</details>
+</li>
+</ul>
+
+${CSSHUB_README_END}`;
+
+		const out = buildRootReadmeContent({
+			mode: "managed-section",
+			existingReadme: existing,
+			existingBlobPaths: new Set([
+				"Battles/Battle #2023/#236. Missing Slice/submission.json",
+			]),
+			challengeFolder: "Battles/Battle #2023/#233. Push Button",
+			challengeTitle: "#233. Push Button (236 Characters)",
+			battleMetadataByGroup: new Map([
+				[
+					"Battle #2023",
+					{
+						totalChallenges: 124,
+						status: "unfinished",
+					},
+				],
+			]),
+		});
+
+		expect(out).toContain("#236. Missing Slice</a> (212 Characters)");
+		expect(out).toContain("#233. Push Button</a> (236 Characters)");
+		expect(out).toContain("<strong>Battle #2023 (2/124+)</strong>");
+	});
+
 	it("managed: nests multiple battles under separate Battle # sections", () => {
 
 		const out = buildRootReadmeContent({
@@ -506,6 +585,50 @@ ${CSSHUB_README_END}`;
 
 		expect(out).toContain('<a href="./Battles/Battle%20%2339/%23254.%20Unfitting/">#254. Unfitting</a>');
 
+	});
+
+	it("managed: includes battle progress and plus legend for unfinished battles", () => {
+		const out = buildRootReadmeContent({
+			mode: "managed-section",
+			existingReadme: "",
+			existingBlobPaths: new Set(["Battles/Battle #39/#254. Unfitting/submission.json"]),
+			challengeFolder: "Battles/Battle #39/#255. Next",
+			challengeTitle: "#255. Next",
+			battleMetadataByGroup: new Map([
+				[
+					"Battle #39",
+					{
+						totalChallenges: 8,
+						status: "unfinished",
+					},
+				],
+			]),
+		});
+
+		expect(out).toContain("<strong>Battle #39 (2/8+)</strong>");
+		expect(out).toContain("+ means this battle may receive more targets.");
+	});
+
+	it("managed: omits the plus legend for finished battle progress", () => {
+		const out = buildRootReadmeContent({
+			mode: "managed-section",
+			existingReadme: "",
+			existingBlobPaths: new Set(["Battles/Battle #39/#254. Unfitting/submission.json"]),
+			challengeFolder: "Battles/Battle #39/#255. Next",
+			challengeTitle: "#255. Next",
+			battleMetadataByGroup: new Map([
+				[
+					"Battle #39",
+					{
+						totalChallenges: 8,
+						status: "finished",
+					},
+				],
+			]),
+		});
+
+		expect(out).toContain("<strong>Battle #39 (2/8)</strong>");
+		expect(out).not.toContain("+ means this battle may receive more targets.");
 	});
 
 

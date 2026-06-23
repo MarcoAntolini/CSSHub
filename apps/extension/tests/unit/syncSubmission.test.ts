@@ -44,6 +44,7 @@ const baseState = (overrides: Partial<StoredState> = {}): StoredState => ({
 	lastIngestion: null,
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
+	battleMetadataCache: {},
 	...overrides,
 });
 
@@ -208,6 +209,60 @@ describe("processCssbattleSubmission", () => {
 				expect.objectContaining({
 					path: "README.md",
 					content: expect.stringContaining("#42. Carrom</a> (225 Characters)"),
+				}),
+			])
+		);
+	});
+
+	it("uses existing battle metadata when formatting README battle progress", async () => {
+		const deps = noopDeps();
+		deps.listBranchBlobPaths.mockResolvedValue(
+			new Set([
+				"Battles/Battle #1/#41. Prior/submission.json",
+				"Battles/Battle #1/#42. Carrom/submission.json",
+			])
+		);
+		deps.fetchRepoUtf8File.mockImplementation(
+			async (
+				_token: string,
+				_repoFullName: string,
+				_branch: string,
+				path: string
+			): Promise<string | null> => {
+				if (path === "README.md") {
+					return null;
+				}
+				if (path === "Battles/Battle #1/#41. Prior/submission.json") {
+					return JSON.stringify({
+						battleGroup: "Battle #1",
+						battleTotalChallenges: 4,
+						battleStatus: "unfinished",
+					});
+				}
+				return null;
+			}
+		);
+
+		await processCssbattleSubmission(
+			basePayload(),
+			baseState({
+				settings: {
+					...baseState().settings,
+					repositoryReadmeMode: "managed-section",
+				},
+			}),
+			deps
+		);
+
+		expect(deps.commitFilesToRepo).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.any(String),
+			expect.any(String),
+			expect.any(String),
+			expect.arrayContaining([
+				expect.objectContaining({
+					path: "README.md",
+					content: expect.stringContaining("Battle #1 (2/4+)"),
 				}),
 			])
 		);

@@ -4,6 +4,7 @@ import {
 	syncEventSchema,
 	type AuthStatus,
 } from "./shared/contracts";
+import type { CssbattleBattleMetadataCache } from "./cssbattleBattleMetadata";
 import {
 	parseAuthFromLocal,
 	reconcileAuthWithSession,
@@ -31,7 +32,40 @@ const buildDefaultState = (sessionToken: string | null): StoredState => ({
 	lastIngestion: null,
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
+	battleMetadataCache: {},
 });
+
+const parseBattleMetadataCache = (value: unknown): CssbattleBattleMetadataCache => {
+	if (!value || typeof value !== "object" || Array.isArray(value)) {
+		return {};
+	}
+	const cache: CssbattleBattleMetadataCache = {};
+	for (const [battleId, metadata] of Object.entries(value)) {
+		if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+			continue;
+		}
+		const record = metadata as Record<string, unknown>;
+		const totalChallenges = record.totalChallenges;
+		const status = record.status;
+		const fetchedAt = record.fetchedAt;
+		if (
+			typeof record.battleId !== "string" ||
+			(totalChallenges !== null &&
+				!(typeof totalChallenges === "number" && Number.isInteger(totalChallenges))) ||
+			(status !== "finished" && status !== "unfinished") ||
+			typeof fetchedAt !== "string"
+		) {
+			continue;
+		}
+		cache[battleId] = {
+			battleId: record.battleId,
+			totalChallenges,
+			status,
+			fetchedAt,
+		};
+	}
+	return cache;
+};
 
 export const getStoredState = async (): Promise<StoredState> => {
 	const { local: state, sessionToken } = await readPersistedState();
@@ -64,6 +98,7 @@ export const getStoredState = async (): Promise<StoredState> => {
 			typeof state.lastSubmissionFingerprint === "string"
 				? state.lastSubmissionFingerprint
 				: null,
+		battleMetadataCache: parseBattleMetadataCache(state.battleMetadataCache),
 	};
 
 	if (!hasSessionToken && authFromLocal.isAuthenticated) {

@@ -1,9 +1,13 @@
 import type { SubmissionPayload, SyncEvent, SyncIngestionEventCode } from "@/shared/contracts";
-import { buildRootReadmeContent } from "@/rootReadme";
+import {
+	buildRootReadmeContent,
+	extractBattleGroupFromFolder,
+	type BattleReadmeMetadata,
+} from "@/rootReadme";
 import type { CommitFile, CommitResult, SavedSubmissionMetrics } from "@/githubClient";
 import type { StoredState } from "@/storage";
 import { normalizeSubmissionCharacterCount } from "./characterCount";
-import { challengeIdentityKey } from "./challengeModel";
+import { challengeIdentityKey, folderFromSubmissionJsonPath } from "./challengeModel";
 import { pushSyncEvent } from "./recentEvents";
 
 export const DUPLICATE_WINDOW_MS = 45 * 1000;
@@ -123,6 +127,102 @@ const formatChallengeTitleWithCharacterCount = (
 	characterCount: number | null
 ): string => (characterCount === null ? title : `${title} (${characterCount} Characters)`);
 
+const parseBattleReadmeMetadata = (content: string | null): {
+	group: string;
+	metadata: BattleReadmeMetadata;
+} | null => {
+	if (!content) {
+		return null;
+	}
+	try {
+		const parsed = JSON.parse(content) as Record<string, unknown>;
+		const group = parsed.battleGroup;
+		const totalChallenges = parsed.battleTotalChallenges;
+		const status = parsed.battleStatus;
+		if (
+			typeof group !== "string" ||
+			typeof totalChallenges !== "number" ||
+			!Number.isInteger(totalChallenges) ||
+			totalChallenges <= 0 ||
+			(status !== "finished" && status !== "unfinished")
+		) {
+			return null;
+		}
+		return {
+			group,
+			metadata: {
+				totalChallenges,
+				status,
+			},
+		};
+	} catch (_error) {
+		return null;
+	}
+};
+
+const collectCurrentBattleReadmeMetadata = (
+	payload: SubmissionPayload
+): { group: string; metadata: BattleReadmeMetadata } | null => {
+	if (
+		payload.challengeMode !== "battle" ||
+		!payload.battleGroup ||
+		typeof payload.battleTotalChallenges !== "number" ||
+		!Number.isInteger(payload.battleTotalChallenges) ||
+		payload.battleTotalChallenges <= 0 ||
+		(payload.battleStatus !== "finished" && payload.battleStatus !== "unfinished")
+	) {
+		return null;
+	}
+	return {
+		group: payload.battleGroup,
+		metadata: {
+			totalChallenges: payload.battleTotalChallenges,
+			status: payload.battleStatus,
+		},
+	};
+};
+
+const collectBattleMetadataPathsByGroup = (
+	paths: Iterable<string>
+): Map<string, string> => {
+	const byGroup = new Map<string, string>();
+	for (const path of paths) {
+		const parsed = folderFromSubmissionJsonPath(path);
+		if (parsed?.kind !== "battle") {
+			continue;
+		}
+		const group = extractBattleGroupFromFolder(parsed.folder);
+		if (group && !byGroup.has(group)) {
+			byGroup.set(group, path);
+		}
+	}
+	return byGroup;
+};
+
+const fetchBattleReadmeMetadataByGroup = async (
+	token: string,
+	repoFullName: string,
+	branch: string,
+	paths: Iterable<string>,
+	fetchRepoUtf8File: SyncSubmissionDeps["fetchRepoUtf8File"]
+): Promise<Map<string, BattleReadmeMetadata>> => {
+	const metadata = new Map<string, BattleReadmeMetadata>();
+	const byGroup = collectBattleMetadataPathsByGroup(paths);
+	await Promise.all(
+		[...byGroup.entries()].map(async ([group, path]) => {
+			const parsed = parseBattleReadmeMetadata(
+				await fetchRepoUtf8File(token, repoFullName, branch, path)
+			);
+			if (parsed) {
+				metadata.set(parsed.group, parsed.metadata);
+				return;
+			}
+			metadata.delete(group);
+		})
+	);
+	return metadata;
+};
+
 const notImprovedReasonMessage = (
 	current: SavedSubmissionMetrics,
 	previous: SavedSubmissionMetrics
@@ -224,6 +324,20 @@ export const processCssbattleSubmission = async (
 								"README.md"
 							),
 						]);
+						const battleMetadataByGroup = await fetchBattleReadmeMetadataByGroup(
+							state.githubToken,
+							repoFullName,
+							branch,
+							existingPaths,
+							deps.fetchRepoUtf8File
+						);
+						const currentBattleMetadata = collectCurrentBattleReadmeMetadata(payload);
+						if (currentBattleMetadata) {
+							battleMetadataByGroup.set(
+								currentBattleMetadata.group,
+								currentBattleMetadata.metadata
+							);
+						}
 						const rootReadme = buildRootReadmeContent({
 							mode: readmeMode,
 							existingReadme,
@@ -233,6 +347,7 @@ export const processCssbattleSubmission = async (
 								deps.formatChallengeTitle(payload),
 								payload.characterCount
 							),
+							battleMetadataByGroup,
 						});
 						if (rootReadme !== null) {
 							files.push({
