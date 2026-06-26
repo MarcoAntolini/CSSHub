@@ -68,8 +68,8 @@ export const handleCapturePreview: Handler<"capturePreview"> = async (
 				const croppedDataUrl = await captureElement(data.dimensions, tab.id);
 				sendResponse({ ok: true, data: { croppedDataUrl } });
 				return;
-			} catch (screenshotError) {
-				console.warn("[CssHub] Tab screenshot capture failed, trying iframe frames", screenshotError);
+			} catch (_screenshotError) {
+				// Fall through to iframe-frame capture below.
 			}
 		}
 

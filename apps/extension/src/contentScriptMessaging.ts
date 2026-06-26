@@ -30,9 +30,6 @@ export const sendCapturePreviewMessage = async (
 		...(dimensions ? { dimensions } : {}),
 	});
 	if (!isBackgroundResponse(response) || !response.ok) {
-		if (isBackgroundResponse(response) && !response.ok) {
-			console.warn("[CssHub] Background preview capture failed:", response.error);
-		}
 		return null;
 	}
 	const data = response.data as { croppedDataUrl?: unknown } | undefined;

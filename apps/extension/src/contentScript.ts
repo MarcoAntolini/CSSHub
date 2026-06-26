@@ -145,15 +145,9 @@ const capturePreviewImage = async (): Promise<string | null> => {
 		},
 		captureFromIframe: capturePreviewFromIframeLocally,
 		isExtensionContextInvalidated,
-		onBackgroundFailure: (error) => {
-			console.warn("[CssHub] Tab screenshot preview capture failed", error);
-		},
-		onIframeFailure: (error) => {
-			console.warn("[CssHub] Preview iframe capture attempt failed", error);
-		},
-		onExhausted: () => {
-			console.warn("[CssHub] Preview capture failed after retries; continuing without image");
-		},
+		onBackgroundFailure: () => {},
+		onIframeFailure: () => {},
+		onExhausted: () => {},
 	});
 };
 
