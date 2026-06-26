@@ -9,8 +9,12 @@ export type { StatusTone };
 
 export const statusTextFromTone = (
 	tone: StatusTone,
-	neutralLabel = "info"
+	neutralLabel = "info",
+	eventCode?: string
 ): string => {
+	if (eventCode === "CAPTURE_FAILED") {
+		return "capture failed";
+	}
 	if (tone === "success") return "committed";
 	if (tone === "error") return "failed";
 	if (tone === "warn") return "skipped";
@@ -41,4 +45,11 @@ export const getSyncEventTone = (event: SyncEvent): StatusTone => {
 		return "warn";
 	}
 	return "neutral";
+};
+
+export const getEventBadgeLabel = (event: SyncEvent): string => {
+	if (event.code) {
+		return statusTextFromTone(getSyncEventTone(event), "info", event.code);
+	}
+	return event.level === "info" ? "info" : event.level;
 };

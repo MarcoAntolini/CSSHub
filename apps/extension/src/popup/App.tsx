@@ -36,7 +36,8 @@ export const App = (): ReactElement => {
 		);
 	}
 
-	const { auth, settings, lastSubmission, lastIngestion, submissionProcessing } = data;
+	const { auth, settings, lastSubmission, lastIngestion, lastCaptureFailure, submissionProcessing } =
+		data;
 
 	return (
 		<main className="popup popup-shell">
@@ -66,6 +67,7 @@ export const App = (): ReactElement => {
 					<LastSubmissionSection
 						lastSubmission={lastSubmission}
 						lastIngestion={lastIngestion}
+						lastCaptureFailure={lastCaptureFailure}
 						submissionProcessing={submissionProcessing}
 					/>
 					{SHOW_STATUS_DEMO ? (

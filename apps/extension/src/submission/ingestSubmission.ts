@@ -40,6 +40,7 @@ export type IngestSubmissionOutcome = {
 		| "lastSubmissionFingerprint"
 		| "recentEvents"
 		| "battleMetadataCache"
+		| "lastCaptureFailure"
 	>;
 	feedback: SubmissionFeedback;
 	errorMessage: string | null;
@@ -122,6 +123,7 @@ export const buildIngestionStoragePatch = (
 			payload,
 			state.battleMetadataCache
 		),
+		lastCaptureFailure: null,
 	};
 };
 
@@ -222,6 +224,7 @@ export const ingestCssbattleSubmission = async (
 					normalizedPayload,
 					state.battleMetadataCache
 				),
+				lastCaptureFailure: null,
 			},
 			feedback: {
 				level: "error",

@@ -51,6 +51,7 @@ export const usePopupState = (): {
 				lastSubmissionAccepted: parsed.lastSubmissionAccepted,
 				lastIngestion: parsed.lastIngestion,
 				submissionProcessing: parsed.submissionProcessing,
+				lastCaptureFailure: parsed.lastCaptureFailure,
 			});
 			setThresholdDraft(parsed.settings.threshold);
 		} catch (error) {

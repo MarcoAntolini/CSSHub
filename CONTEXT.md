@@ -60,6 +60,10 @@ _Avoid_: Sync, save
 A Submission that CssHub evaluated but intentionally did not commit.
 _Avoid_: Failed submission, rejected submission
 
+**Failed Capture Attempt**:
+When CssHub cannot read required CSSBattle page data during submit handling, so no Submission is created and Sync never starts. The user should submit again after the page finishes updating or after disabling extensions that modify the page.
+_Avoid_: Skipped Submission, sync failure, incomplete submission
+
 **Duplicate Submission**:
 A Submission that matches a very recent prior Submission closely enough that CssHub treats it as the same attempt.
 _Avoid_: Repeat sync, resubmission

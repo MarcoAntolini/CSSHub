@@ -46,6 +46,7 @@ const baseState = (overrides: Partial<StoredState> = {}): StoredState => ({
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
 	battleMetadataCache: {},
+	lastCaptureFailure: null,
 	...overrides,
 });
 
@@ -157,6 +158,24 @@ describe("buildIngestionStoragePatch", () => {
 		expect(patch.lastSubmission).toEqual(payload);
 		expect(patch.lastSubmissionFingerprint).toBeTruthy();
 		expect(patch.lastSubmissionAccepted).toBe(true);
+		expect(patch.lastCaptureFailure).toBeNull();
+	});
+
+	it("clears lastCaptureFailure on ingest", () => {
+		const patch = buildIngestionStoragePatch(
+			basePayload(),
+			baseState({
+				lastCaptureFailure: {
+					timestamp: new Date().toISOString(),
+					issueIds: ["preview-image"],
+					reason: "Could not capture submission: missing preview image",
+					code: "CAPTURE_FAILED",
+				},
+			}),
+			syncResult()
+		);
+
+		expect(patch.lastCaptureFailure).toBeNull();
 	});
 
 	it("stores battle metadata from payload in the cache", () => {

@@ -27,6 +27,7 @@ export const handleGetExtensionState: Handler<"getExtensionState"> = async (
 		lastIngestion: state.lastIngestion,
 		submissionProcessing: state.submissionProcessing,
 		recentEvents: state.recentEvents,
+		lastCaptureFailure: state.lastCaptureFailure,
 	});
 
 	sendResponse({ ok: true, data: payload });

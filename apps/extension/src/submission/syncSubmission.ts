@@ -360,6 +360,8 @@ export const processCssbattleSubmission = async (
 			eventCode = "SYNC_REPO_REQUIRED";
 			recentEvents = pushSyncEvent(recentEvents, "warn", reason, null, eventCode);
 		} else if (!payload.resultImageDataUrl) {
+			// Defense-in-depth: the content-script capture gate should require preview
+			// before Sync starts; this branch covers older versions and future callers.
 			reason =
 				"Submission accepted but preview capture was unavailable. Retry from the CSSBattle tab so CssHub can include user.png.";
 			eventCode = "SYNC_SKIPPED_PREVIEW_UNAVAILABLE";

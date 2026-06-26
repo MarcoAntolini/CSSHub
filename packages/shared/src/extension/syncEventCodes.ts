@@ -15,6 +15,7 @@ export type SyncIngestionEventCode = z.infer<typeof syncIngestionEventCodeSchema
 
 export const backgroundEventCodeSchema = z.enum([
 	...syncIngestionEventCodeSchema.options,
+	"CAPTURE_FAILED",
 	"AUTH_STATE_MISMATCH",
 	"AUTH_SESSION_EXPIRED",
 	"AUTH_REDIRECT_INVALID",
@@ -35,6 +36,7 @@ export type BackgroundEventCode = z.infer<typeof backgroundEventCodeSchema>;
 export type StatusTone = "success" | "warn" | "error" | "neutral";
 
 const WARN_CODES = new Set<string>([
+	"CAPTURE_FAILED",
 	"SYNC_SKIPPED_NOT_IMPROVED",
 	"SYNC_SKIPPED_THRESHOLD",
 	"SYNC_SKIPPED_INVALID_SCORE",

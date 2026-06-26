@@ -1,5 +1,6 @@
 import type {
 	AuthStatus,
+	CaptureFailure,
 	ExtensionSettings,
 	PopupToBackgroundMessage,
 	SubmissionIngestionResponse,
@@ -18,4 +19,5 @@ export type StoredState = {
 	recentEvents: SyncEvent[];
 	lastSubmissionFingerprint: string | null;
 	battleMetadataCache: CssbattleBattleMetadataCache;
+	lastCaptureFailure: CaptureFailure | null;
 };

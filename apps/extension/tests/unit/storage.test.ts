@@ -44,6 +44,7 @@ const buildAuthenticatedState = (): StoredState => ({
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
 	battleMetadataCache: {},
+	lastCaptureFailure: null,
 });
 
 describe("extension storage auth persistence", () => {
@@ -105,5 +106,22 @@ describe("extension storage auth persistence", () => {
 		const state = await getStoredState();
 
 		expect(state.submissionProcessing).toBe(false);
+		expect(state.lastCaptureFailure).toBeNull();
+	});
+
+	it("parses persisted lastCaptureFailure", async () => {
+		await saveStoredState({
+			...buildAuthenticatedState(),
+			lastCaptureFailure: {
+				timestamp: "2026-06-23T17:00:00.000Z",
+				challengeId: "42",
+				issueIds: ["preview-image"],
+				reason: "Could not capture submission: missing preview image",
+				code: "CAPTURE_FAILED",
+			},
+		});
+
+		const state = await getStoredState();
+		expect(state.lastCaptureFailure?.challengeId).toBe("42");
 	});
 });

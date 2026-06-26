@@ -3,6 +3,15 @@ import {
 	resolveBattleMetadataFromSources,
 } from "./contentScriptChallengeContext";
 import {
+	detectCaptureIssues,
+	formatCaptureFailureReason,
+	type CaptureIssueId,
+} from "./contentScriptCaptureIssues";
+import {
+	hideCaptureFailurePrompt,
+	showCaptureFailurePrompt,
+} from "./contentScriptCapturePrompt";
+import {
 	CLICKABLE_SELECTOR,
 	addCssBattleSubmitShortcutListener,
 	asImageDataUrlOrNull,
@@ -19,6 +28,7 @@ import {
 import {
 	parseContentScriptTabMessage,
 	sendBackgroundAction,
+	sendCaptureAttemptFailedMessage,
 	sendCapturePreviewMessage,
 	sendCssbattleBattleMetadataMessage,
 	sendCssbattleSubmissionMessage,
@@ -158,6 +168,28 @@ const clearSubmissionBadge = (): void => {
 	void sendBackgroundAction("clearActionBadge");
 };
 
+const reportCaptureFailure = async (params: {
+	issueIds: CaptureIssueId[];
+	challengeId?: string;
+	challengeName?: string;
+	challengeUrl?: string;
+	unsupportedContext?: boolean;
+}): Promise<boolean> => {
+	const reason = formatCaptureFailureReason(params.issueIds, {
+		unsupportedContext: params.unsupportedContext,
+	});
+	showCaptureFailurePrompt(params.issueIds, {
+		unsupportedContext: params.unsupportedContext,
+	});
+	return sendCaptureAttemptFailedMessage({
+		issueIds: params.issueIds,
+		reason,
+		challengeId: params.challengeId,
+		challengeName: params.challengeName,
+		challengeUrl: params.challengeUrl,
+	});
+};
+
 const processSubmission = async (): Promise<void> => {
 	if (isProcessingSubmission) {
 		console.info(
@@ -167,14 +199,18 @@ const processSubmission = async (): Promise<void> => {
 	}
 	isProcessingSubmission = true;
 	let sentToBackground = false;
+	let captureFailureReported = false;
 
+	hideCaptureFailurePrompt();
 	notifySubmissionProcessingStarted();
 
 	try {
 		const challengeContext = detectChallengeContext(document);
 		if (challengeContext.mode === "unsupported") {
-			console.info("[CssHub] Skipped: unsupported challenge mode", {
-				crumbs: challengeContext.crumbs,
+			captureFailureReported = await reportCaptureFailure({
+				issueIds: ["challenge-metadata"],
+				challengeUrl: window.location.href,
+				unsupportedContext: true,
 			});
 			return;
 		}
@@ -193,12 +229,34 @@ const processSubmission = async (): Promise<void> => {
 			fetchTargetImagePayload(document, window.location.href, getChallengeId()),
 			codePromise,
 		]);
+		const challengeId = getChallengeId();
 		const challengeName =
 			challengeContext.mode === "daily"
 				? challengeContext.dailyDateLabel
 				: challengeContext.mode === "battle"
 					? challengeContext.challengeLabel
 					: getChallengeName();
+		const captureIssues = detectCaptureIssues({
+			challengeContext,
+			challengeId,
+			challengeName,
+			stats: postSubmitStats,
+			code,
+			targetImage,
+			resultImageDataUrl,
+			documentRoot: document,
+		});
+		if (captureIssues.length > 0) {
+			captureFailureReported = await reportCaptureFailure({
+				issueIds: captureIssues,
+				challengeId,
+				challengeName,
+				challengeUrl: window.location.href,
+				unsupportedContext: false,
+			});
+			return;
+		}
+
 		const characterCount = postSubmitStats.characterCount ?? code.length;
 		const battleMetadata =
 			challengeContext.mode === "battle"
@@ -219,7 +277,7 @@ const processSubmission = async (): Promise<void> => {
 						battleStatus,
 					}
 				: {}),
-			challengeId: getChallengeId(),
+			challengeId,
 			challengeName,
 			challengeUrl: window.location.href,
 			submittedAt: new Date().toISOString(),
@@ -233,6 +291,7 @@ const processSubmission = async (): Promise<void> => {
 
 		const response = await sendCssbattleSubmissionMessage(payload);
 		sentToBackground = true;
+		hideCaptureFailurePrompt();
 		if (!response.ok) {
 			console.warn(
 				`[CssHub] Submission rejected by extension background logic. ${response.error}`
@@ -255,7 +314,7 @@ const processSubmission = async (): Promise<void> => {
 
 		console.error("[CssHub] Submission processing failed unexpectedly", error);
 	} finally {
-		if (!sentToBackground) {
+		if (!sentToBackground && !captureFailureReported) {
 			clearSubmissionBadge();
 		}
 		isProcessingSubmission = false;

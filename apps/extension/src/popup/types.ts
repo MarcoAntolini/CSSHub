@@ -1,5 +1,6 @@
 import type {
 	AuthStatus,
+	CaptureFailure,
 	ExtensionSettings,
 	SubmissionIngestionResponse,
 	SubmissionPayload,
@@ -23,4 +24,5 @@ export type PopupState = {
 	lastSubmissionAccepted: boolean | null;
 	lastIngestion: SubmissionIngestionResponse | null;
 	submissionProcessing: boolean;
+	lastCaptureFailure: CaptureFailure | null;
 };

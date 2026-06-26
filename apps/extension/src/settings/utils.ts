@@ -1,13 +1,9 @@
 import type { SyncEvent } from "@/shared/contracts";
-import { getSyncEventTone, statusTextFromTone } from "@/shared/eventTone";
+import { getEventBadgeLabel as getEventBadgeLabelFromTone } from "@/shared/eventTone";
 import { BRANCH_NAME_PATTERN } from "./constants";
 
-export const getEventBadgeLabel = (event: SyncEvent): string => {
-	if (event.code) {
-		return statusTextFromTone(getSyncEventTone(event));
-	}
-	return event.level === "info" ? "info" : event.level;
-};
+export const getEventBadgeLabel = (event: SyncEvent): string =>
+	getEventBadgeLabelFromTone(event);
 
 export const formatActivityTimestamp = (iso: string): string => {
 	const d = new Date(iso);

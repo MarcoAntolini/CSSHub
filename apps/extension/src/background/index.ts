@@ -32,6 +32,7 @@ import {
 	handleSubmissionProcessingStarted,
 } from "./handlers/badge";
 import { handleFetchCssbattleBattleMetadata } from "./handlers/battleMetadata";
+import { handleCaptureAttemptFailed } from "./handlers/captureFailure";
 import { handleCssbattleSubmission } from "./handlers/submission";
 import {
 	handleClearRecentEvents,
@@ -81,6 +82,7 @@ const actionHandlers: {
 	extractCssbattleEditorCode: handleExtractCssbattleEditorCode,
 	submissionProcessingStarted: handleSubmissionProcessingStarted,
 	clearActionBadge: handleClearActionBadge,
+	captureAttemptFailed: handleCaptureAttemptFailed,
 	fetchCssbattleBattleMetadata: handleFetchCssbattleBattleMetadata,
 	cssbattleSubmission: handleCssbattleSubmission,
 };

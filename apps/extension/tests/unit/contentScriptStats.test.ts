@@ -7,6 +7,7 @@ import {
 	didStatsChange,
 	extractStatsFromDocument,
 	hasDisplayableScore,
+	isScoreUnavailableInText,
 	parseScoreFromText,
 	waitForPostSubmitStats,
 } from "@/contentScriptStats";
@@ -15,6 +16,16 @@ const FIXTURE_PATH = join(
 	dirname(fileURLToPath(import.meta.url)),
 	"../fixtures/cssbattle-play-minimal.html"
 );
+
+const loadFixture = (): void => {
+	const parsed = new DOMParser().parseFromString(
+		readFileSync(FIXTURE_PATH, "utf8"),
+		"text/html"
+	);
+	document.head.innerHTML = parsed.head.innerHTML;
+	document.body.innerHTML = parsed.body.innerHTML;
+	document.title = parsed.title;
+};
 
 describe("parseScoreFromText", () => {
 	it("parses score and match from leaderboard-style text", () => {
@@ -46,15 +57,15 @@ describe("parseScoreFromText", () => {
 	});
 });
 
-const loadFixture = (): void => {
-	const parsed = new DOMParser().parseFromString(
-		readFileSync(FIXTURE_PATH, "utf8"),
-		"text/html"
-	);
-	document.head.innerHTML = parsed.head.innerHTML;
-	document.body.innerHTML = parsed.body.innerHTML;
-	document.title = parsed.title;
-};
+describe("isScoreUnavailableInText", () => {
+	it("treats dash markers as unavailable", () => {
+		expect(isScoreUnavailableInText("- Last score")).toBe(true);
+	});
+
+	it("allows genuine zero scores", () => {
+		expect(isScoreUnavailableInText("Last score 0 0% match")).toBe(false);
+	});
+});
 
 describe("extractStatsFromDocument", () => {
 	beforeEach(() => {

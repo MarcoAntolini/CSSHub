@@ -156,6 +156,18 @@ export const syncEventSchema = z.object({
 
 export type SyncEvent = z.infer<typeof syncEventSchema>;
 
+export const captureFailureSchema = z.object({
+	timestamp: z.string(),
+	challengeId: z.string().optional(),
+	challengeName: z.string().optional(),
+	challengeUrl: z.string().url().optional(),
+	issueIds: z.array(z.string()),
+	reason: z.string(),
+	code: z.literal("CAPTURE_FAILED"),
+});
+
+export type CaptureFailure = z.infer<typeof captureFailureSchema>;
+
 export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
 	captureElementMessageSchema,
 	capturePreviewMessageSchema,
@@ -216,6 +228,14 @@ export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
 		action: z.literal("clearActionBadge"),
 	}),
 	z.object({
+		action: z.literal("captureAttemptFailed"),
+		issueIds: z.array(z.string()),
+		reason: z.string(),
+		challengeId: z.string().optional(),
+		challengeName: z.string().optional(),
+		challengeUrl: z.string().url().optional(),
+	}),
+	z.object({
 		action: z.literal("fetchCssbattleBattleMetadata"),
 		battleId: z.string().min(1),
 	}),
@@ -273,6 +293,7 @@ export const extensionStateResponseSchema = z.object({
 	lastIngestion: submissionIngestionResponseSchema.nullable(),
 	submissionProcessing: z.boolean(),
 	recentEvents: z.array(syncEventSchema),
+	lastCaptureFailure: captureFailureSchema.nullable(),
 });
 
 export type ExtensionStateResponse = z.infer<typeof extensionStateResponseSchema>;

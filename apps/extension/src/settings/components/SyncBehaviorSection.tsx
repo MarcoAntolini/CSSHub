@@ -24,6 +24,12 @@ export const SyncBehaviorSection = (): ReactElement => {
 				Sync runs in the extension background. CssHub never navigates the tab you
 				are playing in.
 			</p>
+			<p className="muted compatibility-note">
+				CssHub reads the CSSBattle page to detect Target details, Score, Solution
+				code, and preview images. Extensions or styles that hide or modify page
+				sections may cause capture to fail or Sync to skip. If something looks
+				wrong, disable page-modifying extensions for CSSBattle and submit again.
+			</p>
 			{syncInfoOpen ? (
 				<div
 					className="readme-info-panel"
@@ -32,7 +38,7 @@ export const SyncBehaviorSection = (): ReactElement => {
 					aria-label="Background sync details"
 				>
 					<p>
-						Most work happens in the extension&apos;s background service—GitHub
+						Most work happens in the extension&apos;s background service — GitHub
 						API calls, image fetches, and commit creation.
 					</p>
 					<p>

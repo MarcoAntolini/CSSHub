@@ -27,7 +27,7 @@ export const ActivityLogSection = ({
 			</button>
 		</div>
 		<p className="muted">
-			Recent sync outcomes. For warnings and errors, the short code under the message
+			Recent CssHub outcomes. For warnings and errors, the short code under the message
 			matches what CssHub uses internally (not a stack trace).
 		</p>
 		{recentEvents.length === 0 ? (

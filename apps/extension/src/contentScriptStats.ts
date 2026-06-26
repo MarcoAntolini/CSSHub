@@ -197,6 +197,61 @@ export const didStatsChange = (
 export const hasDisplayableScore = (stats: SubmissionStats): boolean =>
 	typeof stats.score === "number" && Number.isFinite(stats.score) && stats.score > 0;
 
+/** True when Last score text uses dash placeholders or cannot be parsed. */
+export const isScoreUnavailableInText = (text: string): boolean => {
+	const normalized = text.replace(/\s+/g, " ").trim();
+	if (!LAST_SCORE_LABEL.test(normalized)) {
+		return true;
+	}
+
+	const labelMatches = Array.from(normalized.matchAll(LAST_SCORE_LABEL_GLOBAL));
+	const lastLabelMatch = labelMatches.at(-1);
+	if (!lastLabelMatch) {
+		return true;
+	}
+
+	const beforeLabel = normalized
+		.slice(0, lastLabelMatch.index)
+		.replace(/\{[^}]*\}/g, " ")
+		.trim();
+	if (/[-–—]\s*$/.test(beforeLabel)) {
+		return true;
+	}
+
+	const afterLabel = normalized.slice((lastLabelMatch.index ?? 0) + lastLabelMatch[0].length);
+	const afterSearch = afterLabel.replace(/\{[^}]*\}/g, " ").trim();
+	if (/^[-–—](?:\s|$)/.test(afterSearch)) {
+		return true;
+	}
+
+	return parseScoreFromText(normalized).score === null;
+};
+
+/** True when the DOM shows an unavailable Last score (dash markers or missing parse). */
+export const isScoreUnavailableInDocument = (root: Document | Element = document): boolean => {
+	for (const labelElement of getLastScoreLabelElements(root)) {
+		const statsBox = labelElement.closest(LEADERBOARD_STATS_BOX_SELECTOR);
+		const text =
+			(statsBox ?? labelElement.parentElement)?.textContent?.replace(/\s+/g, " ").trim() ??
+			"";
+		if (text && isScoreUnavailableInText(text)) {
+			return true;
+		}
+	}
+
+	const relevantRoots = Array.from(root.querySelectorAll("section, div, article, main"))
+		.map((node) => node.textContent?.replace(/\s+/g, " ").trim() ?? "")
+		.filter((text) => LAST_SCORE_LABEL.test(text));
+
+	for (const text of relevantRoots) {
+		if (isScoreUnavailableInText(text)) {
+			return true;
+		}
+	}
+
+	return extractStatsFromDocument(root).score === null;
+};
+
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => window.setTimeout(resolve, ms));
 

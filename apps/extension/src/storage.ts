@@ -2,6 +2,7 @@ import {
 	submissionPayloadSchema,
 	submissionIngestionResponseSchema,
 	syncEventSchema,
+	captureFailureSchema,
 	type AuthStatus,
 } from "./shared/contracts";
 import type { CssbattleBattleMetadataCache } from "./cssbattleBattleMetadata";
@@ -34,6 +35,7 @@ const buildDefaultState = (sessionToken: string | null): StoredState => ({
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
 	battleMetadataCache: {},
+	lastCaptureFailure: null,
 });
 
 const parseBattleMetadataCache = (value: unknown): CssbattleBattleMetadataCache => {
@@ -79,6 +81,7 @@ export const getStoredState = async (): Promise<StoredState> => {
 	const lastSubmission = submissionPayloadSchema.safeParse(state.lastSubmission);
 	const lastIngestion = submissionIngestionResponseSchema.safeParse(state.lastIngestion);
 	const recentEvents = syncEventSchema.array().safeParse(state.recentEvents);
+	const lastCaptureFailure = captureFailureSchema.safeParse(state.lastCaptureFailure);
 
 	const hasSessionToken = Boolean(sessionToken);
 	const authFromLocal = parseAuthFromLocal(state.auth);
@@ -104,6 +107,7 @@ export const getStoredState = async (): Promise<StoredState> => {
 				? state.lastSubmissionFingerprint
 				: null,
 		battleMetadataCache: parseBattleMetadataCache(state.battleMetadataCache),
+		lastCaptureFailure: lastCaptureFailure.success ? lastCaptureFailure.data : null,
 	};
 
 	if (!hasSessionToken && authFromLocal.isAuthenticated) {

@@ -114,3 +114,21 @@ export const sendBackgroundAction = async (
 		// Extension context invalidated — badge update is best-effort.
 	}
 };
+
+export const sendCaptureAttemptFailedMessage = async (payload: {
+	issueIds: string[];
+	reason: string;
+	challengeId?: string;
+	challengeName?: string;
+	challengeUrl?: string;
+}): Promise<boolean> => {
+	try {
+		const response = await sendMessage({
+			action: "captureAttemptFailed",
+			...payload,
+		});
+		return isBackgroundResponse(response) && response.ok;
+	} catch (_error) {
+		return false;
+	}
+};

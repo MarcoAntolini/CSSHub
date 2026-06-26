@@ -47,6 +47,7 @@ const baseState = (overrides: Partial<StoredState> = {}): StoredState => ({
 	recentEvents: [],
 	lastSubmissionFingerprint: null,
 	battleMetadataCache: {},
+	lastCaptureFailure: null,
 	...overrides,
 });
 
