@@ -1,3 +1,4 @@
+import { clearActionBadge } from "@/background/feedback";
 import { getStoredState, saveStoredState } from "@/storage";
 import type { Handler } from "./types";
 

@@ -563,9 +563,6 @@ ${CSSHUB_README_END}`;
 		const oldBattlePath = encodeRepoPathForMarkdownLink(
 			"Battles/Battle #2023/#236. Missing Slice"
 		);
-		const currentBattlePath = encodeRepoPathForMarkdownLink(
-			"Battles/Battle #2023/#233. Push Button"
-		);
 		const existing = `# My repo
 
 ${CSSHUB_README_START}
