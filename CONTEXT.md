@@ -80,6 +80,14 @@ _Avoid_: Backup, export
 The user-facing list of recent CssHub outcomes, such as skipped duplicates, accepted submissions, sync failures, and commits.
 _Avoid_: Event stream, debug log
 
+**Page Feedback**:
+Transient in-page UI on the CSSBattle tab that tells the user what happened during submit handling — processing, committed, skipped, failed capture, or sync error.
+_Avoid_: Toast, notification, badge
+
+**Setup Badge**:
+The persistent extension icon indicator shown when GitHub Authentication or a Selected Repository is missing. It is not used for transient submit outcomes.
+_Avoid_: Result badge, sync badge
+
 **GitHub Authentication**:
 The user's authorization for CssHub to access GitHub on their behalf.
 _Avoid_: Login session, token

@@ -3,13 +3,10 @@ import {
 	clearActionBadge,
 	resolveNotificationAction,
 	setSetupActionBadgeState,
-	setActionBadge,
-	setLoadingBadge,
 } from "@/background/feedback";
 
-describe("action badge feedback", () => {
+describe("setup action badge", () => {
 	beforeEach(() => {
-		vi.useFakeTimers();
 		vi.stubGlobal("chrome", {
 			action: {
 				setBadgeBackgroundColor: vi.fn(),
@@ -23,40 +20,15 @@ describe("action badge feedback", () => {
 	});
 
 	afterEach(() => {
-		vi.useRealTimers();
 		vi.unstubAllGlobals();
 		vi.restoreAllMocks();
 	});
 
-	it("shows a blue loading badge without auto-clearing", () => {
-		setLoadingBadge();
-
-		expect(chrome.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
-			color: "#2563eb",
-		});
-		expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: "..." });
-
-		vi.advanceTimersByTime(15_000);
-		expect(chrome.action.setBadgeText).toHaveBeenCalledTimes(1);
-	});
-
-	it("replaces loading with a result badge and clears only the latest timer", () => {
+	it("clears the badge when setup is complete", () => {
 		setSetupActionBadgeState({ hasSelectedRepo: true, isAuthenticated: true });
-		setLoadingBadge();
-		setActionBadge("success", "OK");
-
-		expect(chrome.action.setBadgeText).toHaveBeenLastCalledWith({ text: "OK" });
-
-		vi.advanceTimersByTime(10_000);
-		expect(chrome.action.setBadgeText).toHaveBeenLastCalledWith({ text: "" });
-	});
-
-	it("clears the badge immediately", () => {
-		setSetupActionBadgeState({ hasSelectedRepo: true, isAuthenticated: true });
-		setLoadingBadge();
-		clearActionBadge();
 
 		expect(chrome.action.setBadgeText).toHaveBeenLastCalledWith({ text: "" });
+		expect(chrome.action.setTitle).toHaveBeenLastCalledWith({ title: "CssHub" });
 	});
 
 	it("shows a persistent red sign-in badge while logged out", () => {
@@ -83,34 +55,10 @@ describe("action badge feedback", () => {
 		});
 	});
 
-	it("keeps the logged-out badge instead of showing transient feedback", () => {
+	it("restores setup badge when clearActionBadge is called", () => {
 		setSetupActionBadgeState({ hasSelectedRepo: false, isAuthenticated: false });
-		setActionBadge("error", "ERR");
+		clearActionBadge();
 
-		expect(chrome.action.setBadgeText).toHaveBeenLastCalledWith({ text: "!" });
-
-		vi.advanceTimersByTime(10_000);
-		expect(chrome.action.setBadgeText).toHaveBeenLastCalledWith({ text: "!" });
-	});
-
-	it("keeps the missing-repo badge instead of showing transient feedback", () => {
-		setSetupActionBadgeState({ hasSelectedRepo: false, isAuthenticated: true });
-		setActionBadge("success", "OK");
-
-		expect(chrome.action.setBadgeText).toHaveBeenLastCalledWith({ text: "!" });
-		vi.advanceTimersByTime(10_000);
-		expect(chrome.action.setBadgeText).toHaveBeenLastCalledWith({ text: "!" });
-	});
-
-	it("restores the logged-out badge if setup state changes while a result is visible", () => {
-		setActionBadge("success", "OK");
-
-		expect(chrome.action.setBadgeText).toHaveBeenLastCalledWith({ text: "OK" });
-
-		setSetupActionBadgeState({ hasSelectedRepo: false, isAuthenticated: false });
-
-		expect(chrome.action.setBadgeText).toHaveBeenLastCalledWith({ text: "!" });
-		vi.advanceTimersByTime(10_000);
 		expect(chrome.action.setBadgeText).toHaveBeenLastCalledWith({ text: "!" });
 	});
 });

@@ -4,7 +4,6 @@ import { toUserSafeError } from "./errors";
 import {
 	pushEvent,
 	registerNotificationHandlers,
-	setActionBadge,
 	setSetupActionBadgeState,
 	showBrowserNotification,
 } from "./feedback";
@@ -106,7 +105,6 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
 	void handler(data, sendResponse, _sender).catch((error: unknown) => {
 		const safeError = toUserSafeError(error);
-		setActionBadge("error", "ERR");
 		void getStoredState()
 			.then((state) => {
 				showBrowserNotification(

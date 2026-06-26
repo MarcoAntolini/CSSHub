@@ -2,7 +2,6 @@ import { getStoredState, saveStoredState } from "@/storage";
 import type { CaptureFailure } from "@/shared/contracts";
 import {
 	pushEvent,
-	setActionBadge,
 	showBrowserNotification,
 } from "@/background/feedback";
 import type { Handler } from "./types";
@@ -35,7 +34,6 @@ export const handleCaptureAttemptFailed: Handler<"captureAttemptFailed"> = async
 		),
 	});
 
-	setActionBadge("warn", "FAIL");
 	showBrowserNotification(
 		state.settings.systemNotificationsEnabled,
 		"warn",

@@ -14,8 +14,6 @@ import {
 import { ingestCssbattleSubmission } from "@/submission/ingestSubmission";
 import { toUserSafeError } from "@/background/errors";
 import {
-	setActionBadge,
-	setLoadingBadge,
 	showBrowserNotification,
 } from "@/background/feedback";
 import type { Handler } from "./types";
@@ -48,8 +46,6 @@ export const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 	sendResponse
 ) => {
 	await runSerializedSubmission(async () => {
-		setLoadingBadge();
-
 		const state = await getStoredState();
 		await saveStoredState({
 			...state,
@@ -64,7 +60,6 @@ export const handleCssbattleSubmission: Handler<"cssbattleSubmission"> = async (
 		});
 
 		const { feedback } = outcome;
-		setActionBadge(feedback.level, feedback.badgeText);
 		showBrowserNotification(
 			state.settings.systemNotificationsEnabled,
 			feedback.level,

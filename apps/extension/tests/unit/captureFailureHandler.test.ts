@@ -75,7 +75,7 @@ describe("handleCaptureAttemptFailed", () => {
 		});
 	});
 
-	it("sets FAIL badge, lastCaptureFailure, and appends activity log events", async () => {
+	it("persists lastCaptureFailure and appends activity log events", async () => {
 		await saveStoredState(buildState());
 		const sendResponse = vi.fn();
 
@@ -92,7 +92,6 @@ describe("handleCaptureAttemptFailed", () => {
 		);
 
 		expect(sendResponse).toHaveBeenCalledWith({ ok: true });
-		expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: "FAIL" });
 		expect(chrome.notifications.create).toHaveBeenCalled();
 
 		const state = await getStoredState();

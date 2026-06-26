@@ -1,4 +1,3 @@
-import { clearActionBadge, setLoadingBadge } from "@/background/feedback";
 import { getStoredState, saveStoredState } from "@/storage";
 import type { Handler } from "./types";
 
@@ -10,7 +9,6 @@ export const handleSubmissionProcessingStarted: Handler<
 		...state,
 		submissionProcessing: true,
 	});
-	setLoadingBadge();
 	sendResponse({ ok: true });
 };
 

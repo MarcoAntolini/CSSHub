@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-06-26
+
+### Added
+
+- Incomplete CSSBattle page captures are blocked before Sync and surfaced as **Failed Capture Attempts** with in-page retry guidance, popup last-activity state, and Activity Log entries
+- Transient submit outcomes now show as **Page Feedback** on the CSSBattle tab: processing, synced (with commit link when available), skipped, and sync errors
+- ADRs document capture-before-sync validation, duplicate fingerprinting, hydrated battle metadata, the sync evaluation pipeline, and layered capture/sync checks
+
+### Changed
+
+- Extension action badge is now **setup-only** (missing GitHub auth or Selected Repository); transient submit result badges (`OK`, `FAIL`, `SKIP`, etc.) are removed in favor of Page Feedback
+- Page Feedback auto-hides after about 6 seconds for success and 10 seconds for skipped outcomes; errors and capture failures stay until dismissed or replaced by the next submit
+- Page Feedback UI is refreshed with clearer status styling, a button-like commit link, reduced-motion handling, and a spinner for processing
+- `CONTEXT.md` adds **Failed Capture Attempt**, **Page Feedback**, and **Setup Badge** glossary terms
+
+### Fixed
+
+- Preview capture retries no longer spam `console.warn` on the extensions error page when capture already fails through the normal failure path
+
 ## [1.3.0] - 2026-06-23
 
 ### Added

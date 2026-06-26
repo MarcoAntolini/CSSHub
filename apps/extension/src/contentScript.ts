@@ -8,9 +8,12 @@ import {
 	type CaptureIssueId,
 } from "./contentScriptCaptureIssues";
 import {
-	hideCaptureFailurePrompt,
+	hidePageFeedbackPrompt,
 	showCaptureFailurePrompt,
-} from "./contentScriptCapturePrompt";
+	showProcessingPrompt,
+	showSubmissionErrorPrompt,
+	showSubmissionOutcomePrompt,
+} from "./contentScriptPageFeedback";
 import {
 	CLICKABLE_SELECTOR,
 	addCssBattleSubmitShortcutListener,
@@ -158,7 +161,7 @@ const notifySubmissionProcessingStarted = (): void => {
 	void sendBackgroundAction("submissionProcessingStarted");
 };
 
-const clearSubmissionBadge = (): void => {
+const clearSubmissionProcessingState = (): void => {
 	void sendBackgroundAction("clearActionBadge");
 };
 
@@ -195,7 +198,8 @@ const processSubmission = async (): Promise<void> => {
 	let sentToBackground = false;
 	let captureFailureReported = false;
 
-	hideCaptureFailurePrompt();
+	hidePageFeedbackPrompt();
+	showProcessingPrompt();
 	notifySubmissionProcessingStarted();
 
 	try {
@@ -285,13 +289,14 @@ const processSubmission = async (): Promise<void> => {
 
 		const response = await sendCssbattleSubmissionMessage(payload);
 		sentToBackground = true;
-		hideCaptureFailurePrompt();
 		if (!response.ok) {
+			showSubmissionErrorPrompt(response.error);
 			console.warn(
 				`[CssHub] Submission rejected by extension background logic. ${response.error}`
 			);
 			return;
 		}
+		showSubmissionOutcomePrompt(response.data);
 		const { reason, committed } = response.data;
 		if (committed) {
 			console.info("[CssHub] Submission committed", { reason });
@@ -300,16 +305,21 @@ const processSubmission = async (): Promise<void> => {
 		console.info("[CssHub] Submission skipped", { reason });
 	} catch (error) {
 		if (isExtensionContextInvalidated(error)) {
+			hidePageFeedbackPrompt();
 			console.warn(
 				"[CssHub] Extension was reloaded; reload this CSSBattle tab before submitting again."
 			);
 			return;
 		}
 
+		showSubmissionErrorPrompt(
+			error instanceof Error ? error.message : "Submission processing failed unexpectedly"
+		);
 		console.error("[CssHub] Submission processing failed unexpectedly", error);
 	} finally {
 		if (!sentToBackground && !captureFailureReported) {
-			clearSubmissionBadge();
+			hidePageFeedbackPrompt();
+			clearSubmissionProcessingState();
 		}
 		isProcessingSubmission = false;
 	}

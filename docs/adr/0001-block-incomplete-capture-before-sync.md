@@ -20,8 +20,7 @@ Incomplete DOM capture becomes a **Failed Capture Attempt** before Sync starts. 
 
 Failed Capture Attempts:
 
-- Show an in-page retry prompt on the CSSBattle tab
-- Set a warn-level `FAIL` badge
+- Show **Page Feedback** (in-page retry prompt) on the CSSBattle tab
 - Record `CAPTURE_FAILED` in the Activity Log
 - Persist `lastCaptureFailure` for the popup **Last activity** card
 - Optionally notify when desktop notifications are enabled

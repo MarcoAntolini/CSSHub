@@ -8,7 +8,7 @@ Accepted
 
 After capture succeeds, a Submission enters **Sync**: CssHub evaluates whether it should reach GitHub and, if so, whether it improves what is already on the Selected Repository branch. Users see different product language and UI tones for "accepted but not committed", "skipped below threshold", "kept best result", and "committed".
 
-The pipeline must be ordered so cheap local checks run before GitHub API calls, and so outcome codes map cleanly to Activity Log entries, popup badges, and notifications.
+The pipeline must be ordered so cheap local checks run before GitHub API calls, and so outcome codes map cleanly to Activity Log entries, Page Feedback, popup Last activity, and optional notifications.
 
 ## Decision
 
@@ -43,6 +43,6 @@ Genuine score **0** / match **0** are valid captured values that Sync skips via 
 
 - Event codes in `syncEventCodes.ts` are the stable contract for UI tone mapping (`success` / `warn` / `error`).
 - `ingestSubmission.ts` persists `lastIngestion`, updates duplicate baseline per ADR 0002, and clears `lastCaptureFailure` on any ingest path.
-- Badge mapping: `OK` commit, `BEST` not improved, `DUP` duplicate, `WAIT` accepted-but-blocked, `SKIP` other skips, `ERR` errors.
+- Transient submit outcomes surface as **Page Feedback** on the CSSBattle tab (processing, committed, skipped, error). The extension **Setup Badge** remains only for missing GitHub Authentication or Selected Repository.
 - Pipeline order is regression-tested in `syncSubmission.test.ts` and `ingestSubmission.test.ts`.
 - Related: ADR 0001 (capture boundary), ADR 0002 (duplicate gate), ADR 0005 (preview defense-in-depth).

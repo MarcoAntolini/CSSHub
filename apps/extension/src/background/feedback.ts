@@ -2,7 +2,6 @@ import { openSettingsPage } from "@/openSettingsPage";
 import { MAX_RECENT_EVENTS, pushSyncEvent } from "@/submission/recentEvents";
 
 export const MAX_EVENTS = MAX_RECENT_EVENTS;
-const BADGE_CLEAR_TIMEOUT_MS = 10_000;
 const DEFAULT_ACTION_TITLE = "CssHub";
 const SIGN_IN_ACTION_TITLE = "CssHub: sign in required";
 const SELECT_REPO_ACTION_TITLE = "CssHub: select a repository";
@@ -16,6 +15,11 @@ type NotificationMeta = {
 };
 
 const notificationMeta = new Map<string, NotificationMeta>();
+
+let setupBadgeState = {
+	isAuthenticated: true,
+	hasSelectedRepo: true,
+};
 
 export const resolveNotificationAction = (
 	meta: NotificationMeta | undefined
@@ -58,27 +62,10 @@ export const registerNotificationHandlers = (): void => {
 	});
 };
 
-let badgeClearTimer: ReturnType<typeof setTimeout> | null = null;
-let setupBadgeState = {
-	isAuthenticated: true,
-	hasSelectedRepo: true,
-};
-let hasTransientBadge = false;
+const resolveBadgeBackgroundColor = (level: "error" | "warn"): string =>
+	level === "warn" ? "#b45309" : "#b91c1c";
 
-const resolveBadgeBackgroundColor = (level: FeedbackLevel): string => {
-	if (level === "success") {
-		return "#15803d";
-	}
-	if (level === "warn") {
-		return "#b45309";
-	}
-	if (level === "loading") {
-		return "#2563eb";
-	}
-	return "#b91c1c";
-};
-
-const applyBaseActionBadge = (): void => {
+const applySetupActionBadge = (): void => {
 	if (!setupBadgeState.isAuthenticated) {
 		chrome.action.setBadgeBackgroundColor({ color: resolveBadgeBackgroundColor("error") });
 		chrome.action.setBadgeText({ text: "!" });
@@ -104,60 +91,11 @@ export type SetupActionBadgeState = {
 
 export const setSetupActionBadgeState = (state: SetupActionBadgeState): void => {
 	setupBadgeState = state;
-	const isSetupComplete = state.isAuthenticated && state.hasSelectedRepo;
-	if (!isSetupComplete && hasTransientBadge) {
-		if (badgeClearTimer) {
-			clearTimeout(badgeClearTimer);
-			badgeClearTimer = null;
-		}
-		hasTransientBadge = false;
-		applyBaseActionBadge();
-		return;
-	}
-
-	if (!hasTransientBadge) {
-		applyBaseActionBadge();
-	}
+	applySetupActionBadge();
 };
 
 export const clearActionBadge = (): void => {
-	if (badgeClearTimer) {
-		clearTimeout(badgeClearTimer);
-		badgeClearTimer = null;
-	}
-	hasTransientBadge = false;
-	applyBaseActionBadge();
-};
-
-export const setLoadingBadge = (): void => {
-	setActionBadge("loading", "...");
-};
-
-export const setActionBadge = (level: FeedbackLevel, text: string): void => {
-	if (badgeClearTimer) {
-		clearTimeout(badgeClearTimer);
-		badgeClearTimer = null;
-	}
-
-	if (!setupBadgeState.isAuthenticated || !setupBadgeState.hasSelectedRepo) {
-		hasTransientBadge = false;
-		applyBaseActionBadge();
-		return;
-	}
-
-	hasTransientBadge = true;
-	chrome.action.setBadgeBackgroundColor({ color: resolveBadgeBackgroundColor(level) });
-	chrome.action.setBadgeText({ text });
-
-	if (level === "loading") {
-		return;
-	}
-
-	badgeClearTimer = setTimeout(() => {
-		hasTransientBadge = false;
-		applyBaseActionBadge();
-		badgeClearTimer = null;
-	}, BADGE_CLEAR_TIMEOUT_MS);
+	applySetupActionBadge();
 };
 
 export type BrowserNotificationOptions = {
