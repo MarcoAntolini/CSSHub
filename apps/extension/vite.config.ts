@@ -7,8 +7,13 @@ import react from "@vitejs/plugin-react";
 const DEFAULT_BACKEND_URL = "http://localhost:3000";
 
 type ExtensionManifest = {
+	action?: {
+		default_title?: unknown;
+		[key: string]: unknown;
+	};
 	host_permissions?: string[];
 	key?: string;
+	name?: unknown;
 	[key: string]: unknown;
 };
 
@@ -74,6 +79,32 @@ const getManifestKey = (env: Record<string, string>): string | null => {
 	return compact;
 };
 
+const DEV_EXTENSION_NAME_PREFIX = "[DEV] ";
+
+const applyDevExtensionNamePrefix = (
+	manifest: ExtensionManifest,
+	mode: string
+): void => {
+	if (mode !== "development") {
+		return;
+	}
+
+	if (typeof manifest.name === "string" && !manifest.name.startsWith(DEV_EXTENSION_NAME_PREFIX)) {
+		manifest.name = `${DEV_EXTENSION_NAME_PREFIX}${manifest.name}`;
+	}
+
+	const action = manifest.action;
+	if (
+		action &&
+		typeof action === "object" &&
+		!Array.isArray(action) &&
+		typeof action.default_title === "string" &&
+		!action.default_title.startsWith(DEV_EXTENSION_NAME_PREFIX)
+	) {
+		action.default_title = `${DEV_EXTENSION_NAME_PREFIX}${action.default_title}`;
+	}
+};
+
 const manifestHostPlugin = (
 	mode: string,
 	backendBaseUrl: string,
@@ -92,6 +123,7 @@ const manifestHostPlugin = (
 		if (manifestKey) {
 			manifest.key = manifestKey;
 		}
+		applyDevExtensionNamePrefix(manifest, mode);
 		assertNoLocalhostInProduction(backendBaseUrl, mode);
 		await writeFile(manifestPath, JSON.stringify(manifest, null, "\t"));
 	},

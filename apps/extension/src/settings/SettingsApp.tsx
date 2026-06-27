@@ -205,6 +205,7 @@ export const SettingsApp = (): ReactElement => {
 							onToggleSystemNotifications={(enabled) => {
 								void toggleSystemNotifications(enabled);
 							}}
+							onSaveSettings={saveSettings}
 						/>
 						<SyncBehaviorSection />
 						<ActivityLogSection

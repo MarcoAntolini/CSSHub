@@ -37,6 +37,7 @@ const buildState = (): StoredState => ({
 		selectedBranch: "main",
 		systemNotificationsEnabled: true,
 		repositoryReadmeMode: "managed-section",
+		pageFeedbackPlacement: "bottom-right",
 	},
 	lastSubmission: null,
 	lastSubmissionAccepted: null,

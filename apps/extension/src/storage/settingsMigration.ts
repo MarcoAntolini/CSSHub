@@ -7,6 +7,7 @@ export const defaultSettings = (): ExtensionSettings =>
 		selectedBranch: null,
 		systemNotificationsEnabled: true,
 		repositoryReadmeMode: "managed-section",
+		pageFeedbackPlacement: "bottom-right",
 	});
 
 export const parseStoredSettings = (value: unknown): ExtensionSettings => {

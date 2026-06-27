@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-06-28
+
+### Added
+
+- Page Feedback position preference lets users choose any corner of CSSBattle play pages, with bottom-right remaining the default
+- Bottom-right Page Feedback automatically moves above visible CSSBattle toast notifications and adjusts as the page resizes or toast state changes
+- Development extension builds can inject a stable manifest key and add a `[DEV]` name/title prefix for clearer unpacked-extension testing
+
+### Changed
+
+- Page Feedback now uses enter, update, exit, and placement transition animations while respecting reduced-motion preferences
+- Settings copy clarifies that page-modifying extensions or styles can interfere with CSSBattle capture and sync
+
 ## [1.4.0] - 2026-06-26
 
 ### Added

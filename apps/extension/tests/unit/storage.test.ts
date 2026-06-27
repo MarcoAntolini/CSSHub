@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clearAuthState, getStoredState, saveStoredState, type StoredState } from "@/storage";
 import { STORAGE_KEY, TOKEN_KEY } from "@/storage/authSession";
+import { defaultSettings, parseStoredSettings } from "@/storage/settingsMigration";
 
 type MemoryStorageArea = {
 	data: Record<string, unknown>;
@@ -36,6 +37,7 @@ const buildAuthenticatedState = (): StoredState => ({
 		selectedBranch: "main",
 		systemNotificationsEnabled: true,
 		repositoryReadmeMode: "managed-section",
+		pageFeedbackPlacement: "bottom-right",
 	},
 	lastSubmission: null,
 	lastSubmissionAccepted: null,
@@ -123,5 +125,18 @@ describe("extension storage auth persistence", () => {
 
 		const state = await getStoredState();
 		expect(state.lastCaptureFailure?.challengeId).toBe("42");
+	});
+
+	it("defaults pageFeedbackPlacement for older stored settings", () => {
+		const legacySettings = {
+			threshold: 95,
+			selectedRepoFullName: "MarcoAntolini/CSSHub",
+			selectedBranch: "main",
+			systemNotificationsEnabled: true,
+			repositoryReadmeMode: "managed-section" as const,
+		};
+
+		expect(parseStoredSettings(legacySettings).pageFeedbackPlacement).toBe("bottom-right");
+		expect(defaultSettings().pageFeedbackPlacement).toBe("bottom-right");
 	});
 });

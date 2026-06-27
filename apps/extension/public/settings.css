@@ -689,6 +689,21 @@ body {
 	color: #64748b;
 }
 
+.page-feedback-field {
+	margin-top: 1.25rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid rgba(71, 85, 105, 0.35);
+}
+
+.page-feedback-field .toggle-title {
+	display: block;
+	margin-bottom: 0.35rem;
+}
+
+.page-feedback-select-row {
+	margin-top: 0.65rem;
+}
+
 .switch {
 	position: relative;
 	display: inline-flex;
@@ -774,7 +789,7 @@ body {
 
 .section-title-row {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: space-between;
 	gap: 0.5rem;
 	width: 100%;

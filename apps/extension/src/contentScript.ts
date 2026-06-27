@@ -9,6 +9,7 @@ import {
 } from "./contentScriptCaptureIssues";
 import {
 	hidePageFeedbackPrompt,
+	initPageFeedbackSettings,
 	showCaptureFailurePrompt,
 	showProcessingPrompt,
 	showSubmissionErrorPrompt,
@@ -390,6 +391,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 });
 
 if (window.location.pathname.startsWith("/play/")) {
+	initPageFeedbackSettings();
 	installSubmitListeners();
 	console.info("[CssHub] Auto-capture enabled: submissions are synced on submit.");
 }

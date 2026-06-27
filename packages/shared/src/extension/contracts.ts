@@ -61,12 +61,22 @@ export const battleStatusSchema = z.enum(["finished", "unfinished"]);
 
 export type BattleStatus = z.infer<typeof battleStatusSchema>;
 
+export const pageFeedbackPlacementSchema = z.enum([
+	"top-left",
+	"top-right",
+	"bottom-left",
+	"bottom-right",
+]);
+
+export type PageFeedbackPlacement = z.infer<typeof pageFeedbackPlacementSchema>;
+
 export const extensionSettingsSchema = z.object({
 	threshold: z.number().min(0).max(100),
 	selectedRepoFullName: z.string().nullable(),
 	selectedBranch: z.string().nullable(),
 	systemNotificationsEnabled: z.boolean().default(true),
 	repositoryReadmeMode: repositoryReadmeModeSchema.default("managed-section"),
+	pageFeedbackPlacement: pageFeedbackPlacementSchema.default("bottom-right"),
 });
 
 export type ExtensionSettings = z.infer<typeof extensionSettingsSchema>;

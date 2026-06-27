@@ -38,6 +38,7 @@ const baseState = (overrides: Partial<StoredState> = {}): StoredState => ({
 		selectedBranch: "main",
 		systemNotificationsEnabled: true,
 		repositoryReadmeMode: "off",
+		pageFeedbackPlacement: "bottom-right",
 	},
 	lastSubmission: null,
 	lastSubmissionAccepted: null,

@@ -1,16 +1,31 @@
 import type { ReactElement } from "react";
-import type { ExtensionSettings } from "@/shared/contracts";
+import type { ExtensionSettings, PageFeedbackPlacement } from "@/shared/contracts";
+
+const PAGE_FEEDBACK_PLACEMENTS: readonly {
+	value: PageFeedbackPlacement;
+	label: string;
+}[] = [
+	{ value: "top-left", label: "Top left" },
+	{ value: "top-right", label: "Top right" },
+	{ value: "bottom-left", label: "Bottom left" },
+	{ value: "bottom-right", label: "Bottom right" },
+];
+
+const isPageFeedbackPlacement = (value: string): value is PageFeedbackPlacement =>
+	PAGE_FEEDBACK_PLACEMENTS.some((option) => option.value === value);
 
 type PreferencesSectionProps = {
 	settings: ExtensionSettings;
 	busy: boolean;
 	onToggleSystemNotifications: (enabled: boolean) => void;
+	onSaveSettings: (settings: ExtensionSettings) => void;
 };
 
 export const PreferencesSection = ({
 	settings,
 	busy,
 	onToggleSystemNotifications,
+	onSaveSettings,
 }: PreferencesSectionProps): ReactElement => (
 	<section className="settings-section">
 		<h2>Notifications</h2>
@@ -38,6 +53,37 @@ export const PreferencesSection = ({
 				/>
 				<span className="switch-slider" />
 			</label>
+		</div>
+		<div className="page-feedback-field">
+			<label className="toggle-title" htmlFor="page-feedback-placement">
+				Page Feedback position
+			</label>
+			<p className="toggle-caption">
+				Where CssHub shows submit outcomes on the CSSBattle tab.
+			</p>
+			<div className="row row-tight page-feedback-select-row">
+				<select
+					id="page-feedback-placement"
+					value={settings.pageFeedbackPlacement ?? "bottom-right"}
+					disabled={busy}
+					onChange={(e) => {
+						const value = e.target.value;
+						if (isPageFeedbackPlacement(value)) {
+							onSaveSettings({ ...settings, pageFeedbackPlacement: value });
+						}
+					}}
+				>
+					{PAGE_FEEDBACK_PLACEMENTS.map((option) => (
+						<option key={option.value} value={option.value}>
+							{option.label}
+						</option>
+					))}
+				</select>
+			</div>
+			<p className="hint">
+				Bottom right automatically moves above CSSBattle&apos;s own feedback when
+				both are visible.
+			</p>
 		</div>
 	</section>
 );
