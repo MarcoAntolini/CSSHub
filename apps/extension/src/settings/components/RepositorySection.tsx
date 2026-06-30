@@ -50,8 +50,7 @@ export const RepositorySection = ({
 	const branchUrl = repoUrl ? `${repoUrl}/tree/${branchPath}` : null;
 
 	return (
-		<section className="settings-section">
-			<h2>Repository</h2>
+		<>
 			{settings.selectedRepoFullName ? (
 				<>
 					<div className="repo-panel">
@@ -183,17 +182,17 @@ export const RepositorySection = ({
 										)}
 									</select>
 								</div>
+								<div className="branch-create-action">
+									<button
+										type="button"
+										className="btn btn-primary branch-create-submit"
+										onClick={onConfirmCreateBranch}
+										disabled={busy || branchesLoading || branches.length === 0}
+									>
+										Create branch
+									</button>
+								</div>
 							</div>
-						</div>
-						<div className="branch-workspace-foot">
-							<button
-								type="button"
-								className="btn btn-primary branch-create-submit"
-								onClick={onConfirmCreateBranch}
-								disabled={busy || branchesLoading || branches.length === 0}
-							>
-								Create branch
-							</button>
 						</div>
 					</div>
 					<div className="repo-readme-card">
@@ -292,6 +291,6 @@ export const RepositorySection = ({
 				</div>
 			</>
 		)}
-		</section>
+		</>
 	);
 };

@@ -231,3 +231,6 @@ export const detectChallengeContext = (
 		battleId: collectBattleId(root) ?? undefined,
 	};
 };
+
+export const isSupportedTargetRoute = (root: Document | Element = document): boolean =>
+	detectChallengeContext(root).mode !== "unsupported";

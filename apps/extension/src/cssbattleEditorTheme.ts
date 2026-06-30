@@ -69,6 +69,27 @@ const cssbattleHighlightTokenStyles = `
 }
 `;
 
+export const cssbattleSyntaxHighlightStyles = cssbattleHighlightTokenStyles;
+
+/** Code block area inside the format preview panel. */
+export const cssbattlePreviewCodeStyles = `
+.csshub-formatting-preview-code {
+	margin: 0;
+	padding: 14px;
+	overflow: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+	font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	color: ${CSSBATTLE_EDITOR_COLORS.foreground};
+	background: ${CSSBATTLE_EDITOR_COLORS.background};
+}
+.csshub-formatting-preview-code code {
+	display: block;
+	font: inherit;
+}
+${cssbattleHighlightTokenStyles}
+`;
+
 /** Isolated preview styles for a shadow root (immune to CSSBattle page CSS). */
 export const formatPreviewShadowStyles = `
 :host {

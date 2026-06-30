@@ -3,9 +3,18 @@ import type {
 	ExtensionSettings,
 	FormattingControlsPosition,
 } from "./shared/contracts";
+import {
+	isSupportedTargetRoute,
+} from "./contentScriptChallengeContext";
 import { readCssbattleEditorCode } from "./contentScriptEditorCode";
-import { formatPreviewShadowStyles } from "./cssbattleEditorTheme";
+import { cssbattlePreviewCodeStyles } from "./cssbattleEditorTheme";
 import { highlightFormatPreviewCode } from "./formatPreviewHighlight";
+import {
+	buildFormatPreviewOverlayStyles,
+	buildFormattingControlsStyles,
+	initInjectedUiTheme,
+	onInjectedUiThemeChange,
+} from "./shared/injectedUiStyles";
 import { parseStoredSettings } from "./storage/settingsMigration";
 import { STORAGE_KEY } from "./storage/authSession";
 
@@ -15,10 +24,12 @@ const FORMATTING_CONTROLS_DEFAULT_POSITION_CLASS =
 const FORMATTING_PREVIEW_ID = "csshub-formatting-preview";
 const FORMATTING_STYLE_ID = "csshub-formatting-controls-styles";
 
-let controlsVisible = true;
+let showControlsFromSettings = true;
+let routeSupported = false;
 let controlsInitialized = false;
 let storedControlsPosition: FormattingControlsPosition | null = null;
 let resizeListenerAttached = false;
+let routeSupportObserverAttached = false;
 
 const POSITION_MARGIN = 8;
 
@@ -66,10 +77,22 @@ const formattingControlsPositionFromSettings = (
 };
 
 const applySettingsFromStorage = (settings: unknown | undefined): void => {
-	controlsVisible = showFormattingControlsFromSettings(settings);
+	showControlsFromSettings = showFormattingControlsFromSettings(settings);
 	storedControlsPosition = formattingControlsPositionFromSettings(settings);
 	updateControlsVisibility();
 	applyStoredControlsPosition();
+};
+
+const refreshRouteSupport = (): void => {
+	if (typeof document === "undefined" || !document.documentElement) {
+		return;
+	}
+	const nextSupported = isSupportedTargetRoute(document);
+	if (nextSupported === routeSupported) {
+		return;
+	}
+	routeSupported = nextSupported;
+	updateControlsVisibility();
 };
 
 const loadFormattingControlsSettings = async (): Promise<void> => {
@@ -78,7 +101,7 @@ const loadFormattingControlsSettings = async (): Promise<void> => {
 		const state = stored[STORAGE_KEY] as { settings?: unknown } | undefined;
 		applySettingsFromStorage(state?.settings);
 	} catch (_error) {
-		controlsVisible = true;
+		showControlsFromSettings = true;
 		storedControlsPosition = null;
 	}
 };
@@ -101,12 +124,28 @@ const patchStoredSettings = async (
 	});
 };
 
+const shouldShowFormattingControls = (): boolean =>
+	showControlsFromSettings && routeSupported;
+
 const updateControlsVisibility = (): void => {
 	const root = document.getElementById(FORMATTING_CONTROLS_ID);
 	if (!root) {
 		return;
 	}
-	root.hidden = !controlsVisible;
+	root.hidden = !shouldShowFormattingControls();
+};
+
+const ensureRouteSupportObserver = (): void => {
+	if (routeSupportObserverAttached) {
+		return;
+	}
+	routeSupportObserverAttached = true;
+
+	const observer = new MutationObserver(() => {
+		refreshRouteSupport();
+	});
+	observer.observe(document.documentElement, { childList: true, subtree: true });
+	refreshRouteSupport();
 };
 
 const extractEditorCode = async (): Promise<string | null> => {
@@ -166,7 +205,7 @@ const showPreview = (title: string, code: string, format: EditorCodeFormat): voi
 	const shadow = host.attachShadow({ mode: "open" });
 
 	const style = document.createElement("style");
-	style.textContent = formatPreviewShadowStyles;
+	style.textContent = getFormatPreviewStyles();
 
 	const overlay = document.createElement("div");
 	overlay.className = "csshub-formatting-preview-overlay";
@@ -434,6 +473,19 @@ const makeFormattingControlsDraggable = (
 	});
 };
 
+const getFormatPreviewStyles = (): string =>
+	`${buildFormatPreviewOverlayStyles()}${cssbattlePreviewCodeStyles}`;
+
+const refreshFormattingStyles = (): void => {
+	const style = document.getElementById(FORMATTING_STYLE_ID);
+	if (style) {
+		style.textContent = buildFormattingControlsStyles(
+			FORMATTING_CONTROLS_ID,
+			FORMATTING_CONTROLS_DEFAULT_POSITION_CLASS
+		);
+	}
+};
+
 const ensureFormattingStyles = (): void => {
 	let style = document.getElementById(FORMATTING_STYLE_ID);
 	if (!style) {
@@ -442,123 +494,10 @@ const ensureFormattingStyles = (): void => {
 		document.head.append(style);
 	}
 
-	style.textContent = `
-#${FORMATTING_CONTROLS_ID} {
-	position: fixed;
-	z-index: 2147483645;
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	width: min(268px, calc(100vw - 32px));
-	padding: 14px 16px;
-	border-radius: 12px;
-	border: 1px solid rgba(148, 163, 184, 0.15);
-	background: rgba(15, 23, 42, 0.94);
-	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-	font: 12px/1.35 system-ui, sans-serif;
-	color: #e2e8f0;
-}
-#${FORMATTING_CONTROLS_ID}.${FORMATTING_CONTROLS_DEFAULT_POSITION_CLASS} {
-	left: 16px;
-	bottom: 16px;
-}
-#${FORMATTING_CONTROLS_ID}[hidden] {
-	display: none !important;
-}
-#${FORMATTING_CONTROLS_ID} .csshub-formatting-label {
-	margin: 0;
-	font-size: 11px;
-	font-weight: 600;
-	letter-spacing: .04em;
-	text-transform: uppercase;
-	color: #94a3b8;
-}
-#${FORMATTING_CONTROLS_ID} .csshub-formatting-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 10px;
-	margin: 0;
-	padding: 0;
-	cursor: grab !important;
-	user-select: none;
-	touch-action: none;
-}
-#${FORMATTING_CONTROLS_ID} .csshub-formatting-header,
-#${FORMATTING_CONTROLS_ID} .csshub-formatting-header * {
-	cursor: grab !important;
-}
-#${FORMATTING_CONTROLS_ID}.csshub-formatting-controls-dragging,
-#${FORMATTING_CONTROLS_ID}.csshub-formatting-controls-dragging * {
-	cursor: grabbing !important;
-}
-#${FORMATTING_CONTROLS_ID} .csshub-formatting-drag-hint {
-	color: #64748b;
-	font-size: 10px;
-	line-height: 1;
-	text-transform: lowercase;
-	cursor: grab !important;
-}
-#${FORMATTING_CONTROLS_ID} .csshub-formatting-columns {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
-	column-gap: 13px;
-	align-items: stretch;
-}
-#${FORMATTING_CONTROLS_ID} .csshub-formatting-divider {
-	background: rgba(148, 163, 184, 0.15);
-	width: 1px;
-	align-self: stretch;
-}
-#${FORMATTING_CONTROLS_ID} .csshub-formatting-section {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	min-width: 0;
-}
-#${FORMATTING_CONTROLS_ID} button {
-	width: 100%;
-	border: 1px solid rgba(148, 163, 184, 0.28);
-	border-radius: 8px;
-	background: rgba(30, 41, 59, 0.55);
-	color: #e2e8f0;
-	padding: 8px 10px;
-	font: inherit;
-	font-size: 11px;
-	font-weight: 600;
-	line-height: 1.25;
-	text-align: center;
-	cursor: pointer;
-	transition: background 0.15s, border-color 0.15s, transform 0.1s;
-}
-#${FORMATTING_CONTROLS_ID} button:hover {
-	background: rgba(30, 41, 59, 0.85);
-	border-color: rgba(148, 163, 184, 0.4);
-}
-#${FORMATTING_CONTROLS_ID} button:active {
-	transform: scale(0.98);
-}
-#${FORMATTING_CONTROLS_ID} button:focus-visible {
-	outline: 2px solid rgba(249, 115, 22, 0.85);
-	outline-offset: 2px;
-}
-#${FORMATTING_CONTROLS_ID} button.csshub-formatting-button-primary {
-	background: linear-gradient(135deg, #ea580c, #c2410c);
-	border-color: rgba(249, 115, 22, 0.5);
-	color: #fff7ed;
-}
-#${FORMATTING_CONTROLS_ID} button.csshub-formatting-button-primary:hover {
-	background: linear-gradient(
-		135deg,
-		color-mix(in srgb, #ea580c 88%, white),
-		color-mix(in srgb, #c2410c 85%, white)
+	style.textContent = buildFormattingControlsStyles(
+		FORMATTING_CONTROLS_ID,
+		FORMATTING_CONTROLS_DEFAULT_POSITION_CLASS
 	);
-	border-color: rgba(251, 146, 60, 0.58);
-}
-#${FORMATTING_CONTROLS_ID} button.csshub-formatting-button-primary:active {
-	transform: scale(0.98);
-}
-`;
 };
 
 const mountFormattingControls = (): void => {
@@ -578,7 +517,7 @@ const mountFormattingControls = (): void => {
 
 	const root = document.createElement("div");
 	root.id = FORMATTING_CONTROLS_ID;
-	root.hidden = !controlsVisible;
+	root.hidden = !shouldShowFormattingControls();
 	root.classList.add(FORMATTING_CONTROLS_DEFAULT_POSITION_CLASS);
 
 	const header = document.createElement("div");
@@ -660,7 +599,9 @@ const mountFormattingControls = (): void => {
 const scheduleFormattingControlsMount = (): void => {
 	const tryMount = async (): Promise<void> => {
 		await loadFormattingControlsSettings();
+		refreshRouteSupport();
 		mountFormattingControls();
+		ensureRouteSupportObserver();
 	};
 
 	if (document.body) {
@@ -691,6 +632,11 @@ export const initFormattingControls = (): void => {
 		return;
 	}
 	controlsInitialized = true;
+
+	initInjectedUiTheme();
+	onInjectedUiThemeChange(() => {
+		refreshFormattingStyles();
+	});
 
 	scheduleFormattingControlsMount();
 

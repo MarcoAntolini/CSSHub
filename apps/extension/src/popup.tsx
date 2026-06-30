@@ -1,14 +1,14 @@
 import { createRoot } from "react-dom/client";
 import "../public/popup.css";
 import {
-	applyPopupTheme,
-	DEFAULT_POPUP_THEME,
-	loadPopupTheme,
-} from "./popupTheme";
+	applyExtensionTheme,
+	DEFAULT_EXTENSION_THEME,
+	loadExtensionTheme,
+} from "./shared/extensionTheme";
 import { App } from "./popup/App";
 
-applyPopupTheme(DEFAULT_POPUP_THEME);
-void loadPopupTheme().then(applyPopupTheme);
+applyExtensionTheme(DEFAULT_EXTENSION_THEME);
+void loadExtensionTheme().then(applyExtensionTheme);
 
 const container = document.getElementById("root");
 if (!container) {

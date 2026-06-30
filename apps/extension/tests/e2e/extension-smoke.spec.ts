@@ -191,7 +191,7 @@ test("settings renders auth section for signed-out users", async () => {
 		await page.goto(`chrome-extension://${launched.extensionId}/settings.html`);
 
 		await expect(page.getByRole("heading", { name: "CssHub" })).toBeVisible();
-		await expect(page.getByRole("heading", { name: "GitHub account" })).toBeVisible();
+		await expect(page.getByRole("button", { name: "Connect GitHub" })).toBeVisible();
 		await expect(
 			page.getByRole("button", { name: "Continue with GitHub" })
 		).toBeVisible();

@@ -1,0 +1,133 @@
+/* CssHub design tokens — dark default, light via [data-theme="light"] */
+
+:root,
+[data-theme="dark"] {
+	--hub-bg: #020617;
+	--hub-bg-elevated: #0f172a;
+	--hub-surface: rgba(15, 23, 42, 0.92);
+	--hub-surface-muted: rgba(30, 41, 59, 0.55);
+	--hub-surface-strong: rgba(2, 6, 23, 0.75);
+	--hub-surface-info: rgba(249, 115, 22, 0.12);
+	--hub-text-primary: #e2e8f0;
+	--hub-text-secondary: #94a3b8;
+	--hub-text-muted: #64748b;
+	--hub-text-subtle: #475569;
+	--hub-accent: #f97316;
+	--hub-accent-strong: #fb923c;
+	--hub-accent-ring: rgba(249, 115, 22, 0.28);
+	--hub-link: #38bdf8;
+	--hub-link-hover: #7dd3fc;
+	--hub-border: rgba(148, 163, 184, 0.15);
+	--hub-border-strong: rgba(148, 163, 184, 0.28);
+	--hub-border-input: rgba(71, 85, 105, 0.6);
+	--hub-radius-sm: 8px;
+	--hub-radius-md: 10px;
+	--hub-radius-lg: 12px;
+	--hub-radius-xl: 14px;
+	--hub-radius-pill: 999px;
+	--hub-shadow-soft: 0 8px 24px rgba(2, 6, 23, 0.45);
+	--hub-shadow-panel: 0 24px 48px rgba(0, 0, 0, 0.45);
+	--hub-bg-gradient:
+		radial-gradient(ellipse 120% 80% at 50% -20%, rgba(249, 115, 22, 0.08), transparent),
+		linear-gradient(180deg, #020617 0%, #0f172a 100%);
+	--hub-btn-primary-text: #fff7ed;
+	--hub-btn-primary-bg: linear-gradient(135deg, #ea580c, #c2410c);
+	--hub-btn-primary-border: rgba(249, 115, 22, 0.5);
+	--hub-btn-primary-hover-bg: linear-gradient(
+		135deg,
+		color-mix(in srgb, #ea580c 88%, white),
+		color-mix(in srgb, #c2410c 85%, white)
+	);
+	--hub-btn-secondary-bg: rgba(30, 41, 59, 0.9);
+	--hub-btn-secondary-hover-bg: rgba(51, 65, 85, 0.95);
+	--hub-focus-ring: rgba(56, 189, 248, 0.85);
+	--hub-focus-shadow: rgba(56, 189, 248, 0.2);
+	--hub-switch-bg: rgba(71, 85, 105, 0.8);
+	--hub-switch-checked-bg: rgba(234, 88, 12, 0.85);
+	--hub-switch-checked-border: rgba(249, 115, 22, 0.7);
+	--hub-switch-knob: #f8fafc;
+	--hub-inline-error-text: #fecaca;
+	--hub-inline-error-bg: rgba(127, 29, 29, 0.35);
+	--hub-inline-error-border: rgba(248, 113, 113, 0.35);
+	--hub-status-success-text: #86efac;
+	--hub-status-success-bg: rgba(22, 101, 52, 0.35);
+	--hub-status-success-border: rgba(74, 222, 128, 0.35);
+	--hub-status-warn-text: #fdba74;
+	--hub-status-warn-bg: rgba(146, 64, 14, 0.4);
+	--hub-status-warn-border: rgba(251, 146, 60, 0.35);
+	--hub-status-error-text: #fca5a5;
+	--hub-status-error-bg: rgba(127, 29, 29, 0.4);
+	--hub-status-error-border: rgba(248, 113, 113, 0.35);
+	--hub-status-neutral-text: #94a3b8;
+	--hub-status-neutral-bg: rgba(51, 65, 85, 0.55);
+	--hub-status-neutral-border: rgba(148, 163, 184, 0.28);
+	--hub-info-panel-bg: rgba(124, 45, 18, 0.12);
+	--hub-info-panel-border: rgba(249, 115, 22, 0.25);
+	--hub-info-panel-text: #cbd5e1;
+	--hub-modal-backdrop: rgba(2, 6, 23, 0.72);
+	--hub-modal-surface: #0f172a;
+	--hub-collapsible-hover: rgba(30, 41, 59, 0.45);
+}
+
+[data-theme="light"] {
+	--hub-bg: #f1f5f9;
+	--hub-bg-elevated: #ffffff;
+	--hub-surface: #ffffff;
+	--hub-surface-muted: #f8fafc;
+	--hub-surface-strong: #f1f5f9;
+	--hub-surface-info: #fff7ed;
+	--hub-text-primary: #0f172a;
+	--hub-text-secondary: #475569;
+	--hub-text-muted: #64748b;
+	--hub-text-subtle: #94a3b8;
+	--hub-accent: #ea580c;
+	--hub-accent-strong: #c2410c;
+	--hub-accent-ring: rgba(234, 88, 12, 0.2);
+	--hub-link: #0369a1;
+	--hub-link-hover: #0284c7;
+	--hub-border: #e2e8f0;
+	--hub-border-strong: #cbd5e1;
+	--hub-border-input: #cbd5e1;
+	--hub-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.08);
+	--hub-shadow-panel: 0 24px 48px rgba(15, 23, 42, 0.12);
+	--hub-bg-gradient:
+		radial-gradient(ellipse 120% 80% at 50% -20%, rgba(249, 115, 22, 0.06), transparent),
+		linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+	--hub-btn-primary-text: #fff7ed;
+	--hub-btn-primary-bg: linear-gradient(135deg, #ea580c, #c2410c);
+	--hub-btn-primary-border: rgba(234, 88, 12, 0.45);
+	--hub-btn-primary-hover-bg: linear-gradient(
+		135deg,
+		color-mix(in srgb, #ea580c 92%, white),
+		color-mix(in srgb, #c2410c 88%, white)
+	);
+	--hub-btn-secondary-bg: #ffffff;
+	--hub-btn-secondary-hover-bg: #f8fafc;
+	--hub-focus-ring: rgba(234, 88, 12, 0.75);
+	--hub-focus-shadow: rgba(234, 88, 12, 0.18);
+	--hub-switch-bg: #cbd5e1;
+	--hub-switch-checked-bg: rgba(234, 88, 12, 0.9);
+	--hub-switch-checked-border: rgba(234, 88, 12, 0.55);
+	--hub-switch-knob: #ffffff;
+	--hub-inline-error-text: #991b1b;
+	--hub-inline-error-bg: #fef2f2;
+	--hub-inline-error-border: #fecaca;
+	--hub-status-success-text: #166534;
+	--hub-status-success-bg: #dcfce7;
+	--hub-status-success-border: #86efac;
+	--hub-status-warn-text: #92400e;
+	--hub-status-warn-bg: #ffedd5;
+	--hub-status-warn-border: #fdba74;
+	--hub-status-error-text: #991b1b;
+	--hub-status-error-bg: #fee2e2;
+	--hub-status-error-border: #fca5a5;
+	--hub-status-neutral-text: #475569;
+	--hub-status-neutral-bg: #e2e8f0;
+	--hub-status-neutral-border: #cbd5e1;
+	--hub-info-panel-bg: #fff7ed;
+	--hub-info-panel-border: rgba(234, 88, 12, 0.25);
+	--hub-info-panel-text: #475569;
+	--hub-modal-backdrop: rgba(15, 23, 42, 0.35);
+	--hub-modal-surface: #ffffff;
+	--hub-collapsible-hover: rgba(241, 245, 249, 0.85);
+}

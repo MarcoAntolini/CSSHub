@@ -49,8 +49,8 @@ describe("contentScriptPageFeedback", () => {
 		showCaptureFailurePrompt(["editor-code"]);
 
 		const prompt = document.getElementById(PROMPT_ELEMENT_ID);
-		expect(prompt?.style.backdropFilter).toContain("blur");
-		expect(prompt?.style.borderTopColor).toBe("rgba(255, 255, 255, 0.1)");
+		expect(prompt?.style.background).toContain("rgba");
+		expect(prompt?.style.border).toContain("solid");
 		expect(prompt?.querySelector('[data-csshub-feedback-body="true"]')).not.toBeNull();
 		expect(prompt?.querySelector('[data-csshub-feedback-accent="true"]')).not.toBeNull();
 	});

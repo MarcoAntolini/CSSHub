@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { EXTENSION_THEME_STORAGE_KEY } from "@/shared/extensionTheme";
 import { STORAGE_KEY } from "@/storage/authSession";
 
 const defaultStoredState = {
@@ -16,10 +17,36 @@ const defaultStoredState = {
 	},
 };
 
+const supportedTargetBreadcrumbs = `
+	<div class="Header-module__4HehcG__breadcrumbs">
+		<a href="/battles">Battles</a>
+		<a href="/battles/39">Battle #39</a>
+		<button type="button">#254. Unfitting</button>
+	</div>
+`;
+
+const buildStorageGetMock = (
+	settingsState: typeof defaultStoredState = defaultStoredState
+): ReturnType<typeof vi.fn> =>
+	vi.fn().mockImplementation((keys: string | string[] | Record<string, unknown>) => {
+		const keyList = Array.isArray(keys) ? keys : [keys];
+		if (
+			keyList.includes(EXTENSION_THEME_STORAGE_KEY) ||
+			keyList.includes("csshub_popup_theme_v1")
+		) {
+			return Promise.resolve({ [EXTENSION_THEME_STORAGE_KEY]: "dark" });
+		}
+		if (keyList.includes(STORAGE_KEY)) {
+			return Promise.resolve({ [STORAGE_KEY]: settingsState });
+		}
+		return Promise.resolve({});
+	});
+
 describe("contentScriptFormattingControls", () => {
 	beforeEach(async () => {
 		vi.resetModules();
 		document.body.innerHTML = `
+			${supportedTargetBreadcrumbs}
 			<div class="container__item--editor">
 				<div class="cm-editor"></div>
 			</div>
@@ -27,9 +54,7 @@ describe("contentScriptFormattingControls", () => {
 		vi.stubGlobal("chrome", {
 			storage: {
 				local: {
-					get: vi.fn().mockResolvedValue({
-						[STORAGE_KEY]: defaultStoredState,
-					}),
+					get: buildStorageGetMock(),
 					set: vi.fn().mockResolvedValue(undefined),
 				},
 				session: {
@@ -39,6 +64,7 @@ describe("contentScriptFormattingControls", () => {
 				},
 				onChanged: {
 					addListener: vi.fn(),
+					removeListener: vi.fn(),
 				},
 			},
 			runtime: {
@@ -73,29 +99,59 @@ describe("contentScriptFormattingControls", () => {
 	});
 
 	it("hides controls when showFormattingControls is false", async () => {
-		const getMock = chrome.storage.local.get as ReturnType<typeof vi.fn>;
-		getMock.mockResolvedValueOnce({
-			[STORAGE_KEY]: {
+		(chrome.storage.local.get as ReturnType<typeof vi.fn>).mockImplementation(
+			buildStorageGetMock({
 				settings: {
 					...defaultStoredState.settings,
 					showFormattingControls: false,
 				},
-			},
-		});
+			})
+		);
 		const controls = await mountControls();
 		expect(controls.hidden).toBe(true);
 	});
 
+	it("hides controls on unsupported target routes", async () => {
+		document.body.innerHTML = `
+			<div class="Header-module__4HehcG__breadcrumbs">
+				<a href="/versus">Versus</a>
+				<button type="button">Room 1</button>
+			</div>
+			<div class="container__item--editor">
+				<div class="cm-editor"></div>
+			</div>
+		`;
+		const controls = await mountControls();
+		expect(controls.hidden).toBe(true);
+	});
+
+	it("shows controls once breadcrumbs identify a supported target route", async () => {
+		document.body.innerHTML = `
+			<div class="container__item--editor">
+				<div class="cm-editor"></div>
+			</div>
+		`;
+		const controls = await mountControls();
+		expect(controls.hidden).toBe(true);
+
+		document.body.insertAdjacentHTML(
+			"afterbegin",
+			supportedTargetBreadcrumbs
+		);
+		await vi.waitFor(() => {
+			expect(controls.hidden).toBe(false);
+		});
+	});
+
 	it("restores a saved position on mount", async () => {
-		const getMock = chrome.storage.local.get as ReturnType<typeof vi.fn>;
-		getMock.mockResolvedValueOnce({
-			[STORAGE_KEY]: {
+		(chrome.storage.local.get as ReturnType<typeof vi.fn>).mockImplementation(
+			buildStorageGetMock({
 				settings: {
 					...defaultStoredState.settings,
 					formattingControlsPosition: { leftPct: 0.145, topPct: 0.667 },
 				},
-			},
-		});
+			})
+		);
 		Object.defineProperty(window, "innerWidth", { configurable: true, value: 800 });
 		Object.defineProperty(window, "innerHeight", { configurable: true, value: 600 });
 
@@ -218,14 +274,13 @@ describe("contentScriptFormattingControls", () => {
 	});
 
 	it("restores position after reload when storage only had a partial settings object", async () => {
-		const getMock = chrome.storage.local.get as ReturnType<typeof vi.fn>;
-		getMock.mockResolvedValueOnce({
-			[STORAGE_KEY]: {
+		(chrome.storage.local.get as ReturnType<typeof vi.fn>).mockImplementation(
+			buildStorageGetMock({
 				settings: {
 					formattingControlsPosition: { leftPct: 0.145, topPct: 0.667 },
 				},
-			},
-		});
+			} as typeof defaultStoredState)
+		);
 		Object.defineProperty(window, "innerWidth", { configurable: true, value: 800 });
 		Object.defineProperty(window, "innerHeight", { configurable: true, value: 600 });
 

@@ -50,8 +50,7 @@ export const AuthSection = ({
 		: null;
 
 	return (
-		<section className="settings-section">
-			<h2>GitHub account</h2>
+		<>
 			{auth.isAuthenticated ? (
 				<>
 					<p className="muted">
@@ -344,6 +343,6 @@ export const AuthSection = ({
 					</div>
 				</>
 			)}
-		</section>
+		</>
 	);
 };

@@ -3,13 +3,21 @@ import { useRef } from "react";
 import { createPortal } from "react-dom";
 import { Toaster } from "sonner";
 import { popupToBackgroundMessageSchema } from "@/shared/contracts";
-import { ActivityLogSection } from "./components/ActivityLogSection";
-import { AuthSection } from "./components/AuthSection";
+import { useExtensionTheme } from "@/shared/ThemeToggle";
+import {
+	ActivityLogSection,
+} from "./components/ActivityLogSection";
+import { CollapsibleSection } from "./components/CollapsibleSection";
+import { CodeFormattingSection } from "./components/CodeFormattingSection";
 import { CreateRepoModal } from "./components/CreateRepoModal";
+import {
+	GithubSetupSection,
+	githubSetupSummary,
+	githubSetupTitle,
+} from "./components/GithubSetupSection";
 import { LoadingShell } from "./components/LoadingShell";
+import { NotificationsSection } from "./components/NotificationsSection";
 import { PickRepoModal } from "./components/PickRepoModal";
-import { PreferencesSection } from "./components/PreferencesSection";
-import { RepositorySection } from "./components/RepositorySection";
 import { SyncBehaviorSection } from "./components/SyncBehaviorSection";
 import { SettingsHero } from "./components/SettingsHero";
 import { useDeviceFlow } from "./hooks/useDeviceFlow";
@@ -18,6 +26,7 @@ import { useModalA11y } from "./hooks/useModalA11y";
 import { useRepoPicker } from "./hooks/useRepoPicker";
 
 export const SettingsApp = (): ReactElement => {
+	const { theme, toggleTheme } = useExtensionTheme();
 	const {
 		data,
 		setData,
@@ -142,7 +151,7 @@ export const SettingsApp = (): ReactElement => {
 	};
 
 	const toaster = createPortal(
-		<Toaster theme="dark" richColors position="top-center" closeButton />,
+		<Toaster theme={theme} richColors position="top-center" closeButton />,
 		document.body
 	);
 
@@ -161,25 +170,16 @@ export const SettingsApp = (): ReactElement => {
 		<>
 			{toaster}
 			<main ref={modalA11y.appMainRef} className="settings-root">
-				<SettingsHero />
-				<AuthSection
-					auth={auth}
-					busy={busy}
-					webAuthInProgress={deviceFlow.webAuthInProgress}
-					deviceFlow={deviceFlow.deviceFlow}
-					deviceCopyOk={deviceFlow.deviceCopyOk}
-					onBeginWebFlow={() => void deviceFlow.beginWebFlow()}
-					onBeginDeviceFlow={() => void deviceFlow.beginDeviceFlow()}
-					onPollDevice={() => void deviceFlow.pollDevice()}
-					onCopyDeviceUserCode={() => void deviceFlow.copyDeviceUserCode()}
-					onOpenDeviceVerification={deviceFlow.openDeviceVerification}
-					onLogout={() => void logout()}
-					onLoginPat={loginPat}
-					pushToast={pushToast}
-				/>
-				{auth.isAuthenticated ? (
-					<>
-						<RepositorySection
+				<SettingsHero theme={theme} onToggleTheme={toggleTheme} />
+				<div className="settings-section-stack">
+					<CollapsibleSection
+						id="settings-github-setup"
+						title={githubSetupTitle(auth)}
+						summary={githubSetupSummary(auth, settings)}
+						defaultOpen
+					>
+						<GithubSetupSection
+							auth={auth}
 							settings={settings}
 							selectedRepoMeta={repoPicker.selectedRepoMeta}
 							branches={repoPicker.branches}
@@ -188,6 +188,17 @@ export const SettingsApp = (): ReactElement => {
 							createBranchFrom={repoPicker.createBranchFrom}
 							readmeInfoOpen={repoPicker.readmeInfoOpen}
 							busy={busy}
+							webAuthInProgress={deviceFlow.webAuthInProgress}
+							deviceFlow={deviceFlow.deviceFlow}
+							deviceCopyOk={deviceFlow.deviceCopyOk}
+							onBeginWebFlow={() => void deviceFlow.beginWebFlow()}
+							onBeginDeviceFlow={() => void deviceFlow.beginDeviceFlow()}
+							onPollDevice={() => void deviceFlow.pollDevice()}
+							onCopyDeviceUserCode={() => void deviceFlow.copyDeviceUserCode()}
+							onOpenDeviceVerification={deviceFlow.openDeviceVerification}
+							onLogout={() => void logout()}
+							onLoginPat={loginPat}
+							pushToast={pushToast}
 							onCreateBranchNameChange={repoPicker.setCreateBranchName}
 							onCreateBranchFromChange={repoPicker.setCreateBranchFrom}
 							onReadmeInfoOpenChange={repoPicker.setReadmeInfoOpen}
@@ -195,26 +206,69 @@ export const SettingsApp = (): ReactElement => {
 							onClearRepoSelection={() => void repoPicker.clearRepoSelection()}
 							onOpenCreateModal={repoPicker.openCreateModal}
 							onSaveSettings={saveSettings}
-							onConfirmCreateBranch={() =>
-								void repoPicker.confirmCreateBranch()
-							}
+							onConfirmCreateBranch={() => void repoPicker.confirmCreateBranch()}
 						/>
-						<PreferencesSection
-							settings={settings}
-							busy={busy}
-							onToggleSystemNotifications={(enabled) => {
-								void toggleSystemNotifications(enabled);
-							}}
-							onSaveSettings={saveSettings}
-						/>
-						<SyncBehaviorSection />
-						<ActivityLogSection
-							recentEvents={recentEvents}
-							busy={busy}
-							onClearActivityLog={() => void clearActivityLog()}
-						/>
-					</>
-				) : null}
+					</CollapsibleSection>
+
+					{auth.isAuthenticated ? (
+						<>
+							<CollapsibleSection
+								id="settings-notifications"
+								title="Notifications & feedback"
+								summary="Desktop notifications and on-page toasts"
+								defaultOpen
+							>
+								<NotificationsSection
+									settings={settings}
+									busy={busy}
+									onToggleSystemNotifications={(enabled) => {
+										void toggleSystemNotifications(enabled);
+									}}
+									onSaveSettings={saveSettings}
+								/>
+							</CollapsibleSection>
+
+							<CollapsibleSection
+								id="settings-formatting"
+								title="Code formatting"
+								summary="README layout and editor tools"
+								defaultOpen={false}
+							>
+								<CodeFormattingSection
+									settings={settings}
+									busy={busy}
+									onSaveSettings={saveSettings}
+								/>
+							</CollapsibleSection>
+
+							<CollapsibleSection
+								id="settings-sync-behavior"
+								title="How sync works"
+								summary="Background processing and compatibility"
+								defaultOpen={false}
+							>
+								<SyncBehaviorSection />
+							</CollapsibleSection>
+
+							<CollapsibleSection
+								id="settings-activity"
+								title="Activity log"
+								summary={
+									recentEvents.length === 0
+										? "No events yet"
+										: `${recentEvents.length} recent event${recentEvents.length === 1 ? "" : "s"}`
+								}
+								defaultOpen={recentEvents.length > 0}
+							>
+								<ActivityLogSection
+									recentEvents={recentEvents}
+									busy={busy}
+									onClear={() => void clearActivityLog()}
+								/>
+							</CollapsibleSection>
+						</>
+					) : null}
+				</div>
 			</main>
 
 			{repoPicker.createOpen ? (

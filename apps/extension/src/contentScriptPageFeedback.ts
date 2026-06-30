@@ -3,6 +3,11 @@ import {
 	type CaptureIssueId,
 } from "./contentScriptCaptureIssues";
 import type { SubmissionIngestionResponse } from "./shared/contracts";
+import {
+	getInjectedUiColors,
+	initInjectedUiTheme,
+	onInjectedUiThemeChange,
+} from "./shared/injectedUiStyles";
 import { STORAGE_KEY } from "./storage/authSession";
 
 export const PROMPT_ELEMENT_ID = "csshub-page-feedback";
@@ -32,14 +37,18 @@ const PAGE_FEEDBACK_PLACEMENTS = [
 
 type PageFeedbackPlacement = (typeof PAGE_FEEDBACK_PLACEMENTS)[number];
 
-const COLORS = {
-	text: "#fafaf9",
-	muted: "#d6d3d1",
-	subtle: "#a8a29e",
-	border: "rgba(255,255,255,.10)",
-	surface: "rgba(28,25,23,.94)",
-	surfaceStrong: "rgba(41,37,36,.98)",
-} as const;
+const feedbackSurfaceColors = () => {
+	const c = getInjectedUiColors();
+	return {
+		text: c.text,
+		muted: c.muted,
+		subtle: c.subtle,
+		border: c.border,
+		surface: c.surface,
+		surfaceStrong: c.surfaceStrong,
+		panelShadow: c.panelShadow,
+	};
+};
 
 const TONE_STYLES = {
 	processing: {
@@ -468,6 +477,11 @@ export const initPageFeedbackSettings = (): void => {
 	}
 	settingsInitialized = true;
 
+	initInjectedUiTheme();
+	onInjectedUiThemeChange(() => {
+		refreshVisibleFeedbackTheme();
+	});
+
 	void loadPageFeedbackPlacementFromStorage();
 
 	chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -496,9 +510,9 @@ const ensureFeedbackStyles = (): void => {
 	will-change: bottom, top, opacity, transform;
 }
 #${PROMPT_ELEMENT_ID} [data-csshub-feedback-control="dismiss"]:hover {
-	background: rgba(255,255,255,.12) !important;
-	border-color: rgba(255,255,255,.18) !important;
-	color: ${COLORS.text} !important;
+	background: color-mix(in srgb, var(--csshub-feedback-surface-strong) 88%, white) !important;
+	border-color: var(--csshub-feedback-border) !important;
+	color: var(--csshub-feedback-text) !important;
 	transform: translate3d(0,-1px,0);
 }
 #${PROMPT_ELEMENT_ID} [data-csshub-feedback-control="action"]:hover {
@@ -559,16 +573,36 @@ const scheduleAutoHide = (ms: number): void => {
 	}, ms);
 };
 
+const applyFeedbackThemeToPrompt = (prompt: HTMLDivElement): void => {
+	const colors = feedbackSurfaceColors();
+	prompt.style.setProperty("--csshub-feedback-text", colors.text);
+	prompt.style.setProperty("--csshub-feedback-border", colors.border);
+	prompt.style.setProperty("--csshub-feedback-surface-strong", colors.surfaceStrong);
+	prompt.style.background = colors.surface;
+	prompt.style.color = colors.text;
+	prompt.style.border = `1px solid ${colors.border}`;
+	prompt.style.boxShadow = colors.panelShadow;
+};
+
+const refreshVisibleFeedbackTheme = (): void => {
+	const prompt = document.getElementById(PROMPT_ELEMENT_ID);
+	if (prompt instanceof HTMLDivElement) {
+		applyFeedbackThemeToPrompt(prompt);
+	}
+};
+
 const ensurePromptElement = (accentColor: string): { prompt: HTMLDivElement; isNew: boolean } => {
 	ensureFeedbackStyles();
 	const existing = document.getElementById(PROMPT_ELEMENT_ID);
 	if (existing instanceof HTMLDivElement) {
 		existing.style.setProperty("--csshub-feedback-accent", accentColor);
+		applyFeedbackThemeToPrompt(existing);
 		resetPromptAnimationState(existing);
 		applyPromptPlacement(existing);
 		return { prompt: existing, isNew: false };
 	}
 
+	const colors = feedbackSurfaceColors();
 	const prompt = document.createElement("div");
 	prompt.id = PROMPT_ELEMENT_ID;
 	prompt.setAttribute("role", "alert");
@@ -579,25 +613,24 @@ const ensurePromptElement = (accentColor: string): { prompt: HTMLDivElement; isN
 		"overflow:hidden",
 		"padding:0",
 		"border-radius:16px",
-		`background:${COLORS.surface}`,
-		`color:${COLORS.text}`,
+		`background:${colors.surface}`,
+		`color:${colors.text}`,
 		"font:13px/1.45 system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",
 		"letter-spacing:-.01em",
-		"box-shadow:0 24px 80px rgba(0,0,0,.46),inset 0 1px 0 rgba(255,255,255,.08)",
-		`border:1px solid ${COLORS.border}`,
-		"border-top:1px solid rgba(255,255,255,.10)",
-		"backdrop-filter:blur(18px) saturate(1.15)",
-		"-webkit-backdrop-filter:blur(18px) saturate(1.15)",
+		`box-shadow:${colors.panelShadow}`,
+		`border:1px solid ${colors.border}`,
 	].join(";");
 	prompt.style.setProperty("--csshub-feedback-accent", accentColor);
-	prompt.style.backdropFilter = "blur(18px) saturate(1.15)";
-	prompt.style.borderTopColor = "rgba(255, 255, 255, 0.1)";
+	prompt.style.setProperty("--csshub-feedback-text", colors.text);
+	prompt.style.setProperty("--csshub-feedback-border", colors.border);
+	prompt.style.setProperty("--csshub-feedback-surface-strong", colors.surfaceStrong);
 	document.body.appendChild(prompt);
 	applyPromptPlacement(prompt);
 	return { prompt, isNew: true };
 };
 
 const createDismissButton = (): HTMLButtonElement => {
+	const colors = feedbackSurfaceColors();
 	const dismiss = document.createElement("button");
 	dismiss.type = "button";
 	dismiss.textContent = "×";
@@ -608,12 +641,12 @@ const createDismissButton = (): HTMLButtonElement => {
 		"width:28px",
 		"height:28px",
 		"border-radius:999px",
-		`border:1px solid ${COLORS.border}`,
-		"background:rgba(255,255,255,.04)",
-		`color:${COLORS.subtle}`,
+		`border:1px solid ${colors.border}`,
+		`background:${colors.surfaceStrong}`,
+		`color:${colors.subtle}`,
 		"cursor:pointer",
 		"font:18px/1 system-ui,sans-serif",
-		"transition:background .16s ease,color .16s ease,transform .16s ease",
+		"transition:background .16s cubic-bezier(0.32, 0.72, 0, 1),color .16s cubic-bezier(0.32, 0.72, 0, 1),transform .16s cubic-bezier(0.32, 0.72, 0, 1)",
 	].join(";");
 	dismiss.addEventListener("pointerdown", () => {
 		dismiss.style.transform = "scale(.96)";
@@ -647,6 +680,7 @@ export const showPageFeedbackPrompt = (options: ShowPageFeedbackOptions): void =
 	clearAutoHideTimer();
 	hideAnimationToken += 1;
 	const styles = TONE_STYLES[options.tone];
+	const colors = feedbackSurfaceColors();
 	const { prompt, isNew } = ensurePromptElement(styles.accent);
 	prompt.dataset.tone = options.tone;
 	prompt.innerHTML = "";
@@ -742,7 +776,7 @@ export const showPageFeedbackPrompt = (options: ShowPageFeedbackOptions): void =
 			"margin:0 0 7px",
 			"font-size:13px",
 			"line-height:1.45",
-			`color:${COLORS.text}`,
+			`color:${colors.text}`,
 		].join(";");
 		body.append(detailLine);
 	}
@@ -753,10 +787,10 @@ export const showPageFeedbackPrompt = (options: ShowPageFeedbackOptions): void =
 		tipLine.style.cssText = [
 			"margin:8px 0 0",
 			"padding-top:8px",
-			`border-top:1px solid ${COLORS.border}`,
+			`border-top:1px solid ${colors.border}`,
 			"font-size:12px",
 			"line-height:1.4",
-			`color:${COLORS.muted}`,
+			`color:${colors.muted}`,
 		].join(";");
 		body.append(tipLine);
 	}

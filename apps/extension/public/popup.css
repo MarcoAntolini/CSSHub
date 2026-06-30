@@ -1,101 +1,53 @@
-/* Dark default — aligned with settings.html */
+@import "./theme-tokens.css";
+
 :root {
-	--popup-bg: #020617;
-	--surface: rgba(15, 23, 42, 0.92);
-	--surface-muted: rgba(30, 41, 59, 0.55);
-	--surface-info: rgba(249, 115, 22, 0.12);
-	--text-primary: #e2e8f0;
-	--text-secondary: #94a3b8;
-	--text-muted: #64748b;
-	--text-subtle: #475569;
-	--accent: #f97316;
-	--accent-strong: #fb923c;
-	--accent-ring: rgba(249, 115, 22, 0.28);
-	--border-default: rgba(148, 163, 184, 0.15);
-	--border-strong: rgba(148, 163, 184, 0.28);
-	--radius-sm: 8px;
-	--radius-md: 10px;
-	--radius-pill: 999px;
-	--inline-error-text: #fecaca;
-	--inline-error-bg: rgba(127, 29, 29, 0.35);
-	--inline-error-border: rgba(248, 113, 113, 0.35);
-	--empty-sync-text: #fcd34d;
-	--empty-sync-bg: rgba(146, 64, 14, 0.35);
-	--empty-sync-border: rgba(251, 191, 36, 0.35);
-	--commit-link-text: var(--status-success-text);
-	--commit-link-bg: var(--status-success-bg);
-	--commit-link-border: var(--status-success-border);
-	--commit-link-hover-bg: rgba(22, 101, 52, 0.55);
-	--commit-link-hover-border: rgba(74, 222, 128, 0.5);
-	--commit-link-hover-text: #bbf7d0;
-	--btn-primary-text: #fff7ed;
-	--btn-primary-bg: linear-gradient(135deg, #ea580c, #c2410c);
-	--btn-primary-border: rgba(249, 115, 22, 0.5);
-	--btn-primary-hover-bg: linear-gradient(
-		135deg,
-		color-mix(in srgb, #ea580c 88%, white),
-		color-mix(in srgb, #c2410c 85%, white)
-	);
-	--btn-secondary-hover-bg: rgba(30, 41, 59, 0.85);
-	--status-success-text: #86efac;
-	--status-success-bg: rgba(22, 101, 52, 0.35);
-	--status-success-border: rgba(74, 222, 128, 0.35);
-	--status-warn-text: #fdba74;
-	--status-warn-bg: rgba(146, 64, 14, 0.4);
-	--status-warn-border: rgba(251, 146, 60, 0.35);
-	--status-error-text: #fca5a5;
-	--status-error-bg: rgba(127, 29, 29, 0.4);
-	--status-error-border: rgba(248, 113, 113, 0.35);
-	--status-neutral-text: #94a3b8;
-	--status-neutral-bg: rgba(51, 65, 85, 0.55);
-	--status-neutral-border: rgba(148, 163, 184, 0.28);
+	--popup-bg: var(--hub-bg);
+	--surface: var(--hub-surface);
+	--surface-muted: var(--hub-surface-muted);
+	--surface-info: var(--hub-surface-info);
+	--text-primary: var(--hub-text-primary);
+	--text-secondary: var(--hub-text-secondary);
+	--text-muted: var(--hub-text-muted);
+	--text-subtle: var(--hub-text-subtle);
+	--accent: var(--hub-accent);
+	--accent-strong: var(--hub-accent-strong);
+	--accent-ring: var(--hub-accent-ring);
+	--border-default: var(--hub-border);
+	--border-strong: var(--hub-border-strong);
+	--radius-sm: var(--hub-radius-sm);
+	--radius-md: var(--hub-radius-md);
+	--radius-pill: var(--hub-radius-pill);
+	--inline-error-text: var(--hub-inline-error-text);
+	--inline-error-bg: var(--hub-inline-error-bg);
+	--inline-error-border: var(--hub-inline-error-border);
+	--empty-sync-text: var(--hub-status-warn-text);
+	--empty-sync-bg: var(--hub-status-warn-bg);
+	--empty-sync-border: var(--hub-status-warn-border);
+	--commit-link-text: var(--hub-status-success-text);
+	--commit-link-bg: var(--hub-status-success-bg);
+	--commit-link-border: var(--hub-status-success-border);
+	--commit-link-hover-bg: color-mix(in srgb, var(--hub-status-success-bg) 85%, var(--hub-accent) 15%);
+	--commit-link-hover-border: var(--hub-status-success-border);
+	--commit-link-hover-text: var(--hub-status-success-text);
+	--btn-primary-text: var(--hub-btn-primary-text);
+	--btn-primary-bg: var(--hub-btn-primary-bg);
+	--btn-primary-border: var(--hub-btn-primary-border);
+	--btn-primary-hover-bg: var(--hub-btn-primary-hover-bg);
+	--btn-secondary-hover-bg: var(--hub-btn-secondary-hover-bg);
+	--status-success-text: var(--hub-status-success-text);
+	--status-success-bg: var(--hub-status-success-bg);
+	--status-success-border: var(--hub-status-success-border);
+	--status-warn-text: var(--hub-status-warn-text);
+	--status-warn-bg: var(--hub-status-warn-bg);
+	--status-warn-border: var(--hub-status-warn-border);
+	--status-error-text: var(--hub-status-error-text);
+	--status-error-bg: var(--hub-status-error-bg);
+	--status-error-border: var(--hub-status-error-border);
+	--status-neutral-text: var(--hub-status-neutral-text);
+	--status-neutral-bg: var(--hub-status-neutral-bg);
+	--status-neutral-border: var(--hub-status-neutral-border);
 	color: var(--text-primary);
 	background: var(--popup-bg);
-}
-
-[data-theme="light"] {
-	--popup-bg: #f1f5f9;
-	--surface: #ffffff;
-	--surface-muted: #f8fafc;
-	--surface-info: #f0f9ff;
-	--text-primary: #0f172a;
-	--text-secondary: #475569;
-	--text-muted: #64748b;
-	--text-subtle: #94a3b8;
-	--accent: #0284c7;
-	--accent-strong: #0369a1;
-	--accent-ring: rgba(2, 132, 199, 0.2);
-	--border-default: #e2e8f0;
-	--border-strong: #cbd5e1;
-	--inline-error-text: #991b1b;
-	--inline-error-bg: #fef2f2;
-	--inline-error-border: #fecaca;
-	--empty-sync-text: #92400e;
-	--empty-sync-bg: #fef3c7;
-	--empty-sync-border: #fde68a;
-	--commit-link-text: #0c4a6e;
-	--commit-link-bg: #f0f9ff;
-	--commit-link-border: #bae6fd;
-	--commit-link-hover-bg: #e0f2fe;
-	--commit-link-hover-border: #7dd3fc;
-	--commit-link-hover-text: #0c4a6e;
-	--btn-primary-text: #f8fafc;
-	--btn-primary-bg: #0f172a;
-	--btn-primary-border: #0f172a;
-	--btn-primary-hover-bg: #1e293b;
-	--btn-secondary-hover-bg: #f8fafc;
-	--status-success-text: #166534;
-	--status-success-bg: #dcfce7;
-	--status-success-border: #86efac;
-	--status-warn-text: #92400e;
-	--status-warn-bg: #ffedd5;
-	--status-warn-border: #fdba74;
-	--status-error-text: #991b1b;
-	--status-error-bg: #fee2e2;
-	--status-error-border: #fca5a5;
-	--status-neutral-text: #475569;
-	--status-neutral-bg: #e2e8f0;
-	--status-neutral-border: #cbd5e1;
 }
 
 *,
@@ -110,7 +62,6 @@ html {
 	font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-/* Fixed footprint: avoids layout jump when content changes */
 body {
 	width: 320px;
 	max-width: 320px;
@@ -178,9 +129,9 @@ body {
 	font-family: inherit;
 	flex-shrink: 0;
 	transition:
-		background 0.15s ease,
-		border-color 0.15s ease,
-		color 0.15s ease;
+		background 0.15s cubic-bezier(0.32, 0.72, 0, 1),
+		border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1),
+		color 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .theme-toggle:hover {
@@ -307,7 +258,9 @@ body {
 	border-radius: var(--radius-sm);
 	background: var(--surface-muted);
 	border: 1px solid var(--border-default);
-	transition: background 0.15s ease, border-color 0.15s ease;
+	transition:
+		background 0.15s cubic-bezier(0.32, 0.72, 0, 1),
+		border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 a.sync-target:hover {
@@ -388,8 +341,10 @@ a.sync-target:hover {
 	font-weight: 600;
 	cursor: pointer;
 	font-family: inherit;
-	transition: background 0.15s ease, border-color 0.15s ease,
-		color 0.15s ease;
+	transition:
+		background 0.15s cubic-bezier(0.32, 0.72, 0, 1),
+		border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1),
+		color 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .threshold-step:hover:not(:disabled) {
@@ -531,7 +486,10 @@ a.sync-target:hover {
 	border-radius: var(--radius-pill);
 	background: var(--commit-link-bg);
 	border: 1px solid var(--commit-link-border);
-	transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+	transition:
+		background 0.15s cubic-bezier(0.32, 0.72, 0, 1),
+		border-color 0.15s cubic-bezier(0.32, 0.72, 0, 1),
+		color 0.15s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .last-commit-link:hover {
@@ -637,4 +595,10 @@ a.sync-target:hover {
 	outline: 2px solid var(--accent);
 	outline-offset: 2px;
 	box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.last-status-spinner {
+		animation: none;
+	}
 }
