@@ -26,28 +26,6 @@ export const CodeFormattingSection = ({
 
 	return (
 		<div className="code-formatting-section">
-			<div className="code-formatting-intro">
-				<p className="code-formatting-intro-lead">
-					When you sync, CssHub saves your solution to that Target&apos;s README in
-					your repo.
-				</p>
-				<ul className="code-formatting-intro-points">
-					<li>
-						<span className="code-formatting-intro-label">In your README</span>
-						<span>
-							Choose how the code block is formatted in that file when sync runs.
-						</span>
-					</li>
-					<li>
-						<span className="code-formatting-intro-label">On CSSBattle</span>
-						<span>
-							Optional Prettify and Minify buttons in the editor before you submit.
-							They do not change the README format settings below.
-						</span>
-					</li>
-				</ul>
-			</div>
-
 			<div className="code-formatting-group">
 				<p className="code-formatting-group-title">In your README</p>
 				<div className="settings-field-block">
