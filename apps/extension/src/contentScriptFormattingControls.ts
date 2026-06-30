@@ -143,7 +143,21 @@ const hidePreview = (): void => {
 	document.getElementById(FORMATTING_PREVIEW_ID)?.remove();
 };
 
-const showPreview = (title: string, code: string): void => {
+const previewApplyLabel = (format: EditorCodeFormat): string => {
+	return format === "prettified" ? "Apply prettified" : "Apply minified";
+};
+
+const applyPreviewedCode = async (code: string): Promise<void> => {
+	try {
+		await applyEditorCodeRemote(code);
+		hidePreview();
+	} catch (error) {
+		const message = error instanceof Error ? error.message : "Formatting failed";
+		window.alert(`CssHub formatting failed: ${message}`);
+	}
+};
+
+const showPreview = (title: string, code: string, format: EditorCodeFormat): void => {
 	hidePreview();
 
 	const host = document.createElement("div");
@@ -169,13 +183,25 @@ const showPreview = (title: string, code: string): void => {
 	heading.className = "csshub-formatting-preview-title";
 	heading.textContent = title;
 
+	const actions = document.createElement("div");
+	actions.className = "csshub-formatting-preview-actions";
+
+	const applyButton = document.createElement("button");
+	applyButton.type = "button";
+	applyButton.className = "csshub-formatting-preview-apply";
+	applyButton.textContent = previewApplyLabel(format);
+	applyButton.addEventListener("click", () => {
+		void applyPreviewedCode(code);
+	});
+
 	const closeButton = document.createElement("button");
 	closeButton.type = "button";
 	closeButton.className = "csshub-formatting-preview-close";
 	closeButton.textContent = "Close";
 	closeButton.addEventListener("click", hidePreview);
 
-	header.append(heading, closeButton);
+	actions.append(applyButton, closeButton);
+	header.append(heading, actions);
 
 	const pre = document.createElement("pre");
 	pre.className = "csshub-formatting-preview-code";
@@ -211,7 +237,7 @@ const runFormattingAction = async (
 		const formatted = await formatEditorCodeRemote(currentCode, format);
 		if (mode === "preview") {
 			const label = format === "prettified" ? "Prettified preview" : "Minified preview";
-			showPreview(label, formatted);
+			showPreview(label, formatted, format);
 			return;
 		}
 		await applyEditorCodeRemote(formatted);

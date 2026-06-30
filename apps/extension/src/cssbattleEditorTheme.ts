@@ -108,13 +108,37 @@ export const formatPreviewShadowStyles = `
 	font: 600 13px/1.3 system-ui, sans-serif;
 	color: #fafaf9;
 }
+.csshub-formatting-preview-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+}
+.csshub-formatting-preview-apply,
 .csshub-formatting-preview-close {
 	border: 1px solid rgba(255, 255, 255, 0.14);
 	border-radius: 8px;
 	background: rgba(41, 37, 36, 0.98);
 	color: #fafaf9;
 	padding: 6px 10px;
+	font: 600 12px/1.25 system-ui, sans-serif;
 	cursor: pointer;
+}
+.csshub-formatting-preview-apply {
+	background: linear-gradient(135deg, #ea580c, #c2410c);
+	border-color: rgba(249, 115, 22, 0.5);
+	color: #fff7ed;
+}
+.csshub-formatting-preview-apply:hover {
+	background: linear-gradient(
+		135deg,
+		color-mix(in srgb, #ea580c 88%, white),
+		color-mix(in srgb, #c2410c 85%, white)
+	);
+	border-color: rgba(251, 146, 60, 0.58);
+}
+.csshub-formatting-preview-close:hover {
+	background: rgba(51, 47, 46, 0.98);
 }
 .csshub-formatting-preview-code {
 	margin: 0;

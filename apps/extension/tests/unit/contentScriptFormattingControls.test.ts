@@ -272,4 +272,87 @@ describe("contentScriptFormattingControls", () => {
 			expect(document.getElementById(FORMATTING_CONTROLS_ID)).not.toBeNull();
 		});
 	});
+
+	const getPreviewShadow = (): ShadowRoot => {
+		const host = document.getElementById("csshub-formatting-preview");
+		expect(host).not.toBeNull();
+		expect(host!.shadowRoot).not.toBeNull();
+		return host!.shadowRoot!;
+	};
+
+	it("shows an apply button in the prettified preview", async () => {
+		const sendMessageMock = chrome.runtime.sendMessage as ReturnType<typeof vi.fn>;
+		sendMessageMock.mockImplementation(async (message: { action: string }) => {
+			if (message.action === "extractCssbattleEditorCode") {
+				return { ok: true, data: { code: "body{margin:0}" } };
+			}
+			if (message.action === "formatCssbattleEditorCode") {
+				return { ok: true, data: { code: "body {\n  margin: 0;\n}" } };
+			}
+			return { ok: false };
+		});
+
+		const controls = await mountControls();
+		const previewButton = Array.from(controls.querySelectorAll("button")).find(
+			(button) => button.textContent === "Preview prettified"
+		);
+		expect(previewButton).toBeTruthy();
+		previewButton!.click();
+		await vi.waitFor(() => {
+			expect(document.getElementById("csshub-formatting-preview")).not.toBeNull();
+		});
+
+		const shadow = getPreviewShadow();
+		const applyButton = shadow.querySelector(".csshub-formatting-preview-apply");
+		expect(applyButton?.textContent).toBe("Apply prettified");
+	});
+
+	it("applies previewed code from the preview without re-formatting", async () => {
+		const formattedCode = "body {\n  margin: 0;\n}";
+		const sendMessageMock = chrome.runtime.sendMessage as ReturnType<typeof vi.fn>;
+		sendMessageMock.mockImplementation(async (message: { action: string; code?: string }) => {
+			if (message.action === "extractCssbattleEditorCode") {
+				return { ok: true, data: { code: "body{margin:0}" } };
+			}
+			if (message.action === "formatCssbattleEditorCode") {
+				return { ok: true, data: { code: formattedCode } };
+			}
+			if (message.action === "applyCssbattleEditorCode") {
+				return { ok: true };
+			}
+			return { ok: false };
+		});
+
+		const controls = await mountControls();
+		const previewButton = Array.from(controls.querySelectorAll("button")).find(
+			(button) => button.textContent === "Preview minified"
+		);
+		previewButton!.click();
+		await vi.waitFor(() => {
+			expect(document.getElementById("csshub-formatting-preview")).not.toBeNull();
+		});
+
+		const shadow = getPreviewShadow();
+		const applyButton = shadow.querySelector(
+			".csshub-formatting-preview-apply"
+		) as HTMLButtonElement;
+		expect(applyButton.textContent).toBe("Apply minified");
+		applyButton.click();
+		await vi.waitFor(() => {
+			expect(document.getElementById("csshub-formatting-preview")).toBeNull();
+		});
+
+		const applyCalls = sendMessageMock.mock.calls.filter(
+			([message]) => message.action === "applyCssbattleEditorCode"
+		);
+		expect(applyCalls).toHaveLength(1);
+		expect(applyCalls[0]?.[0]).toEqual({
+			action: "applyCssbattleEditorCode",
+			code: formattedCode,
+		});
+		const formatCallsAfterPreview = sendMessageMock.mock.calls.filter(
+			([message]) => message.action === "formatCssbattleEditorCode"
+		);
+		expect(formatCallsAfterPreview).toHaveLength(1);
+	});
 });
