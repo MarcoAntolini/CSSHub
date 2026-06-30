@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { FormattingControlsPosition } from "@/shared/contracts";
 import { EXTENSION_THEME_STORAGE_KEY } from "@/shared/extensionTheme";
 import { STORAGE_KEY } from "@/storage/authSession";
 
@@ -14,7 +15,12 @@ const defaultStoredState = {
 		savedCodeFormat: "original",
 		includePrettifiedCode: false,
 		showFormattingControls: true,
+		formattingControlsPosition: null as FormattingControlsPosition | null,
 	},
+};
+
+type StoredStateOverride = {
+	settings?: Partial<(typeof defaultStoredState)["settings"]> & Record<string, unknown>;
 };
 
 const supportedTargetBreadcrumbs = `
@@ -26,7 +32,7 @@ const supportedTargetBreadcrumbs = `
 `;
 
 const buildStorageGetMock = (
-	settingsState: typeof defaultStoredState = defaultStoredState
+	settingsState: StoredStateOverride = defaultStoredState
 ): ReturnType<typeof vi.fn> =>
 	vi.fn().mockImplementation((keys: string | string[] | Record<string, unknown>) => {
 		const keyList = Array.isArray(keys) ? keys : [keys];
@@ -279,7 +285,7 @@ describe("contentScriptFormattingControls", () => {
 				settings: {
 					formattingControlsPosition: { leftPct: 0.145, topPct: 0.667 },
 				},
-			} as typeof defaultStoredState)
+			})
 		);
 		Object.defineProperty(window, "innerWidth", { configurable: true, value: 800 });
 		Object.defineProperty(window, "innerHeight", { configurable: true, value: 600 });

@@ -1,13 +1,22 @@
+import type { ExtensionTheme } from "@/shared/extensionTheme";
 import type { ReactElement } from "react";
 import { SettingsHero } from "./SettingsHero";
 
-export const LoadingShell = (): ReactElement => (
+type LoadingShellProps = {
+	theme: ExtensionTheme;
+	onToggleTheme: () => void;
+};
+
+export const LoadingShell = ({
+	theme,
+	onToggleTheme,
+}: LoadingShellProps): ReactElement => (
 	<main
 		className="settings-root settings-loading-shell"
 		aria-busy="true"
 		aria-live="polite"
 	>
-		<SettingsHero />
+		<SettingsHero theme={theme} onToggleTheme={onToggleTheme} />
 		<div
 			className="settings-section loading-shell-card"
 			role="status"

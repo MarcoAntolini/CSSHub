@@ -244,7 +244,7 @@ test("settings supports notification toggle and clear log for signed-in users", 
 		const page = await launched.context.newPage();
 		await page.goto(`chrome-extension://${launched.extensionId}/settings.html`);
 
-		await expect(page.getByText("Signed in as")).toBeVisible();
+		await expect(page.getByText("Signed in as qa-user", { exact: true })).toBeVisible();
 		await expect(page.getByText("No repository selected for sync.")).toBeVisible();
 
 		const notificationsToggle = page.locator("#system-notifications-toggle");
@@ -258,7 +258,7 @@ test("settings supports notification toggle and clear log for signed-in users", 
 		await expect(clearLogButton).toBeEnabled();
 		await clearLogButton.click();
 		await expect(page.getByText("No events yet.")).toBeVisible();
-		await expect(clearLogButton).toBeDisabled();
+		await expect(clearLogButton).toBeHidden();
 
 		const nextState = await readStateFromPage(page);
 		expect(nextState.settings.systemNotificationsEnabled).toBe(false);

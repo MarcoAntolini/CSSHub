@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-30
+
+### Added
+
+- Draggable prettify and minify controls on the CSSBattle editor with syntax-highlighted preview modal; players can apply formatted code before submit
+- Saved code format preferences choose the primary README code block layout (original, prettified, or minified) and optionally add a secondary prettified copy during sync
+- Dark and light theme toggle in popup and settings, persisted across sessions, with shared design tokens for popup, settings, page feedback, and formatting controls
+
+### Changed
+
+- Settings reorganized into collapsible sections for GitHub setup, notifications, code formatting, sync behavior, and activity log
+- Editor formatting controls hide on unsupported CSSBattle routes until breadcrumbs identify a playable Target
+
+### Fixed
+
+- Light mode contrast on settings panels (GitHub account, repository, branch, activity log, and device flow) so text and labels stay readable
+
 ## [1.5.0] - 2026-06-28
 
 ### Added

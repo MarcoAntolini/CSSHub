@@ -159,7 +159,7 @@ export const SettingsApp = (): ReactElement => {
 		return (
 			<>
 				{toaster}
-				<LoadingShell />
+				<LoadingShell theme={theme} onToggleTheme={toggleTheme} />
 			</>
 		);
 	}
