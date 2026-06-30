@@ -11,20 +11,201 @@ import {
 import type { Handler } from "./types";
 
 /** Serialized into the page MAIN world; must stay self-contained for `executeScript`. */
-function readCodeMirror6DocumentFromPage(): string | null {
-	const root = document.querySelector(".cm-editor .cm-content, .cm-content");
-	if (!(root instanceof HTMLElement)) {
+export function readCodeMirror6DocumentFromPage(): string | null {
+	type InjectedCodeMirrorDocument = {
+		length: number;
+		toString(): string;
+	};
+	type InjectedCodeMirrorEditorView = {
+		dispatch: (spec: unknown) => void;
+		state: { doc: InjectedCodeMirrorDocument };
+	};
+	type InjectedCodeMirrorViewHost = HTMLElement & {
+		cmView?: InjectedCodeMirrorEditorView | { view?: unknown };
+		cmTile?: InjectedCodeMirrorEditorView | { view?: unknown };
+		editorView?: unknown;
+		view?: unknown;
+	};
+	const isView = (candidate: unknown): candidate is InjectedCodeMirrorEditorView => {
+		if (!candidate || typeof candidate !== "object") {
+			return false;
+		}
+		const editorView = candidate as Partial<InjectedCodeMirrorEditorView>;
+		return (
+			typeof editorView.dispatch === "function" &&
+			typeof editorView.state?.doc?.length === "number" &&
+			typeof editorView.state.doc.toString === "function"
+		);
+	};
+	const fromHost = (host: HTMLElement | null): InjectedCodeMirrorEditorView | null => {
+		if (!host) {
+			return null;
+		}
+		const viewHost = host as InjectedCodeMirrorViewHost;
+		const candidates = [
+			viewHost.cmView,
+			viewHost.cmView && "view" in viewHost.cmView ? viewHost.cmView.view : undefined,
+			viewHost.cmTile,
+			viewHost.cmTile && "view" in viewHost.cmTile ? viewHost.cmTile.view : undefined,
+			viewHost.editorView,
+			viewHost.view,
+		];
+		for (const candidate of candidates) {
+			if (isView(candidate)) {
+				return candidate;
+			}
+		}
 		return null;
+	};
+	const getView = (): InjectedCodeMirrorEditorView | null => {
+		const root = document.querySelector(".cm-editor .cm-content, .cm-content");
+		if (!(root instanceof HTMLElement)) {
+			return null;
+		}
+		const rootView = fromHost(root);
+		if (rootView) {
+			return rootView;
+		}
+		const editor = root.closest(".cm-editor");
+		return editor instanceof HTMLElement ? fromHost(editor) : null;
+	};
+	const readLines = (selector: string): string => {
+		const lines = document.querySelectorAll(selector);
+		if (lines.length === 0) {
+			return "";
+		}
+		return Array.from(lines)
+			.map((line) =>
+				Array.from(line.childNodes)
+					.map((node) => node.textContent ?? "")
+					.join("")
+			)
+			.join("\n")
+			.trim();
+	};
+
+	const view = getView();
+	if (view) {
+		return view.state.doc.toString();
 	}
-	const tile = (
-		root as HTMLElement & { cmTile?: { view?: { state?: { doc?: { toString(): string } } } } }
-	).cmTile;
-	const doc = tile?.view?.state?.doc;
-	if (doc && typeof doc.toString === "function") {
-		return doc.toString();
-	}
-	return null;
+
+	const fromDom = readLines(".cm-line") || readLines(".monaco-editor .view-line");
+	return fromDom || null;
 }
+
+/** Serialized into the page MAIN world; must stay self-contained for `executeScript`. */
+export function writeCodeMirror6DocumentFromPage(code: string): boolean {
+	type InjectedCodeMirrorDocument = {
+		length: number;
+		toString(): string;
+	};
+	type InjectedCodeMirrorEditorView = {
+		dispatch: (spec: unknown) => void;
+		state: { doc: InjectedCodeMirrorDocument };
+	};
+	type InjectedCodeMirrorViewHost = HTMLElement & {
+		cmView?: InjectedCodeMirrorEditorView | { view?: unknown };
+		cmTile?: InjectedCodeMirrorEditorView | { view?: unknown };
+		editorView?: unknown;
+		view?: unknown;
+	};
+	const isView = (candidate: unknown): candidate is InjectedCodeMirrorEditorView => {
+		if (!candidate || typeof candidate !== "object") {
+			return false;
+		}
+		const editorView = candidate as Partial<InjectedCodeMirrorEditorView>;
+		return (
+			typeof editorView.dispatch === "function" &&
+			typeof editorView.state?.doc?.length === "number" &&
+			typeof editorView.state.doc.toString === "function"
+		);
+	};
+	const fromHost = (host: HTMLElement | null): InjectedCodeMirrorEditorView | null => {
+		if (!host) {
+			return null;
+		}
+		const viewHost = host as InjectedCodeMirrorViewHost;
+		const candidates = [
+			viewHost.cmView,
+			viewHost.cmView && "view" in viewHost.cmView ? viewHost.cmView.view : undefined,
+			viewHost.cmTile,
+			viewHost.cmTile && "view" in viewHost.cmTile ? viewHost.cmTile.view : undefined,
+			viewHost.editorView,
+			viewHost.view,
+		];
+		for (const candidate of candidates) {
+			if (isView(candidate)) {
+				return candidate;
+			}
+		}
+		return null;
+	};
+	const getView = (): InjectedCodeMirrorEditorView | null => {
+		const root = document.querySelector(".cm-editor .cm-content, .cm-content");
+		if (!(root instanceof HTMLElement)) {
+			return null;
+		}
+		const rootView = fromHost(root);
+		if (rootView) {
+			return rootView;
+		}
+		const editor = root.closest(".cm-editor");
+		return editor instanceof HTMLElement ? fromHost(editor) : null;
+	};
+
+	const view = getView();
+	if (view) {
+		view.dispatch({
+			changes: { from: 0, to: view.state.doc.length, insert: code },
+		});
+		return true;
+	}
+
+	const editable = document.querySelector(
+		".cm-editor [contenteditable='true'], .cm-editor [contenteditable=''], [contenteditable='true']"
+	);
+	if (editable instanceof HTMLElement) {
+		editable.focus();
+		editable.textContent = code;
+		editable.dispatchEvent(
+			new InputEvent("input", { bubbles: true, cancelable: true, inputType: "insertText", data: code })
+		);
+		return true;
+	}
+
+	return false;
+}
+
+export const handleApplyCssbattleEditorCode: Handler<"applyCssbattleEditorCode"> = async (
+	data,
+	sendResponse,
+	sender
+) => {
+	const tab = sender.tab;
+	const tabId = tab?.id;
+	if (!tabId || !isCssBattlePlayUrl(tab.url)) {
+		sendResponse({ ok: false, error: "No CSSBattle play tab" });
+		return;
+	}
+
+	try {
+		const [injectionResult] = await chrome.scripting.executeScript({
+			target: { tabId },
+			world: "MAIN",
+			func: writeCodeMirror6DocumentFromPage,
+			args: [data.code],
+		});
+		const applied = injectionResult?.result === true;
+		if (!applied) {
+			sendResponse({ ok: false, error: "Could not update CSSBattle editor" });
+			return;
+		}
+		sendResponse({ ok: true });
+	} catch (error) {
+		const message = error instanceof Error ? error.message : "Editor write failed";
+		sendResponse({ ok: false, error: message });
+	}
+};
 
 export const handleExtractCssbattleEditorCode: Handler<
 	"extractCssbattleEditorCode"

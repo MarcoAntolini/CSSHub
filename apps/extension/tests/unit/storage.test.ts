@@ -38,6 +38,9 @@ const buildAuthenticatedState = (): StoredState => ({
 		systemNotificationsEnabled: true,
 		repositoryReadmeMode: "managed-section",
 		pageFeedbackPlacement: "bottom-right",
+		savedCodeFormat: "original",
+		includePrettifiedCode: false,
+		showFormattingControls: true,
 	},
 	lastSubmission: null,
 	lastSubmissionAccepted: null,
@@ -138,5 +141,23 @@ describe("extension storage auth persistence", () => {
 
 		expect(parseStoredSettings(legacySettings).pageFeedbackPlacement).toBe("bottom-right");
 		expect(defaultSettings().pageFeedbackPlacement).toBe("bottom-right");
+	});
+
+	it("defaults saved code format settings for older stored settings", () => {
+		const legacySettings = {
+			threshold: 95,
+			selectedRepoFullName: "MarcoAntolini/CSSHub",
+			selectedBranch: "main",
+			systemNotificationsEnabled: true,
+			repositoryReadmeMode: "managed-section" as const,
+			pageFeedbackPlacement: "bottom-right" as const,
+		};
+
+		const parsed = parseStoredSettings(legacySettings);
+		expect(parsed.savedCodeFormat).toBe("original");
+		expect(parsed.includePrettifiedCode).toBe(false);
+		expect(parsed.showFormattingControls).toBe(true);
+		expect(parsed.formattingControlsPosition).toBeUndefined();
+		expect(defaultSettings().savedCodeFormat).toBe("original");
 	});
 });

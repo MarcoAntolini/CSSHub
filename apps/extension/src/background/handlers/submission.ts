@@ -31,7 +31,8 @@ const runSerializedSubmission = <T>(task: () => Promise<T>): Promise<T> => {
 
 const defaultIngestionDeps = {
 	readBestSubmissionMetrics,
-	buildSubmissionFiles,
+	buildSubmissionFiles: (payload: Parameters<typeof buildSubmissionFiles>[0], settings: Parameters<typeof buildSubmissionFiles>[1]) =>
+		buildSubmissionFiles(payload, settings),
 	listBranchBlobPaths,
 	fetchRepoUtf8File,
 	commitFilesToRepo,

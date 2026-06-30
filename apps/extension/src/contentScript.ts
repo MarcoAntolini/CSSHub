@@ -19,7 +19,6 @@ import {
 	CLICKABLE_SELECTOR,
 	addCssBattleSubmitShortcutListener,
 	asImageDataUrlOrNull,
-	extractCodeFromCmLines,
 	fetchTargetImagePayload,
 	findPreviewIframe,
 	getChallengeIdFromPathname,
@@ -38,16 +37,18 @@ import {
 	sendCssbattleSubmissionMessage,
 } from "./contentScriptMessaging";
 import {
+	extractStatsFromDocument,
+	type SubmissionStats,
+	waitForPostSubmitStats,
+} from "./contentScriptStats";
+import {
 	capturePreviewFromDocument,
 	capturePreviewFromDocumentAsync,
 } from "./previewDocumentCapture";
 import { executePreviewCaptureStrategy } from "./preview/previewCaptureStrategy";
 import type { ElementDimensions, SubmissionPayload } from "./shared/contracts";
-import {
-	extractStatsFromDocument,
-	type SubmissionStats,
-	waitForPostSubmitStats,
-} from "./contentScriptStats";
+import { readCssbattleEditorCode } from "./contentScriptEditorCode";
+import { initFormattingControls } from "./contentScriptFormattingControls";
 
 const EXTENSION_CONTEXT_INVALIDATED = "Extension context invalidated";
 const CSSHUB_SUBMIT_SHORTCUT_MESSAGE_TYPE = "CSSHUB_SUBMIT_SHORTCUT";
@@ -96,23 +97,7 @@ const buildSubmissionPayloadBase = (
 	return null;
 };
 
-const extractCode = async (): Promise<string> => {
-	try {
-		const response = (await chrome.runtime.sendMessage({
-			action: "extractCssbattleEditorCode",
-		})) as { ok?: boolean; data?: { code?: string | null }; error?: string };
-		if (response?.ok && response.data && "code" in response.data) {
-			const fromEditor = response.data.code;
-			if (typeof fromEditor === "string") {
-				return fromEditor.trim();
-			}
-		}
-	} catch (_error) {
-		// e.g. extension context invalidated — fall back to visible lines only
-	}
-
-	return extractCodeFromCmLines(document);
-};
+const extractCode = async (): Promise<string> => readCssbattleEditorCode();
 
 const extractStats = (): SubmissionStats => extractStatsFromDocument(document);
 
@@ -392,6 +377,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
 if (window.location.pathname.startsWith("/play/")) {
 	initPageFeedbackSettings();
+	initFormattingControls();
 	installSubmitListeners();
 	console.info("[CssHub] Auto-capture enabled: submissions are synced on submit.");
 }

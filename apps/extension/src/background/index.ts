@@ -15,10 +15,12 @@ import {
 	handleStartGithubWebFlow,
 } from "./handlers/auth";
 import {
+	handleApplyCssbattleEditorCode,
 	handleCaptureElement,
 	handleCapturePreview,
 	handleExtractCssbattleEditorCode,
 } from "./handlers/captureHandlers";
+import { handleFormatCssbattleEditorCode } from "./handlers/formatHandlers";
 import { handleFetchRemoteImage } from "./handlers/fetchImage";
 import {
 	handleCreateBranch,
@@ -79,6 +81,8 @@ const actionHandlers: {
 	createRepo: handleCreateRepo,
 	createBranch: handleCreateBranch,
 	extractCssbattleEditorCode: handleExtractCssbattleEditorCode,
+	formatCssbattleEditorCode: handleFormatCssbattleEditorCode,
+	applyCssbattleEditorCode: handleApplyCssbattleEditorCode,
 	submissionProcessingStarted: handleSubmissionProcessingStarted,
 	clearActionBadge: handleClearActionBadge,
 	captureAttemptFailed: handleCaptureAttemptFailed,

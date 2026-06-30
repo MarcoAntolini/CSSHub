@@ -84,6 +84,14 @@ _Avoid_: Event stream, debug log
 Transient in-page UI on the CSSBattle tab that tells the user what happened during submit handling — processing, committed, skipped, failed capture, or sync error.
 _Avoid_: Toast, notification, badge
 
+**Saved Code Format**:
+The setting that controls how CssHub writes Solution code into each Target README during Sync. Supported primary formats are Original, Prettified, and Minified.
+_Avoid_: Export format, archive transform
+
+**Formatting Controls**:
+Optional in-page buttons on the CSSBattle editor that let the player preview or apply prettified or minified code before submitting.
+_Avoid_: Auto-format, submit transform
+
 **Setup Badge**:
 The persistent extension icon indicator shown when GitHub Authentication or a Selected Repository is missing. It is not used for transient submit outcomes.
 _Avoid_: Result badge, sync badge

@@ -70,6 +70,21 @@ export const pageFeedbackPlacementSchema = z.enum([
 
 export type PageFeedbackPlacement = z.infer<typeof pageFeedbackPlacementSchema>;
 
+export const savedCodeFormatSchema = z.enum(["original", "prettified", "minified"]);
+
+export type SavedCodeFormat = z.infer<typeof savedCodeFormatSchema>;
+
+export const editorCodeFormatSchema = z.enum(["prettified", "minified"]);
+
+export type EditorCodeFormat = z.infer<typeof editorCodeFormatSchema>;
+
+export const formattingControlsPositionSchema = z.object({
+	leftPct: z.number().min(0).max(1),
+	topPct: z.number().min(0).max(1),
+});
+
+export type FormattingControlsPosition = z.infer<typeof formattingControlsPositionSchema>;
+
 export const extensionSettingsSchema = z.object({
 	threshold: z.number().min(0).max(100),
 	selectedRepoFullName: z.string().nullable(),
@@ -77,6 +92,10 @@ export const extensionSettingsSchema = z.object({
 	systemNotificationsEnabled: z.boolean().default(true),
 	repositoryReadmeMode: repositoryReadmeModeSchema.default("managed-section"),
 	pageFeedbackPlacement: pageFeedbackPlacementSchema.default("bottom-right"),
+	savedCodeFormat: savedCodeFormatSchema.default("original"),
+	includePrettifiedCode: z.boolean().default(false),
+	showFormattingControls: z.boolean().default(true),
+	formattingControlsPosition: formattingControlsPositionSchema.nullish(),
 });
 
 export type ExtensionSettings = z.infer<typeof extensionSettingsSchema>;
@@ -230,6 +249,15 @@ export const popupToBackgroundMessageSchema = z.discriminatedUnion("action", [
 	}),
 	z.object({
 		action: z.literal("extractCssbattleEditorCode"),
+	}),
+	z.object({
+		action: z.literal("formatCssbattleEditorCode"),
+		format: editorCodeFormatSchema,
+		code: z.string(),
+	}),
+	z.object({
+		action: z.literal("applyCssbattleEditorCode"),
+		code: z.string(),
 	}),
 	z.object({
 		action: z.literal("submissionProcessingStarted"),

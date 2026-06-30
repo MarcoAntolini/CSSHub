@@ -37,7 +37,10 @@ export const handleSaveSettings: Handler<"saveSettings"> = async (data, sendResp
 	const state = await getStoredState();
 	await saveStoredState({
 		...state,
-		settings: data.settings,
+		settings: {
+			...state.settings,
+			...data.settings,
+		},
 	});
 	setSetupActionBadgeState({
 		isAuthenticated: state.auth.isAuthenticated,

@@ -8,6 +8,9 @@ export const defaultSettings = (): ExtensionSettings =>
 		systemNotificationsEnabled: true,
 		repositoryReadmeMode: "managed-section",
 		pageFeedbackPlacement: "bottom-right",
+		savedCodeFormat: "original",
+		includePrettifiedCode: false,
+		showFormattingControls: true,
 	});
 
 export const parseStoredSettings = (value: unknown): ExtensionSettings => {

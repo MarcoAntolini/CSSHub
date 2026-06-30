@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SubmissionPayload } from "@/shared/contracts";
+import { defaultSettings } from "@/storage/settingsMigration";
 import {
 	buildSubmissionFiles,
 	challengeFolderPath,
@@ -13,6 +14,8 @@ vi.mock("@/remoteImageFetch", () => ({
 }));
 
 import { fetchRemoteImageAsDataUrl } from "@/remoteImageFetch";
+
+const readmeSettings = defaultSettings();
 
 const battlePayload = (): SubmissionPayload => ({
 	challengeMode: "battle",
@@ -90,7 +93,7 @@ describe("listBestSubmissionMetadataPaths", () => {
 
 describe("buildSubmissionFiles", () => {
 	it("writes metadata, readme, and deletes legacy files", async () => {
-		const files = await buildSubmissionFiles(battlePayload());
+		const files = await buildSubmissionFiles(battlePayload(), readmeSettings);
 		const paths = files.map((file) => file.path);
 
 		expect(paths).toContain("Battles/Battle #39/battle.json");
@@ -128,21 +131,27 @@ describe("buildSubmissionFiles", () => {
 	});
 
 	it("does not write a battle manifest when battle metadata is unknown", async () => {
-		const files = await buildSubmissionFiles({
-			...battlePayload(),
-			battleTotalChallenges: undefined,
-			battleStatus: undefined,
-		});
+		const files = await buildSubmissionFiles(
+			{
+				...battlePayload(),
+				battleTotalChallenges: undefined,
+				battleStatus: undefined,
+			},
+			readmeSettings
+		);
 
 		expect(files.map((file) => file.path)).not.toContain("Battles/Battle #39/battle.json");
 	});
 
 	it("falls back to code length when metadata has no character count", async () => {
-		const files = await buildSubmissionFiles({
-			...battlePayload(),
-			characterCount: null,
-			code: "<main></main>",
-		});
+		const files = await buildSubmissionFiles(
+			{
+				...battlePayload(),
+				characterCount: null,
+				code: "<main></main>",
+			},
+			readmeSettings
+		);
 		const metadataFile = files.find((file) => file.path.endsWith("submission.json"));
 		const metadata = JSON.parse(
 			metadataFile && "content" in metadataFile ? metadataFile.content : "{}"
@@ -152,12 +161,15 @@ describe("buildSubmissionFiles", () => {
 	});
 
 	it("embeds user and target images from data URLs", async () => {
-		const files = await buildSubmissionFiles({
-			...battlePayload(),
-			code: "<div>hi</div>",
-			resultImageDataUrl: "data:image/png;base64,USER",
-			targetImage: { type: "dataUrl", value: "data:image/png;base64,TARGET" },
-		});
+		const files = await buildSubmissionFiles(
+			{
+				...battlePayload(),
+				code: "<div>hi</div>",
+				resultImageDataUrl: "data:image/png;base64,USER",
+				targetImage: { type: "dataUrl", value: "data:image/png;base64,TARGET" },
+			},
+			readmeSettings
+		);
 
 		const user = files.find((file) => file.path.endsWith("/user.png"));
 		const target = files.find((file) => file.path.endsWith("/target.png"));
@@ -174,13 +186,16 @@ describe("buildSubmissionFiles", () => {
 			"data:image/png;base64,REMOTE"
 		);
 
-		const files = await buildSubmissionFiles({
-			...battlePayload(),
-			targetImage: {
-				type: "url",
-				value: "https://cssbattle.dev/targets/254.png",
+		const files = await buildSubmissionFiles(
+			{
+				...battlePayload(),
+				targetImage: {
+					type: "url",
+					value: "https://cssbattle.dev/targets/254.png",
+				},
 			},
-		});
+			readmeSettings
+		);
 
 		expect(fetchRemoteImageAsDataUrl).toHaveBeenCalledWith(
 			"https://cssbattle.dev/targets/254.png"
@@ -189,6 +204,53 @@ describe("buildSubmissionFiles", () => {
 			encoding: "base64",
 			content: "REMOTE",
 		});
+	});
+
+	it("writes minified code in the primary README block", async () => {
+		const files = await buildSubmissionFiles(
+			{
+				...battlePayload(),
+				code: `<style>
+* {
+  color: transparent;
+}
+</style>`,
+			},
+			{ ...readmeSettings, savedCodeFormat: "minified" }
+		);
+		const readme = files.find((file) => file.path.endsWith("/README.md"));
+		const content = readme && "content" in readme ? readme.content : "";
+		expect(content).toContain("## Code");
+		expect(content).toContain("*{color:#0000");
+		expect(content).not.toContain("transparent");
+	});
+
+	it("adds a prettified section when requested", async () => {
+		const files = await buildSubmissionFiles(
+			{
+				...battlePayload(),
+				code: "<style>*{color:red}</style>",
+			},
+			{ ...readmeSettings, includePrettifiedCode: true }
+		);
+		const readme = files.find((file) => file.path.endsWith("/README.md"));
+		const content = readme && "content" in readme ? readme.content : "";
+		expect(content).toContain("## Code");
+		expect(content).toContain("## Prettified code");
+		expect(content).toContain("color: red");
+	});
+
+	it("uses dynamic fences when code contains backticks", async () => {
+		const files = await buildSubmissionFiles(
+			{
+				...battlePayload(),
+				code: "````html\n<div></div>",
+			},
+			readmeSettings
+		);
+		const readme = files.find((file) => file.path.endsWith("/README.md"));
+		const content = readme && "content" in readme ? readme.content : "";
+		expect(content).toContain("`````html");
 	});
 });
 

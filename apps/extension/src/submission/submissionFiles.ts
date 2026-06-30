@@ -1,4 +1,4 @@
-import type { SubmissionPayload } from "@/shared/contracts";
+import type { ExtensionSettings, SubmissionPayload } from "@/shared/contracts";
 import { fetchRemoteImageAsDataUrl } from "@/remoteImageFetch";
 import { resolveCssBattleImageUrl } from "./cssBattleAssets";
 import {
@@ -16,6 +16,7 @@ import {
 	battleManifestPathFromGroup,
 	buildBattleManifestFromPayload,
 } from "./battleManifest";
+import { formatSubmissionCode } from "./codeFormatting";
 
 export {
 	challengeFolderPath,
@@ -74,10 +75,21 @@ const fetchImageAsBase64 = async (
 	return dataUrl.slice(commaIndex + 1);
 };
 
+const buildCodeSection = (heading: string, code: string): string => {
+	const fence = getMarkdownFence(code);
+	return `## ${heading}
+
+${fence}html
+${code}
+${fence}
+`;
+};
+
 const buildReadme = (
 	payload: SubmissionPayload,
 	hasUserImage: boolean,
-	hasTargetImage: boolean
+	hasTargetImage: boolean,
+	formattedCode: { primary: string; prettifiedExtra?: string }
 ): string => {
 	const title = formatChallengeTitle(payload);
 	const challengeUrl = getChallengeUrl(payload);
@@ -87,8 +99,11 @@ const buildReadme = (
 	const targetCell = hasTargetImage
 		? `<img src="./target.png" alt="Target" width="100%">`
 		: "Not available";
-	const code = payload.code || "<!-- empty submission -->";
-	const fence = getMarkdownFence(code);
+	const primaryCode = formattedCode.primary || "<!-- empty submission -->";
+	const prettifiedSection =
+		formattedCode.prettifiedExtra !== undefined
+			? `\n${buildCodeSection("Prettified code", formattedCode.prettifiedExtra)}`
+			: "";
 
 	return `# ${title}
 
@@ -111,19 +126,16 @@ Challenge: <${challengeUrl}>
 	</tr>
 </table>
 
-## Code
-
-${fence}html
-${code}
-${fence}
-`;
+${buildCodeSection("Code", primaryCode)}${prettifiedSection}`;
 };
 
 export const buildSubmissionFiles = async (
-	payload: SubmissionPayload
+	payload: SubmissionPayload,
+	settings: Pick<ExtensionSettings, "savedCodeFormat" | "includePrettifiedCode">
 ): Promise<CommitFile[]> => {
 	const folder = challengeFolderPath(payload);
 	const files: CommitFile[] = [];
+	const formattedCode = await formatSubmissionCode(payload.code, settings);
 
 	files.push(
 		{ path: `${folder}/solution.html`, delete: true },
@@ -199,7 +211,12 @@ export const buildSubmissionFiles = async (
 
 	files.unshift({
 		path: `${folder}/README.md`,
-		content: buildReadme(payload, Boolean(payload.resultImageDataUrl), hasTargetImage),
+		content: buildReadme(
+			payload,
+			Boolean(payload.resultImageDataUrl),
+			hasTargetImage,
+			formattedCode
+		),
 		encoding: "utf-8",
 	});
 

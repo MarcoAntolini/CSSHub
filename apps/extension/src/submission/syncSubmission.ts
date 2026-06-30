@@ -29,7 +29,10 @@ export type SyncSubmissionDeps = {
 		branch: string,
 		payload: SubmissionPayload
 	) => Promise<SavedSubmissionMetrics | null>;
-	buildSubmissionFiles: (payload: SubmissionPayload) => Promise<CommitFile[]>;
+	buildSubmissionFiles: (
+		payload: SubmissionPayload,
+		settings: StoredState["settings"]
+	) => Promise<CommitFile[]>;
 	listBranchBlobPaths: (
 		token: string,
 		repoFullName: string,
@@ -385,7 +388,7 @@ export const processCssbattleSubmission = async (
 				eventCode = "SYNC_SKIPPED_NOT_IMPROVED";
 				recentEvents = pushSyncEvent(recentEvents, "warn", reason, null, eventCode);
 			} else {
-				const files = await deps.buildSubmissionFiles(payload);
+				const files = await deps.buildSubmissionFiles(payload, state.settings);
 				const readmeMode = state.settings.repositoryReadmeMode ?? "managed-section";
 				if (readmeMode !== "off") {
 					try {
